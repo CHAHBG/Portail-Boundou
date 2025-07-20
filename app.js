@@ -1194,8 +1194,8 @@ async function initializeApp() {
     showToast('Erreur lors du chargement de l\'application', 'error');
   } finally {
     // PATCH: Masquer l'écran de chargement
-    const loadingScreen = document.getElementById('loading-screen');
-    if (loadingScreen) loadingScreen.style.display = 'none';
+    const  = document.getElementById('loading-screen');
+    if (loadingScreen) loadingScreen.classList.add('hidden');
   }
 }
 
