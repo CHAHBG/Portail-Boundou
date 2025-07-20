@@ -10,9 +10,6 @@ const BUILD_HOOK = "https://api.netlify.com/build_hooks/67392b51c5c2b40008fa6dd3
 // Configuration SIG
 const GIS_CONFIG = {
     COMMUNES_GEOJSON_URL: "https://raw.githubusercontent.com/CHAHBG/Portail-Boundou/main/data/communes_boundou.geojson",
-    WMS_URL: "https://votre-geoserver.com/geoserver/wms",
-    WORKSPACE: "boundou",
-    LAYER_NAME: "communes"
 };
 
 /***************** UTILITAIRES *****************/
