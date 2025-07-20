@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portail SIG Boundou - Inventaires Fonciers</title>
     <meta name="description" content="Portail de visualisation des inventaires fonciers dans la région de Boundou, Sénégal">
-
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Leaflet JS -->
+     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-
+    
     <!-- Preload key resources -->
     <link rel="preconnect" href="https://unpkg.com">
 </head>
@@ -38,7 +38,7 @@
                 <h1>🗺️ SIG Boundou</h1>
                 <span class="nav-subtitle">Inventaires Fonciers</span>
             </div>
-
+            
             <div class="nav-controls">
                 <div class="font-size-controls">
                     <button id="font-decrease" class="btn btn--sm" title="Diminuer la taille du texte">A-</button>
@@ -73,20 +73,19 @@
         <section id="map-section" class="content-section active">
             <div class="section-header">
                 <h2>Carte des Communes - Grappe de Boundou</h2>
-                <!-- Filtres et export indépendants pour la carte -->
                 <div class="map-controls">
-                    <select id="map-commune-filter" class="form-control">
+                    <select id="commune-filter" class="form-control">
                         <option value="">Toutes les communes</option>
                     </select>
-                    <select id="map-usage-filter" class="form-control">
+                    <select id="usage-filter" class="form-control">
                         <option value="">Tous les usages</option>
                     </select>
-                    <button id="map-export-data" class="btn btn--secondary">
+                    <button id="export-data" class="btn btn--secondary">
                         📥 Exporter CSV
                     </button>
                 </div>
             </div>
-
+            
             <div class="map-container">
                 <div id="map" class="map-main"></div>
                 <div class="map-legend">
@@ -156,6 +155,7 @@
                     </button>
                 </div>
             </div>
+            
             <div class="dashboard-container">
                 <div class="dashboard-loading">
                     <div class="loading-spinner"></div>
@@ -175,18 +175,18 @@
             <div class="section-header">
                 <h2>Statistiques Générales</h2>
             </div>
-            <!-- Filtres et export indépendants pour les stats -->
-            <div class="stats-controls" style="margin-bottom: 24px;">
-                <select id="stats-commune-filter" class="form-control">
+            <div class="stats-controls">
+                <select id="commune-filter" class="form-control">
                     <option value="">Toutes les communes</option>
                 </select>
-                <select id="stats-usage-filter" class="form-control">
+                <select id="usage-filter" class="form-control">
                     <option value="">Tous les usages</option>
                 </select>
-                <button id="stats-export-data" class="btn btn--secondary">
+                <button id="export-data" class="btn btn--secondary">
                     📥 Exporter CSV
                 </button>
             </div>
+            
             <div class="global-stats">
                 <div class="stats-overview">
                     <div class="overview-card">
@@ -207,6 +207,7 @@
                         </div>
                     </div>
                 </div>
+                
                 <div class="global-charts">
                     <div class="chart-container">
                         <h4>Répartition par Commune</h4>
@@ -223,6 +224,7 @@
 
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
+    
     <!-- Main JavaScript -->
     <script src="app.js"></script>
 </body>
