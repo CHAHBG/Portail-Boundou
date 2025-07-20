@@ -352,10 +352,10 @@ async function loadRealGISLayer() {
 
 /***************** STYLE & INTERACTION DES POLYGONES *****************/
 function getPolygonStyle(feature) {
-  const communeName = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
+  const communeName = feature.properties.CCRCA; // <-- CORRECT
   const dataCommune = ndx.allFiltered().filter(d => d.commune === communeName);
-  const total = dataCommune.length; // nombre de parcelles dans la commune (car pas d'agrégation de parcelles dans le JSON)
-  const maxAll = d3.max(rawData, d => d.commune === communeName ? 1 : 0) || 1;
+  const total = d3.sum(dataCommune, d => d.parcelles);
+  const maxAll = d3.max(rawData, d => d.parcelles) || 1;
   const intensity = Math.min(total / maxAll, 1);
   return {
     fillColor: chroma.mix('#E3F2FD','#1565C0', intensity).hex(),
@@ -364,14 +364,14 @@ function getPolygonStyle(feature) {
 }
 
 function onCommuneFeature(feature, layer) {
-    const name = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
+    const name = feature.properties.CCRCA; // <-- CORRECT
     const data = rawData.filter(d => d.commune === name);
     if (!data.length) return;
     const stats = {
-        parcelles: data.length,
+        parcelles: d3.sum(data, d => d.parcelles),
         superficie: d3.sum(data, d => d.superficie) / 10000,
         nicad: d3.sum(data, d => d.nicad),
-        deliberees: d3.sum(data, d => d.deliberee),
+        deliberees: d3.sum(data, d => d.deliberees),
         villages: new Set(data.map(d => d.village)).size
     };
     layer.bindPopup(createUpdatedPopup(name, stats));
@@ -422,18 +422,17 @@ function filterByCommune(commune) {
 
 /***************** SYNCHRONISATION AVANCÉE *****************/
 function enhanceSynchronization() {
-    const original = updateMapColors;
     updateMapColors = function() {
         if (!mapInitialized || !choroLayer) return;
         const fd = ndx.allFiltered();
         const statsByCommune = d3.rollup(fd, v => ({
-            parcelles: v.length,
+            parcelles: d3.sum(v, d => d.parcelles),
             superficie: d3.sum(v, d => d.superficie),
             nicad: d3.sum(v, d => d.nicad),
-            delib: d3.sum(v, d => d.deliberee)
+            delib: d3.sum(v, d => d.deliberees)
         }), d => d.commune);
         choroLayer.eachLayer(layer => {
-            const name = layer.feature.properties.NOM || layer.feature.properties.COMMUNE || layer.feature.properties.name;
+            const name = layer.feature.properties.CCRCA; // <-- CORRECT
             const stats = statsByCommune.get(name);
             if (stats) {
                 layer.setStyle(getPolygonStyle(layer.feature));
