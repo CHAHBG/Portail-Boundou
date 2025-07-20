@@ -741,10 +741,7 @@ function applyFilters() {
   }
   
   // Mettre à jour les graphiques globaux si on est sur la section stats
-  const statsSection = document.getElementById('stats-section');
-  if (statsSection && statsSection.classList.contains('active')) {
     createGlobalCharts();
-  }
   
   showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
 }
