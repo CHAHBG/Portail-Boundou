@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portail SIG Boundou - Inventaires Fonciers</title>
+    <meta name="description" content="Portail de visualisation des inventaires fonciers dans la région de Boundou, Sénégal">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Preload key resources -->
+    <link rel="preconnect" href="https://unpkg.com">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Chargement du portail Boundou</h2>
+            <p>Préparation des données cartographiques...</p>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>🗺️ SIG Boundou</h1>
+                <span class="nav-subtitle">Inventaires Fonciers</span>
+            </div>
+            
+            <div class="nav-controls">
+                <div class="font-size-controls">
+                    <button id="font-decrease" class="btn btn--sm" title="Diminuer la taille du texte">A-</button>
+                    <button id="font-increase" class="btn btn--sm" title="Augmenter la taille du texte">A+</button>
+                </div>
+                <button id="theme-toggle" class="btn btn--sm theme-toggle" title="Basculer le thème">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Section Tabs -->
+        <div class="section-tabs">
+            <button class="tab-button active" data-section="map">
+                <span class="tab-icon">🗺️</span>
+                Carte Interactive
+            </button>
+            <button class="tab-button" data-section="dashboards">
+                <span class="tab-icon">📊</span>
+                Tableaux de Bord
+            </button>
+            <button class="tab-button" data-section="stats">
+                <span class="tab-icon">📈</span>
+                Statistiques
+            </button>
+        </div>
+
+        <!-- Map Section -->
+        <section id="map-section" class="content-section active">
+            <div class="section-header">
+                <h2>Carte des Communes - Région de Boundou</h2>
+                <div class="map-controls">
+                    <select id="commune-filter" class="form-control">
+                        <option value="">Toutes les communes</option>
+                    </select>
+                    <select id="usage-filter" class="form-control">
+                        <option value="">Tous les usages</option>
+                    </select>
+                    <button id="export-data" class="btn btn--secondary">
+                        📥 Exporter CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map" class="map-main"></div>
+                <div class="map-legend">
+                    <h4>Légende</h4>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #1B3B59"></span>
+                        <span>0-5 parcelles</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #4A7C59"></span>
+                        <span>6-10 parcelles</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #F4A460"></span>
+                        <span>11+ parcelles</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div id="stats-panel" class="stats-panel hidden">
+                <div class="stats-header">
+                    <h3 id="selected-commune">Statistiques</h3>
+                    <button id="close-stats" class="btn btn--sm">✕</button>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-parcelles">0</div>
+                            <div class="stat-label">Parcelles totales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="superficie-totale">0</div>
+                            <div class="stat-label">Superficie (ha)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="pourcentage-nicad">0%</div>
+                            <div class="stat-label">NICAD</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="pourcentage-deliberees">0%</div>
+                            <div class="stat-label">Délibérées</div>
+                        </div>
+                    </div>
+                    <div class="charts-container">
+                        <div class="chart-wrapper">
+                            <canvas id="usage-chart"></canvas>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="status-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboards Section -->
+        <section id="dashboards-section" class="content-section">
+            <div class="section-header">
+                <h2>Tableaux de Bord Externes</h2>
+                <div class="dashboard-tabs">
+                    <button class="dashboard-tab active" data-dashboard="boundou">
+                        Dashboard Principal
+                    </button>
+                    <button class="dashboard-tab" data-dashboard="edl">
+                        Inventaires EDL
+                    </button>
+                </div>
+            </div>
+            
+            <div class="dashboard-container">
+                <div class="dashboard-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement du tableau de bord...</p>
+                </div>
+                <iframe 
+                    id="dashboard-frame" 
+                    src="https://boundoudash.netlify.app/"
+                    title="Dashboard Boundou"
+                    loading="lazy">
+                </iframe>
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section id="stats-section" class="content-section">
+            <div class="section-header">
+                <h2>Statistiques Générales</h2>
+            </div>
+            
+            <div class="global-stats">
+                <div class="stats-overview">
+                    <div class="overview-card">
+                        <h3>Résumé Global</h3>
+                        <div class="overview-metrics">
+                            <div class="metric">
+                                <span class="metric-value" id="total-communes">5</span>
+                                <span class="metric-label">Communes</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value" id="total-parcelles-global">8</span>
+                                <span class="metric-label">Parcelles inventoriées</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value" id="superficie-globale">21.6</span>
+                                <span class="metric-label">Hectares au total</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="global-charts">
+                    <div class="chart-container">
+                        <h4>Répartition par Commune</h4>
+                        <canvas id="communes-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4>Types d'Usage</h4>
+                        <canvas id="global-usage-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
