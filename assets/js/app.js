@@ -94,7 +94,7 @@ function setupCrossfilter() {
     regionDim    = ndx.dimension(d => d.region);
     communeDim   = ndx.dimension(d => d.commune);
     villageDim   = ndx.dimension(d => d.village);
-    statutDim    = ndx.dimension(d => d.statut);
+    typeUsagDim  = ndx.dimension(d => d.type_usag);
     superficieDim= ndx.dimension(d => d.superficie / 10000);
     parcellesDim = ndx.dimension(d => d.parcelles);
 }
@@ -344,6 +344,17 @@ function handleParcellesRangeChange(event) {
     showToast(`Parcelles max: ${maxParcelles}`, 'info');
 }
 
+// --- 2. Adapter le gestionnaire de filtres pour type_usag ---
+function handleTypeUsagFilter() {
+  const checked = Array.from($$('input[type="checkbox"][name="typeUsag"]:checked'))
+                       .map(cb => cb.value);
+  typeUsagDim.filterAll();
+  if (checked.length) {
+    typeUsagDim.filterFunction(v => checked.includes(v));
+  }
+  updateAllVisualizations();
+}
+
 function updateDependentSelects() {
     const filteredData = ndx.allFiltered();
     
@@ -435,15 +446,16 @@ async function loadRealGISLayer() {
 
 /***************** STYLE & INTERACTION DES POLYGONES *****************/
 function getPolygonStyle(feature) {
-    const name = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
-    const data = ndx.allFiltered().filter(d => d.commune === name);
-    const total = d3.sum(data, d => d.parcelles);
-    const maxAll = d3.max(rawData, d => d.parcelles) || 1;
-    const intensity = Math.min(total / maxAll, 1);
-    return {
-        fillColor: chroma.mix('#E3F2FD', '#1565C0', intensity).hex(),
-        weight: 2, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.7
-    };
+  // Remplacez feature.properties.NOM par le bon champ, ici CCRCA
+  const communeName = feature.properties.CCRCA;
+  const dataCommune = ndx.allFiltered().filter(d => d.commune === communeName);
+  const total = d3.sum(dataCommune, d => d.parcelles);
+  const maxAll = d3.max(rawData, d => d.parcelles) || 1;
+  const intensity = Math.min(total / maxAll, 1);
+  return {
+    fillColor: chroma.mix('#E3F2FD','#1565C0', intensity).hex(),
+    weight: 2, color: 'white', fillOpacity: 0.7
+  };
 }
 
 function onCommuneFeature(feature, layer) {
@@ -573,7 +585,8 @@ function loadSavedFilters() {
         
         // Restaure les checkboxes statut
         $$('input[type="checkbox"][id^="statut"]').forEach(cb => {
-            cb.checked = filterState.statuts.includes(cb.value);
+          cb.name = 'typeUsag';
+          cb.addEventListener('change', handleTypeUsagFilter);
         });
         
         // Applique les filtres
