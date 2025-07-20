@@ -1,6 +1,6 @@
 /**
  * Portail Boundou – Application principale avec couche SIG réelle
- * Version complète avec filtres avancés et synchronisation bidirectionnelle
+ * Version adaptée pour mapping direct sur parcelles.json
  */
 
 /***************** CONFIGURATION *****************/
@@ -23,7 +23,7 @@ const formatDecimal = d3.format(",.1f");
 
 /***************** VARIABLES GLOBALES *****************/
 let rawData = [];
-let ndx, regionDim, communeDim, villageDim, statutDim, superficieDim, parcellesDim;
+let ndx, regionDim, communeDim, villageDim, statutDim, superficieDim, nicadDim, delibereeDim, typeUsagDim;
 let statusChart, pieChart;
 let leafletMap, choroLayer, mapInitialized = false;
 let superficieSlider, superficieRange = [0, 1000];
@@ -57,13 +57,12 @@ async function loadData() {
             region: d.region || "",
             commune: d.commune || "",
             village: d.village || "",
-            parcelles: +d.parcelles || 0,
-            superficie: +d.superficie || 0,
-            nicad: +d.nicad || 0,
-            deliberees: +d.deliberees || 0,
-            lat: +d.lat || 0,
-            lng: +d.lng || 0,
-            statut: d.statut || "En attente"
+            superficie: d.superficie ? +d.superficie : 0,
+            nicad: (d.nicad === "Oui" ? 1 : 0),
+            deliberee: (d.deliberee === "Oui" ? 1 : 0),
+            type_usag: d.type_usag || "",
+            statut: d.deliberee === "Oui" ? "Délibérée" : "En attente", // Statut pour les graphiques
+            // lat/lng sont inconnus dans le json, donc non utilisés ici
         }));
         const superficies = rawData.map(d => d.superficie / 10000).filter(s => s > 0);
         superficieRange = [
@@ -73,18 +72,9 @@ async function loadData() {
         console.log(`Données chargées: ${rawData.length} enregistrements`);
     } catch (err) {
         console.error("Erreur loadData():", err);
-        // Fallback: données de démonstration
-        rawData = [
-            { region: "Kédougou", commune: "MISSIRAH", village: "Missirah Centre", parcelles: 1250, superficie: 4507500, nicad: 625, deliberees: 312, lat: 12.5597, lng: -12.2053, statut: "En attente" },
-            { region: "Kédougou", commune: "BANDAFASSI", village: "Bandafassi Sud", parcelles: 890, superficie: 3205000, nicad: 445, deliberees: 267, lat: 12.533, lng: -12.3167, statut: "Délibérée" },
-            { region: "Tambacounda", commune: "NETTEBOULOU", village: "Netteboulou Ouest", parcelles: 675, superficie: 1802500, nicad: 324, deliberees: 145, lat: 13.7667, lng: -13.6667, statut: "En attente" },
-            { region: "Tambacounda", commune: "FONGOLIMBI", village: "Fongolimbi Est", parcelles: 540, superficie: 2758000, nicad: 432, deliberees: 401, lat: 13.8234, lng: -13.789, statut: "Délibérée" },
-            { region: "Kédougou", commune: "DIMBOLI", village: "Dimboli Nord", parcelles: 425, superficie: 954000, nicad: 201, deliberees: 0, lat: 12.4789, lng: -12.2456, statut: "Litige" },
-            { region: "Tambacounda", commune: "BALA", village: "Bala Centre", parcelles: 780, superficie: 1956000, nicad: 390, deliberees: 234, lat: 13.9567, lng: -13.4523, statut: "Délibérée" },
-            { region: "Kédougou", commune: "SALEMATA", village: "Salemata Est", parcelles: 650, superficie: 2145000, nicad: 325, deliberees: 0, lat: 12.8934, lng: -12.1678, statut: "Litige" }
-        ];
-        superficieRange = [95, 451];
-        showToast("Données de démonstration chargées", "warning");
+        rawData = [];
+        superficieRange = [0, 1000];
+        showToast("Erreur chargement données", "error");
     }
 }
 
@@ -96,7 +86,9 @@ function setupCrossfilter() {
     villageDim   = ndx.dimension(d => d.village);
     typeUsagDim  = ndx.dimension(d => d.type_usag);
     superficieDim= ndx.dimension(d => d.superficie / 10000);
-    parcellesDim = ndx.dimension(d => d.parcelles);
+    nicadDim     = ndx.dimension(d => d.nicad); // 1 = Oui, 0 = Non
+    delibereeDim = ndx.dimension(d => d.deliberee); // 1 = Oui, 0 = Non
+    statutDim    = ndx.dimension(d => d.statut); // Délibérée / En attente
 }
 
 /***************** INITIALISATION GIS *****************/
@@ -151,7 +143,7 @@ function createAdvancedFilters() {
                 </select>
             </div>
             
-            <!-- Filtre Statut (checkboxes) -->
+            <!-- Statut (checkboxes) -->
             <div class="filter-group">
                 <label>
                     <span class="filter-icon">📊</span>
@@ -167,11 +159,6 @@ function createAdvancedFilters() {
                         <input type="checkbox" id="statutAttente" value="En attente" checked>
                         <span class="checkmark"></span>
                         En attente
-                    </label>
-                    <label class="checkbox-item">
-                        <input type="checkbox" id="statutLitige" value="Litige" checked>
-                        <span class="checkmark"></span>
-                        Litiges
                     </label>
                 </div>
             </div>
@@ -190,21 +177,6 @@ function createAdvancedFilters() {
                     </div>
                 </div>
             </div>
-            
-            <!-- Filtre Parcelles (range) -->
-            <div class="filter-group">
-                <label>
-                    <span class="filter-icon">📦</span>
-                    Nombre de parcelles
-                </label>
-                <div class="range-container">
-                    <input type="range" id="parcellesRange" class="form-range" 
-                           min="0" max="2000" step="50" value="2000">
-                    <div class="range-values">
-                        Min: <span id="parcellesValue">2000</span> parcelles
-                    </div>
-                </div>
-            </div>
         </div>
         
         <!-- Actions -->
@@ -220,7 +192,6 @@ function createAdvancedFilters() {
             </button>
         </div>
     `;
-    
     setupAdvancedFilterHandlers();
     populateFilterOptions();
     createSuperficieSlider();
@@ -230,8 +201,6 @@ function populateFilterOptions() {
     const regions = [...new Set(rawData.map(d => d.region))].sort();
     const communes = [...new Set(rawData.map(d => d.commune))].sort();
     const villages = [...new Set(rawData.map(d => d.village))].sort();
-    
-    // Populate région select
     const regionSelect = $('#regionSelect');
     regions.forEach(region => {
         const option = document.createElement('option');
@@ -239,8 +208,6 @@ function populateFilterOptions() {
         option.textContent = region;
         regionSelect.appendChild(option);
     });
-    
-    // Populate communes select
     const communeSelect = $('#communeSelect');
     communes.forEach(commune => {
         const option = document.createElement('option');
@@ -248,8 +215,6 @@ function populateFilterOptions() {
         option.textContent = commune;
         communeSelect.appendChild(option);
     });
-    
-    // Populate villages select
     const villageSelect = $('#villageSelect');
     villages.forEach(village => {
         const option = document.createElement('option');
@@ -260,105 +225,60 @@ function populateFilterOptions() {
 }
 
 function setupAdvancedFilterHandlers() {
-    // Region filter
     $('#regionSelect')?.addEventListener('change', handleRegionChange);
-    
-    // Commune filter
     $('#communeSelect')?.addEventListener('change', handleCommuneChange);
-    
-    // Village filter
     $('#villageSelect')?.addEventListener('change', handleVillageChange);
-    
-    // Statut checkboxes
     $$('input[type="checkbox"][id^="statut"]').forEach(checkbox => {
         checkbox.addEventListener('change', handleStatutFilter);
     });
-    
-    // Range slider parcelles
-    $('#parcellesRange')?.addEventListener('input', handleParcellesRangeChange);
-    
-    // Boutons actions
     $('#resetFilters')?.addEventListener('click', resetAllFilters);
     $('#saveFilters')?.addEventListener('click', saveCurrentFilters);
     $('#loadFilters')?.addEventListener('click', loadSavedFilters);
 }
 
 function handleRegionChange(event) {
-    const selectedRegion = event.target.value;
-    
-    regionDim.filterAll();
+    const selectedRegion = event ? event.target.value : $('#regionSelect').value;
+    if(regionDim) regionDim.filterAll();
     if (selectedRegion) {
         regionDim.filterExact(selectedRegion);
-        // Update communes and villages based on region
         updateDependentSelects();
     }
-    
     updateAllVisualizations();
     updateFilterCounts();
 }
 
 function handleCommuneChange(event) {
-    const selectedCommunes = Array.from(event.target.selectedOptions).map(o => o.value);
-    
-    communeDim.filterAll();
+    const selectedCommunes = Array.from($('#communeSelect').selectedOptions).map(o => o.value);
+    if(communeDim) communeDim.filterAll();
     if (selectedCommunes.length > 0) {
         communeDim.filterFunction(d => selectedCommunes.includes(d));
     }
-    
     updateAllVisualizations();
     updateFilterCounts();
 }
 
 function handleVillageChange(event) {
-    const selectedVillages = Array.from(event.target.selectedOptions).map(o => o.value);
-    
-    villageDim.filterAll();
+    const selectedVillages = Array.from($('#villageSelect').selectedOptions).map(o => o.value);
+    if(villageDim) villageDim.filterAll();
     if (selectedVillages.length > 0) {
         villageDim.filterFunction(d => selectedVillages.includes(d));
     }
-    
     updateAllVisualizations();
     updateFilterCounts();
 }
 
 function handleStatutFilter() {
-    const checkedStatuts = Array.from($$('input[type="checkbox"][id^="statut"]:checked'))
-        .map(cb => cb.value);
-    
-    statutDim.filterAll();
-    if (checkedStatuts.length > 0 && checkedStatuts.length < 3) {
+    const checkedStatuts = Array.from($$('input[type="checkbox"][id^="statut"]:checked')).map(cb => cb.value);
+    if(statutDim) statutDim.filterAll();
+    if (checkedStatuts.length && checkedStatuts.length < 2) {
         statutDim.filterFunction(d => checkedStatuts.includes(d));
     }
-    
     updateAllVisualizations();
     updateFilterCounts();
 }
 
-function handleParcellesRangeChange(event) {
-    const maxParcelles = parseInt(event.target.value);
-    const valueSpan = $('#parcellesValue');
-    if (valueSpan) valueSpan.textContent = maxParcelles;
-    
-    parcellesDim.filterRange([0, maxParcelles]);
-    updateAllVisualizations();
-    showToast(`Parcelles max: ${maxParcelles}`, 'info');
-}
-
-// --- 2. Adapter le gestionnaire de filtres pour type_usag ---
-function handleTypeUsagFilter() {
-  const checked = Array.from($$('input[type="checkbox"][name="typeUsag"]:checked'))
-                       .map(cb => cb.value);
-  typeUsagDim.filterAll();
-  if (checked.length) {
-    typeUsagDim.filterFunction(v => checked.includes(v));
-  }
-  updateAllVisualizations();
-}
-
 function updateDependentSelects() {
     const filteredData = ndx.allFiltered();
-    
-    // Update communes based on current filters
     const availableCommunes = [...new Set(filteredData.map(d => d.commune))].sort();
     const communeSelect = $('#communeSelect');
     communeSelect.innerHTML = '';
@@ -368,8 +288,6 @@ function updateDependentSelects() {
         option.textContent = commune;
         communeSelect.appendChild(option);
     });
-    
-    // Update villages based on current filters
     const availableVillages = [...new Set(filteredData.map(d => d.village))].sort();
     const villageSelect = $('#villageSelect');
     villageSelect.innerHTML = '';
@@ -384,12 +302,10 @@ function updateDependentSelects() {
 function updateFilterCounts() {
     const communeCount = $('#communeCount');
     const villageCount = $('#villageCount');
-    
     if (communeCount) {
         const selectedCommunes = Array.from($('#communeSelect').selectedOptions).length;
         communeCount.textContent = selectedCommunes > 0 ? `(${selectedCommunes})` : '';
     }
-    
     if (villageCount) {
         const selectedVillages = Array.from($('#villageSelect').selectedOptions).length;
         villageCount.textContent = selectedVillages > 0 ? `(${selectedVillages})` : '';
@@ -398,26 +314,19 @@ function updateFilterCounts() {
 
 function resetAllFilters() {
     // Reset crossfilter dimensions
-    regionDim.filterAll();
-    communeDim.filterAll();
-    villageDim.filterAll();
-    statutDim.filterAll();
-    superficieDim.filterAll();
-    parcellesDim.filterAll();
-    
+    if(regionDim) regionDim.filterAll();
+    if(communeDim) communeDim.filterAll();
+    if(villageDim) villageDim.filterAll();
+    if(statutDim) statutDim.filterAll();
+    if(superficieDim) superficieDim.filterAll();
+    if(nicadDim) nicadDim.filterAll();
+    if(delibereeDim) delibereeDim.filterAll();
     // Reset UI elements
     $('#regionSelect').value = '';
     $('#communeSelect').selectedIndex = -1;
     $('#villageSelect').selectedIndex = -1;
     $$('input[type="checkbox"][id^="statut"]').forEach(cb => cb.checked = true);
-    
-    if ($('#parcellesRange')) $('#parcellesRange').value = 2000;
-    if ($('#parcellesValue')) $('#parcellesValue').textContent = '2000';
-    
-    if (superficieSlider) {
-        superficieSlider.set([superficieRange[0], superficieRange[1]]);
-    }
-    
+    if (superficieSlider) superficieSlider.set([superficieRange[0], superficieRange[1]]);
     populateFilterOptions();
     updateAllVisualizations();
     updateFilterCounts();
@@ -440,17 +349,16 @@ async function loadRealGISLayer() {
     } catch (error) {
         console.error("Erreur chargement SIG:", error);
         showToast("Erreur couche SIG - utilisation synthétique", "warning");
-        createSyntheticPolygons();
+        // Pas de polygones synthétiques sans lat/lng
     }
 }
 
 /***************** STYLE & INTERACTION DES POLYGONES *****************/
 function getPolygonStyle(feature) {
-  // Remplacez feature.properties.NOM par le bon champ, ici CCRCA
-  const communeName = feature.properties.CCRCA;
+  const communeName = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
   const dataCommune = ndx.allFiltered().filter(d => d.commune === communeName);
-  const total = d3.sum(dataCommune, d => d.parcelles);
-  const maxAll = d3.max(rawData, d => d.parcelles) || 1;
+  const total = dataCommune.length; // nombre de parcelles dans la commune (car pas d'agrégation de parcelles dans le JSON)
+  const maxAll = d3.max(rawData, d => d.commune === communeName ? 1 : 0) || 1;
   const intensity = Math.min(total / maxAll, 1);
   return {
     fillColor: chroma.mix('#E3F2FD','#1565C0', intensity).hex(),
@@ -463,16 +371,15 @@ function onCommuneFeature(feature, layer) {
     const data = rawData.filter(d => d.commune === name);
     if (!data.length) return;
     const stats = {
-        parcelles: d3.sum(data, d => d.parcelles),
+        parcelles: data.length,
         superficie: d3.sum(data, d => d.superficie) / 10000,
         nicad: d3.sum(data, d => d.nicad),
-        deliberees: d3.sum(data, d => d.deliberees),
+        deliberees: d3.sum(data, d => d.deliberee),
         villages: new Set(data.map(d => d.village)).size
     };
     layer.bindPopup(createUpdatedPopup(name, stats));
     layer.on({ mouseover: highlightFeature, mouseout: resetHighlight, click: () => filterByCommune(name) });
 }
-
 
 function createUpdatedPopup(commune, stats) {
     return `
@@ -484,7 +391,7 @@ function createUpdatedPopup(commune, stats) {
                 <div>📋 ${formatNumber(stats.nicad)} NICAD</div>
                 <div>✅ ${formatNumber(stats.deliberees)} délibérées</div>
                 <div>🏘️ ${stats.villages} villages</div>
-                <div class="taux">📈 ${(stats.deliberees / stats.parcelles * 100).toFixed(1)}% délibérées</div>
+                <div class="taux">📈 ${stats.parcelles ? ((stats.deliberees / stats.parcelles * 100).toFixed(1)) : "0.0"}% délibérées</div>
             </div>
             <button onclick="filterByCommune('${commune}')" class="popup-filter-btn">
                 Filtrer sur cette commune
@@ -502,21 +409,15 @@ function resetHighlight(e) {
 }
 
 function filterByCommune(commune) {
-    // Reset autres filtres
-    regionDim.filterAll();
-    villageDim.filterAll();
-    
-    // Applique filtre commune
-    communeDim.filterExact(commune);
-    
-    // Met à jour UI
+    if(regionDim) regionDim.filterAll();
+    if(villageDim) villageDim.filterAll();
+    if(communeDim) communeDim.filterExact(commune);
     const communeSelect = $('#communeSelect');
     if (communeSelect) {
         Array.from(communeSelect.options).forEach(option => {
             option.selected = option.value === commune;
         });
     }
-    
     updateAllVisualizations();
     updateFilterCounts();
     showToast(`Filtré sur ${commune}`, 'info');
@@ -529,10 +430,10 @@ function enhanceSynchronization() {
         if (!mapInitialized || !choroLayer) return;
         const fd = ndx.allFiltered();
         const statsByCommune = d3.rollup(fd, v => ({
-            parcelles: d3.sum(v, d => d.parcelles),
+            parcelles: v.length,
             superficie: d3.sum(v, d => d.superficie),
             nicad: d3.sum(v, d => d.nicad),
-            delib: d3.sum(v, d => d.deliberees)
+            delib: d3.sum(v, d => d.deliberee)
         }), d => d.commune);
         choroLayer.eachLayer(layer => {
             const name = layer.feature.properties.NOM || layer.feature.properties.COMMUNE || layer.feature.properties.name;
@@ -561,10 +462,8 @@ function saveCurrentFilters() {
         villages: Array.from($('#villageSelect').selectedOptions).map(o => o.value),
         statuts: Array.from($$('input[type="checkbox"][id^="statut"]:checked')).map(cb => cb.value),
         superficie: superficieSlider ? superficieSlider.get() : superficieRange,
-        parcelles: $('#parcellesRange') ? $('#parcellesRange').value : null,
         timestamp: new Date().toISOString()
     };
-    
     localStorage.setItem('boundou_filters', JSON.stringify(filterState));
     showToast('Filtres sauvegardés', 'success');
 }
@@ -576,28 +475,15 @@ function loadSavedFilters() {
             showToast('Aucun filtre sauvegardé', 'warning');
             return;
         }
-        
         const filterState = JSON.parse(saved);
-        
-        // Restaure les valeurs
         if ($('#regionSelect')) $('#regionSelect').value = filterState.region || '';
-        if ($('#parcellesRange')) $('#parcellesRange').value = filterState.parcelles || 2000;
-        
         // Restaure les checkboxes statut
         $$('input[type="checkbox"][id^="statut"]').forEach(cb => {
-          cb.name = 'typeUsag';
-          cb.addEventListener('change', handleTypeUsagFilter);
+          cb.checked = filterState.statuts ? filterState.statuts.includes(cb.value) : true;
         });
-        
-        // Applique les filtres
         handleRegionChange();
         handleStatutFilter();
-        if (filterState.parcelles) {
-            handleParcellesRangeChange({target: {value: filterState.parcelles}});
-        }
-        
         showToast(`Filtres du ${new Date(filterState.timestamp).toLocaleDateString()} chargés`, 'success');
-        
     } catch (error) {
         console.error('Erreur chargement filtres:', error);
         showToast('Erreur chargement filtres', 'error');
@@ -645,8 +531,7 @@ function createSuperficieSlider() {
     superficieSlider.on('update', (values, handle) => {
         $('#superficieMin').textContent = values[0];
         $('#superficieMax').textContent = values[1];
-        
-        superficieDim.filterRange([+values[0], +values[1]]);
+        if(superficieDim) superficieDim.filterRange([+values[0], +values[1]]);
         updateAllVisualizations();
     });
 }
@@ -675,12 +560,6 @@ function createStatusChart() {
                 data: [],
                 backgroundColor: 'rgba(251, 191, 36, 0.8)',
                 borderColor: 'rgba(251, 191, 36, 1)',
-                borderWidth: 1
-            }, {
-                label: 'Litiges',
-                data: [],
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                borderColor: 'rgba(239, 68, 68, 1)',
                 borderWidth: 1
             }]
         },
@@ -712,18 +591,16 @@ function createPieChart() {
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Délibérées', 'En attente', 'Litiges'],
+            labels: ['Délibérées', 'En attente'],
             datasets: [{
-                data: [0, 0, 0],
+                data: [0, 0],
                 backgroundColor: [
                     'rgba(34, 197, 94, 0.8)',
-                    'rgba(251, 191, 36, 0.8)',
-                    'rgba(239, 68, 68, 0.8)'
+                    'rgba(251, 191, 36, 0.8)'
                 ],
                 borderColor: [
                     'rgba(34, 197, 94, 1)',
-                    'rgba(251, 191, 36, 1)',
-                    'rgba(239, 68, 68, 1)'
+                    'rgba(251, 191, 36, 1)'
                 ],
                 borderWidth: 2
             }]
@@ -750,50 +627,6 @@ function initializeMap() {
     mapInitialized = true;
 }
 
-function createSyntheticPolygons() {
-    if (!mapInitialized) return;
-
-    const communes = [...new Set(rawData.map(d => d.commune))];
-    const features = communes.map(commune => {
-        const communeData = rawData.filter(d => d.commune === commune);
-        const centerLat = d3.mean(communeData, d => d.lat);
-        const centerLng = d3.mean(communeData, d => d.lng);
-        
-        // Création d'un polygone synthétique autour du centre
-        const radius = 0.05;
-        const points = [];
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * 60) * Math.PI / 180;
-            points.push([
-                centerLng + radius * Math.cos(angle),
-                centerLat + radius * Math.sin(angle)
-            ]);
-        }
-        points.push(points[0]); // Ferme le polygone
-
-        return {
-            type: "Feature",
-            properties: { NOM: commune },
-            geometry: {
-                type: "Polygon",
-                coordinates: [points]
-            }
-        };
-    });
-
-    const geojsonData = {
-        type: "FeatureCollection",
-        features: features
-    };
-
-    choroLayer = L.geoJSON(geojsonData, {
-        style: getPolygonStyle,
-        onEachFeature: onCommuneFeature
-    }).addTo(leafletMap);
-
-    leafletMap.fitBounds(choroLayer.getBounds());
-}
-
 /***************** MISE À JOUR DES VISUALISATIONS *****************/
 function updateAllVisualizations() {
     updateKPIs();
@@ -803,19 +636,15 @@ function updateAllVisualizations() {
 
 function updateKPIs() {
     const filteredData = ndx.allFiltered();
-    
     const newValues = {
-        parcelles: d3.sum(filteredData, d => d.parcelles),
+        parcelles: filteredData.length,
         superficie: Math.round(d3.sum(filteredData, d => d.superficie) / 10000),
         nicad: d3.sum(filteredData, d => d.nicad),
-        deliberees: d3.sum(filteredData, d => d.deliberees)
+        deliberees: d3.sum(filteredData, d => d.deliberee)
     };
-
-    // Animation des valeurs
     Object.keys(newValues).forEach(key => {
         const element = $(`#kpi-${key}`);
         const progressElement = $(`#progress-${key}`);
-        
         if (element) {
             d3.select(element)
                 .transition()
@@ -829,68 +658,51 @@ function updateKPIs() {
                     };
                 });
         }
-
         if (progressElement) {
-            const maxValue = d3.max(rawData, d => d[key]);
+            const maxValue = key === 'superficie' ?
+                Math.round(d3.sum(rawData, d => d.superficie) / 10000) :
+                d3.max([d3.sum(rawData, d => key === 'parcelles' ? 1 : d[key]), 1]);
             const percentage = (newValues[key] / maxValue) * 100;
             progressElement.style.width = `${Math.min(percentage, 100)}%`;
         }
     });
-
     Object.assign(currentKPIValues, newValues);
 }
 
 function updateCharts() {
     const filteredData = ndx.allFiltered();
-    
-    // Mise à jour du graphique en barres empilées
+    // Stats par commune et statut
     if (statusChart) {
         const communeStats = d3.rollup(
             filteredData,
             v => ({
-                'Délibérées': d3.sum(v.filter(d => d.statut === 'Délibérée'), d => d.parcelles),
-                'En attente': d3.sum(v.filter(d => d.statut === 'En attente'), d => d.parcelles),
-                'Litiges': d3.sum(v.filter(d => d.statut === 'Litige'), d => d.parcelles)
+                'Délibérées': v.filter(d => d.statut === 'Délibérée').length,
+                'En attente': v.filter(d => d.statut === 'En attente').length
             }),
             d => d.commune
         );
-
         const communes = Array.from(communeStats.keys()).sort();
-        const isPercent = $('#percentToggle').checked;
-
         statusChart.data.labels = communes;
         statusChart.data.datasets[0].data = communes.map(commune => {
             const stats = communeStats.get(commune);
-            const total = stats['Délibérées'] + stats['En attente'] + stats['Litiges'];
-            return isPercent ? (stats['Délibérées'] / total * 100) || 0 : stats['Délibérées'];
+            return stats['Délibérées'];
         });
         statusChart.data.datasets[1].data = communes.map(commune => {
             const stats = communeStats.get(commune);
-            const total = stats['Délibérées'] + stats['En attente'] + stats['Litiges'];
-            return isPercent ? (stats['En attente'] / total * 100) || 0 : stats['En attente'];
+            return stats['En attente'];
         });
-        statusChart.data.datasets[2].data = communes.map(commune => {
-            const stats = communeStats.get(commune);
-            const total = stats['Délibérées'] + stats['En attente'] + stats['Litiges'];
-            return isPercent ? (stats['Litiges'] / total * 100) || 0 : stats['Litiges'];
-        });
-
-        statusChart.options.scales.y.max = isPercent ? 100 : undefined;
         statusChart.update();
     }
-
-    // Mise à jour du graphique circulaire
+    // Pie chart
     if (pieChart) {
         const statusStats = d3.rollup(
             filteredData,
-            v => d3.sum(v, d => d.parcelles),
+            v => v.length,
             d => d.statut
         );
-
         pieChart.data.datasets[0].data = [
             statusStats.get('Délibérée') || 0,
-            statusStats.get('En attente') || 0,
-            statusStats.get('Litige') || 0
+            statusStats.get('En attente') || 0
         ];
         pieChart.update();
     }
@@ -898,8 +710,6 @@ function updateCharts() {
 
 function updateMapColors() {
     if (!mapInitialized || !choroLayer) return;
-    
-    // Cette fonction sera overridée par enhanceSynchronization()
     choroLayer.eachLayer(layer => {
         layer.setStyle(getPolygonStyle(layer.feature));
     });
@@ -910,32 +720,23 @@ async function generatePDF() {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape', 'pt', 'a4');
-        
-        // En-tête
         doc.setFontSize(20);
         doc.text('Inventaire Foncier - Boundou', 40, 40);
         doc.setFontSize(12);
         doc.text(`Généré le ${new Date().toLocaleDateString()}`, 40, 60);
-        
         let yPosition = 100;
-        
-        // KPI
         const filteredData = ndx.allFiltered();
         const stats = {
-            parcelles: d3.sum(filteredData, d => d.parcelles),
+            parcelles: filteredData.length,
             superficie: d3.sum(filteredData, d => d.superficie) / 10000,
             nicad: d3.sum(filteredData, d => d.nicad),
-            deliberees: d3.sum(filteredData, d => d.deliberees)
+            deliberees: d3.sum(filteredData, d => d.deliberee)
         };
-        
         doc.text(`Parcelles: ${formatNumber(stats.parcelles)}`, 40, yPosition);
         doc.text(`Superficie: ${formatDecimal(stats.superficie)} ha`, 200, yPosition);
         doc.text(`NICAD: ${formatNumber(stats.nicad)}`, 360, yPosition);
         doc.text(`Délibérées: ${formatNumber(stats.deliberees)}`, 520, yPosition);
-        
         yPosition += 40;
-        
-        // Capture des graphiques si possible
         try {
             const chartCanvas = $('#statusChart');
             if (chartCanvas) {
@@ -947,30 +748,25 @@ async function generatePDF() {
         } catch (err) {
             console.warn('Impossible de capturer les graphiques:', err);
         }
-        
-        // Tableau des données
         const tableData = filteredData.map(d => [
             d.region,
             d.commune,
             d.village,
-            formatNumber(d.parcelles),
-            formatDecimal(d.superficie / 10000),
-            formatNumber(d.nicad),
-            formatNumber(d.deliberees),
+            d.superficie ? formatDecimal(d.superficie / 10000) : "0.0",
+            d.nicad === 1 ? "Oui" : "Non",
+            d.deliberee === 1 ? "Oui" : "Non",
+            d.type_usag,
             d.statut
         ]);
-        
         doc.autoTable({
-            head: [['Région', 'Commune', 'Village', 'Parcelles', 'Superficie (ha)', 'NICAD', 'Délibérées', 'Statut']],
+            head: [['Région', 'Commune', 'Village', 'Superficie (ha)', 'NICAD', 'Délibérée', 'Type Usage', 'Statut']],
             body: tableData,
             startY: yPosition,
             styles: { fontSize: 8 },
             headStyles: { fillColor: [33, 128, 141] }
         });
-        
         doc.save('inventaire_boundou.pdf');
         showToast('PDF exporté avec succès', 'success');
-        
     } catch (error) {
         console.error('Erreur export PDF:', error);
         showToast('Erreur lors de l\'export PDF', 'error');
@@ -993,24 +789,18 @@ async function triggerRebuild() {
 
 /***************** GESTION DES ÉVÉNEMENTS *****************/
 function attachEventHandlers() {
-    // Navigation
     $$('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             $$('.nav-item').forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
-            
             const section = item.dataset.section;
             $$('.content-section').forEach(sec => sec.classList.remove('active'));
             $(`#${section}`).classList.add('active');
         });
     });
-
-    // Menu mobile
     $('#menuToggle')?.addEventListener('click', () => {
         $('#sidebar').classList.toggle('open');
     });
-
-    // Thème
     $('#themeToggle')?.addEventListener('click', () => {
         const body = document.body;
         const currentTheme = body.dataset.colorScheme || 'light';
@@ -1018,35 +808,23 @@ function attachEventHandlers() {
         body.dataset.colorScheme = newTheme;
         localStorage.setItem('theme', newTheme);
     });
-
-    // Taille de police
     $$('.font-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             $$('.font-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
             const size = btn.dataset.size;
             document.body.className = document.body.className.replace(/font-\w+/g, '');
             document.body.classList.add(`font-${size}`);
         });
     });
-
-    // Toggle pourcentage
     $('#percentToggle')?.addEventListener('change', updateCharts);
-
-    // Export PDF
     $('#exportPDF')?.addEventListener('click', generatePDF);
-
-    // Rebuild
     $('#triggerRebuild')?.addEventListener('click', triggerRebuild);
-
-    // Contrôles carte
     $('#fitBounds')?.addEventListener('click', () => {
         if (choroLayer && leafletMap) {
             leafletMap.fitBounds(choroLayer.getBounds());
         }
     });
-
     $('#resetMap')?.addEventListener('click', () => {
         if (leafletMap) {
             leafletMap.setView([12.8, -12.3], 8);
@@ -1057,17 +835,13 @@ function attachEventHandlers() {
 /***************** UTILITAIRES INTERFACE *****************/
 function showLoadingOverlay() { $('#loadingOverlay')?.classList.remove('hidden'); }
 function hideLoadingOverlay() { $('#loadingOverlay')?.classList.add('hidden'); }
-
 function showToast(message, type = 'info') {
     const container = $('#toastContainer');
     if (!container) return;
-
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-
     container.appendChild(toast);
-
     setTimeout(() => {
         toast.remove();
     }, 5000);
@@ -1076,7 +850,6 @@ function showToast(message, type = 'info') {
 function createParticles() {
     const container = $('#particles-container');
     if (!container) return;
-
     for (let i = 0; i < 20; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
@@ -1098,7 +871,6 @@ function setupIntersectionObserver() {
             }
         });
     });
-
     $$('.kpi-card, .glass-card').forEach(el => {
         observer.observe(el);
     });
@@ -1106,8 +878,9 @@ function setupIntersectionObserver() {
 
 // Fonction globale pour le filtrage par commune depuis la popup
 window.filterByCommune = commune => {
-    regionDim.filterAll(); villageDim.filterAll();
-    communeDim.filterExact(commune);
+    if(regionDim) regionDim.filterAll();
+    if(villageDim) villageDim.filterAll();
+    if(communeDim) communeDim.filterExact(commune);
     $('#communeSelect').value = commune;
     $('#communeSelect').dispatchEvent(new Event('change'));
     showToast(`Filtré sur ${commune}`, 'info');
