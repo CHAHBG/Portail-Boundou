@@ -3,13 +3,13 @@
  * Version complète avec filtres avancés et synchronisation bidirectionnelle
  */
 
-/***************** CONFIGURATION *****************/ 
-const DATA_URL = "https://raw.githubusercontent.com/CHAHBG/boundou_dashboard/main/data/parcelles.json";
+/***************** CONFIGURATION *****************/
+const DATA_URL = "https://raw.githubusercontent.com/CHAHBG/Portail-Boundou/main/data/parcelles.json";
 const BUILD_HOOK = "https://api.netlify.com/build_hooks/67392b51c5c2b40008fa6dd3";
 
 // Configuration SIG
 const GIS_CONFIG = {
-    COMMUNES_GEOJSON_URL: "https://raw.githubusercontent.com/CHAHBG/boundou_dashboard/main/data/communes_boundou.geojson",
+    COMMUNES_GEOJSON_URL: "https://raw.githubusercontent.com/CHAHBG/Portail-Boundou/main/data/communes_boundou.geojson",
     WMS_URL: "https://votre-geoserver.com/geoserver/wms",
     WORKSPACE: "boundou",
     LAYER_NAME: "communes"
@@ -20,20 +20,14 @@ const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 const formatNumber = d3.format(",.0f");
 const formatDecimal = d3.format(",.1f");
-const delay = ms => new Promise(res => setTimeout(res, ms));
 
 /***************** VARIABLES GLOBALES *****************/
 let rawData = [];
 let ndx, regionDim, communeDim, villageDim, statutDim, superficieDim, parcellesDim;
 let statusChart, pieChart;
-let leafletMap, choroLayer, communesLayer, mapInitialized = false;
+let leafletMap, choroLayer, mapInitialized = false;
 let superficieSlider, superficieRange = [0, 1000];
-const currentKPIValues = {
-    parcelles: 0,
-    superficie: 0,
-    nicad: 0,
-    deliberees: 0
-};
+const currentKPIValues = { parcelles: 0, superficie: 0, nicad: 0, deliberees: 0 };
 
 /***************** INITIALISATION *****************/
 document.addEventListener("DOMContentLoaded", async () => {
@@ -58,7 +52,6 @@ async function loadData() {
     try {
         const res = await fetch(DATA_URL);
         if (!res.ok) throw new Error("Network response not ok");
-        
         const data = await res.json();
         rawData = data.map(d => ({
             region: d.region || "",
@@ -72,18 +65,15 @@ async function loadData() {
             lng: +d.lng || 0,
             statut: d.statut || "En attente"
         }));
-
         const superficies = rawData.map(d => d.superficie / 10000).filter(s => s > 0);
         superficieRange = [
-            Math.floor(Math.min(...superficies)), 
+            Math.floor(Math.min(...superficies)),
             Math.ceil(Math.max(...superficies))
         ];
-        
         console.log(`Données chargées: ${rawData.length} enregistrements`);
-        
     } catch (err) {
         console.error("Erreur loadData():", err);
-        // Données de démonstration améliorées
+        // Fallback: données de démonstration
         rawData = [
             { region: "Kédougou", commune: "MISSIRAH", village: "Missirah Centre", parcelles: 1250, superficie: 4507500, nicad: 625, deliberees: 312, lat: 12.5597, lng: -12.2053, statut: "En attente" },
             { region: "Kédougou", commune: "BANDAFASSI", village: "Bandafassi Sud", parcelles: 890, superficie: 3205000, nicad: 445, deliberees: 267, lat: 12.533, lng: -12.3167, statut: "Délibérée" },
@@ -93,7 +83,6 @@ async function loadData() {
             { region: "Tambacounda", commune: "BALA", village: "Bala Centre", parcelles: 780, superficie: 1956000, nicad: 390, deliberees: 234, lat: 13.9567, lng: -13.4523, statut: "Délibérée" },
             { region: "Kédougou", commune: "SALEMATA", village: "Salemata Est", parcelles: 650, superficie: 2145000, nicad: 325, deliberees: 0, lat: 12.8934, lng: -12.1678, statut: "Litige" }
         ];
-        
         superficieRange = [95, 451];
         showToast("Données de démonstration chargées", "warning");
     }
@@ -102,28 +91,24 @@ async function loadData() {
 /***************** CROSSFILTER *****************/
 function setupCrossfilter() {
     ndx = crossfilter(rawData);
-    regionDim = ndx.dimension(d => d.region);
-    communeDim = ndx.dimension(d => d.commune);
-    villageDim = ndx.dimension(d => d.village);
-    statutDim = ndx.dimension(d => d.statut);
-    superficieDim = ndx.dimension(d => d.superficie / 10000);
+    regionDim    = ndx.dimension(d => d.region);
+    communeDim   = ndx.dimension(d => d.commune);
+    villageDim   = ndx.dimension(d => d.village);
+    statutDim    = ndx.dimension(d => d.statut);
+    superficieDim= ndx.dimension(d => d.superficie / 10000);
     parcellesDim = ndx.dimension(d => d.parcelles);
 }
 
-/***************** INITIALISATION BOUNDOU GIS *****************/
+/***************** INITIALISATION GIS *****************/
 async function initializeBoundouGIS() {
-    // Interface avancée
     createAdvancedFilters();
     createKPICards();
     createCharts();
-    
-    // Initialisation carte avec vraie couche SIG
     if ($('#mapContainer')) {
         initializeMap();
         await loadRealGISLayer();
         enhanceSynchronization();
     }
-    
     updateAllVisualizations();
     setupIntersectionObserver();
 }
@@ -431,89 +416,51 @@ function resetAllFilters() {
 /***************** COUCHE SIG RÉELLE *****************/
 async function loadRealGISLayer() {
     try {
-        const response = await fetch(GIS_CONFIG.COMMUNES_GEOJSON_URL);
-        if (!response.ok) throw new Error('Impossible de charger le GeoJSON');
-        
-        const communesGeoJSON = await response.json();
-        
-        // Supprime l'ancienne couche générée automatiquement
-        if (choroLayer) {
-            leafletMap.removeLayer(choroLayer);
-        }
-        
-        // Crée la nouvelle couche avec les vraies géométries
-        communesLayer = L.geoJSON(communesGeoJSON, {
+        const resp = await fetch(GIS_CONFIG.COMMUNES_GEOJSON_URL);
+        if (!resp.ok) throw new Error("Impossible de charger le GeoJSON");
+        const geojson = await resp.json();
+        if (choroLayer) leafletMap.removeLayer(choroLayer);
+        choroLayer = L.geoJSON(geojson, {
             style: getPolygonStyle,
             onEachFeature: onCommuneFeature
         }).addTo(leafletMap);
-        
-        // Met à jour la référence
-        choroLayer = communesLayer;
-        
-        // Ajuste la vue sur les vraies limites
         leafletMap.fitBounds(choroLayer.getBounds());
-        
         showToast("Couche SIG réelle chargée", "success");
-        
     } catch (error) {
         console.error("Erreur chargement SIG:", error);
-        showToast("Erreur couche SIG - utilisation géométries simulées", "warning");
-        // Garde la couche générée en fallback
+        showToast("Erreur couche SIG - utilisation synthétique", "warning");
         createSyntheticPolygons();
     }
 }
 
+/***************** STYLE & INTERACTION DES POLYGONES *****************/
 function getPolygonStyle(feature) {
-    const commune = feature.properties.NOM || 
-                   feature.properties.nom || 
-                   feature.properties.COMMUNE ||
-                   feature.properties.name;
-    
-    const data = ndx.allFiltered().filter(d => d.commune === commune);
-    const totalParcelles = d3.sum(data, d => d.parcelles);
-    
-    // Échelle de couleur basée sur le nombre de parcelles
-    const maxParcelles = d3.max(rawData, d => d.parcelles) || 1;
-    const intensity = Math.min(totalParcelles / maxParcelles, 1);
-    
+    const name = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
+    const data = ndx.allFiltered().filter(d => d.commune === name);
+    const total = d3.sum(data, d => d.parcelles);
+    const maxAll = d3.max(rawData, d => d.parcelles) || 1;
+    const intensity = Math.min(total / maxAll, 1);
     return {
         fillColor: chroma.mix('#E3F2FD', '#1565C0', intensity).hex(),
-        weight: 2,
-        opacity: 1,
-        color: 'white',
-        dashArray: '3',
-        fillOpacity: 0.7
+        weight: 2, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.7
     };
 }
 
 function onCommuneFeature(feature, layer) {
-    const commune = feature.properties.NOM || 
-                   feature.properties.nom || 
-                   feature.properties.COMMUNE ||
-                   feature.properties.name;
-    
-    const data = rawData.filter(d => d.commune === commune);
-    
-    if (data.length === 0) return;
-    
+    const name = feature.properties.NOM || feature.properties.COMMUNE || feature.properties.name;
+    const data = rawData.filter(d => d.commune === name);
+    if (!data.length) return;
     const stats = {
         parcelles: d3.sum(data, d => d.parcelles),
         superficie: d3.sum(data, d => d.superficie) / 10000,
         nicad: d3.sum(data, d => d.nicad),
         deliberees: d3.sum(data, d => d.deliberees),
-        villages: [...new Set(data.map(d => d.village))].length
+        villages: new Set(data.map(d => d.village)).size
     };
-    
-    const popupContent = createUpdatedPopup(commune, stats);
-    layer.bindPopup(popupContent);
-    
-    // Événements hover
-    layer.on({
-        mouseover: highlightFeature,
-        mouseout: resetHighlight,
-        click: () => filterByCommune(commune)
-    });
+    layer.bindPopup(createUpdatedPopup(name, stats));
+    layer.on({ mouseover: highlightFeature, mouseout: resetHighlight, click: () => filterByCommune(name) });
 }
+
 
 function createUpdatedPopup(commune, stats) {
     return `
@@ -535,15 +482,9 @@ function createUpdatedPopup(commune, stats) {
 }
 
 function highlightFeature(e) {
-    const layer = e.target;
-    layer.setStyle({
-        weight: 4,
-        color: '#1FB8CD',
-        fillOpacity: 0.9
-    });
-    layer.bringToFront();
+    e.target.setStyle({ weight: 4, color: '#1FB8CD', fillOpacity: 0.9 });
+    e.target.bringToFront();
 }
-
 function resetHighlight(e) {
     if (choroLayer) choroLayer.resetStyle(e.target);
 }
@@ -571,44 +512,30 @@ function filterByCommune(commune) {
 
 /***************** SYNCHRONISATION AVANCÉE *****************/
 function enhanceSynchronization() {
-    // Override de la fonction updateMapColors
-    window.originalUpdateMapColors = updateMapColors;
+    const original = updateMapColors;
     updateMapColors = function() {
         if (!mapInitialized || !choroLayer) return;
-        
-        const filteredData = ndx.allFiltered();
-        const communeStats = d3.rollup(
-            filteredData,
-            v => ({
-                parcelles: d3.sum(v, d => d.parcelles),
-                superficie: d3.sum(v, d => d.superficie),
-                nicad: d3.sum(v, d => d.nicad),
-                deliberees: d3.sum(v, d => d.deliberees),
-                tauxDeliberation: d3.sum(v, d => d.deliberees) / d3.sum(v, d => d.parcelles) || 0
-            }),
-            d => d.commune
-        );
-        
-        // Mise à jour du style selon les stats filtrées
+        const fd = ndx.allFiltered();
+        const statsByCommune = d3.rollup(fd, v => ({
+            parcelles: d3.sum(v, d => d.parcelles),
+            superficie: d3.sum(v, d => d.superficie),
+            nicad: d3.sum(v, d => d.nicad),
+            delib: d3.sum(v, d => d.deliberees)
+        }), d => d.commune);
         choroLayer.eachLayer(layer => {
-            const commune = layer.feature.properties.NOM || 
-                           layer.feature.properties.nom || 
-                           layer.feature.properties.COMMUNE ||
-                           layer.feature.properties.name;
-            
-            const stats = communeStats.get(commune);
-            
+            const name = layer.feature.properties.NOM || layer.feature.properties.COMMUNE || layer.feature.properties.name;
+            const stats = statsByCommune.get(name);
             if (stats) {
                 layer.setStyle(getPolygonStyle(layer.feature));
-                layer.setPopupContent(createUpdatedPopup(commune, stats));
+                layer.setPopupContent(createUpdatedPopup(name, {
+                    parcelles: stats.parcelles,
+                    superficie: stats.superficie / 10000,
+                    nicad: stats.nicad,
+                    deliberees: stats.delib,
+                    villages: 0
+                }));
             } else {
-                // Commune filtrée - style grisé
-                layer.setStyle({
-                    fillColor: '#f5f5f5',
-                    fillOpacity: 0.3,
-                    weight: 1,
-                    color: '#ccc'
-                });
+                layer.setStyle({ fillColor: '#f5f5f5', fillOpacity: 0.3, weight: 1, color: '#ccc' });
             }
         });
     };
@@ -800,18 +727,13 @@ function createPieChart() {
     });
 }
 
+/***************** CARTE *****************/
 function initializeMap() {
     if (mapInitialized) return;
-
-    const mapContainer = $('#mapContainer');
-    if (!mapContainer) return;
-
-    leafletMap = L.map(mapContainer).setView([12.8, -12.3], 8);
-
+    leafletMap = L.map('mapContainer').setView([12.8, -12.3], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(leafletMap);
-
     mapInitialized = true;
 }
 
@@ -1120,15 +1042,8 @@ function attachEventHandlers() {
 }
 
 /***************** UTILITAIRES INTERFACE *****************/
-function showLoadingOverlay() {
-    const overlay = $('#loadingOverlay');
-    if (overlay) overlay.classList.remove('hidden');
-}
-
-function hideLoadingOverlay() {
-    const overlay = $('#loadingOverlay');
-    if (overlay) overlay.classList.add('hidden');
-}
+function showLoadingOverlay() { $('#loadingOverlay')?.classList.remove('hidden'); }
+function hideLoadingOverlay() { $('#loadingOverlay')?.classList.add('hidden'); }
 
 function showToast(message, type = 'info') {
     const container = $('#toastContainer');
@@ -1177,7 +1092,13 @@ function setupIntersectionObserver() {
 }
 
 // Fonction globale pour le filtrage par commune depuis la popup
-window.filterByCommune = filterByCommune;
+window.filterByCommune = commune => {
+    regionDim.filterAll(); villageDim.filterAll();
+    communeDim.filterExact(commune);
+    $('#communeSelect').value = commune;
+    $('#communeSelect').dispatchEvent(new Event('change'));
+    showToast(`Filtré sur ${commune}`, 'info');
+};
 
 // Chargement du thème sauvegardé
 const savedTheme = localStorage.getItem('theme');
