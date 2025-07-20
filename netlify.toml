@@ -1,0 +1,83 @@
+[build]
+  # Pas de processus de build nécessaire pour ce site statique
+  publish = "."
+  
+[build.environment]
+  # Variables d'environnement pour le build
+  NODE_VERSION = "18"
+
+[[headers]]
+  # Configuration des headers pour tous les fichiers
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  # Headers spécifiques pour les fichiers JSON et GeoJSON
+  for = "/data/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  # Headers pour les assets CSS et JS
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  # Headers pour les polices
+  for = "/*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+[[redirects]]
+  # Redirection pour la compatibilité des anciennes URLs
+  from = "/dashboard"
+  to = "/#dashboards-section"
+  status = 302
+
+[[redirects]]
+  # Redirection pour les liens directs vers les stats
+  from = "/stats"
+  to = "/#stats-section"
+  status = 302
+
+[dev]
+  # Configuration pour le développement local
+  command = "python -m http.server 8000"
+  port = 8000
+  publish = "."
+
+[functions]
+  # Dossier des fonctions Netlify (non utilisé pour ce projet)
+  directory = "netlify/functions"
+
+# Configuration pour les formulaires Netlify (pour d'éventuels futurs formulaires)
+[build.processing]
+  skip_processing = false
+[build.processing.css]
+  bundle = false
+  minify = true
+[build.processing.js]
+  bundle = false
+  minify = true
+[build.processing.html]
+  pretty_urls = true
+
+# Configuration des plugins Netlify
+[[plugins]]
+  package = "@netlify/plugin-sitemap"
+  
+  [plugins.inputs]
+    baseUrl = "https://votre-site.netlify.app"
