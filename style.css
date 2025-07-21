@@ -1381,3 +1381,59 @@ body {
   background: var(--color-card-bg);
   color: var(--color-text-main);
 }
+
+/* ===============================
+   Responsive design - Mobile/Tablet
+   =============================== */
+@media (max-width: 600px) {
+  .main-content {
+    padding: 6px;
+  }
+  .section-tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .map-container {
+    height: 250px;
+    min-height: 200px;
+  }
+  .map-legend {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+    box-shadow: none;
+    padding: 10px;
+  }
+  .stats-panel,
+  .charts-container,
+  .global-charts {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .chart-wrapper, .chart-container {
+    min-width: 0;
+    width: 100%;
+    height: 180px;
+    padding: 0;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  #map {
+    height: 200px !important;
+    min-height: 180px;
+  }
+  .nav-container {
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 4px;
+  }
+  .dashboard-container iframe {
+    min-height: 180px;
+  }
+  .map-controls, .dashboard-tabs {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+c
