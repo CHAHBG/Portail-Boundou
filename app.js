@@ -671,41 +671,33 @@ function switchSection(sectionName) {
 }
 
 function switchDashboard(dashboardName) {
-  // Désactiver tous les onglets
   document.querySelectorAll('.dashboard-tab').forEach(btn => btn.classList.remove('active'));
-
-  // Activer l’onglet sélectionné
-  const activeTab = document.querySelector(`[data-dashboard="${dashboardName}"]`);
+  const activeTab = document.querySelector([data-dashboard="${dashboardName}"]);
   if (activeTab) activeTab.classList.add('active');
-
-  // Références aux éléments
+  
   const iframe = document.getElementById('dashboard-frame');
   const loading = document.querySelector('.dashboard-loading');
-
+  
   if (!iframe) return;
-
-  // URLs des dashboards
+  
   const urls = {
     'boundou': 'https://boundoudash.netlify.app/',
     'edl': 'https://edlinventairesboundou.netlify.app/'
   };
-
-  // Affiche le chargement
-  if (loading) loading.style.display = 'flex';
-
-  // Définir l'URL du dashboard
+  
+  if (loading) loading.style.display = 'block';
   iframe.src = urls[dashboardName] || '';
+  
+ // Fallback in case onload never fires
+const fallbackTimeout = setTimeout(() => {
+  if (loading) loading.style.display = 'none';
+}, 7000); // 7 seconds max wait
 
-  // Fallback si l'événement onload échoue (max 7 secondes)
-  const fallbackTimeout = setTimeout(() => {
-    if (loading) loading.style.display = 'none';
-  }, 7000);
-
-  // Lorsque le dashboard est complètement chargé
-  iframe.onload = function () {
-    clearTimeout(fallbackTimeout);
-    if (loading) loading.style.display = 'none';
-  };
+// When iframe is fully loaded
+iframe.onload = function() {
+  clearTimeout(fallbackTimeout); // cancel fallback
+  if (loading) loading.style.display = 'none';
+};
 }
 
 
