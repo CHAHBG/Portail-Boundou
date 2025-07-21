@@ -1,58 +1,53 @@
 🗺️ Portal Boundou - Système d'Information Géographique
-À propos du projet
-Le Portal Boundou est un système d'information géographique (SIG) dédié au suivi et à la gestion foncière dans la région de Boundou, Sénégal, dans le cadre du projet PROCASEF (Projet de Cadastre et de Sécurisation Foncière).
+🔍 Suivi et Gestion Foncière dans la Région de Boundou (Sénégal)
+📌 À propos du projet
+Portal Boundou est un Système d’Information Géographique (SIG) développé dans le cadre du Projet de Cadastre et de Sécurisation Foncière (PROCASEF). Il est destiné à la visualisation, au suivi et à l’analyse des données foncières dans les communes de la région de Boundou, au Sénégal.
 
 🎯 Objectifs
-Ce portail permet de :
+Ce portail a pour mission de :
 
-Visualiser les données foncières des communes de Boundou sur une carte interactive
+🗺️ Visualiser les données foncières des communes de Boundou via une carte interactive
 
-Suivre les indicateurs de performance du projet PROCASEF
+📈 Suivre les indicateurs de performance du projet PROCASEF
 
-Analyser la répartition des usages des terres par commune
+🌱 Analyser la répartition des usages des terres par commune
 
-Consulter les statistiques en temps réel sur l'avancement des travaux
+📊 Consulter les statistiques en temps réel sur l’avancement des travaux
 
-📊 Chiffres clés
-33 457 parcelles inventoriées
+📊 Chiffres clés (au 19 juillet 2025)
+Indicateur	Valeur
+Parcelles inventoriées	33 457
+Superficie totale couverte	149 905 408 m²
+Communes actives	13 sur 17
+Taux de réalisation global	47,8 %
+Parcelles avec NICAD	16 129 (48,2 %)
+Parcelles délibérées	6 484 (19,4 %)
 
-149 905 408 m² de superficie totale couverte
-
-13 communes actives sur 17 dans la zone d'intervention
-
-47.8% de taux de réalisation du projet
-
-16 129 parcelles avec NICAD (48.2%)
-
-6 484 parcelles délibérées (19.4%)
-
-🗺️ Fonctionnalités principales
-1. Carte Interactive
+🛠️ Fonctionnalités principales
+🗺️ Carte Interactive
 Visualisation géographique des 17 communes de Boundou
 
-Filtrage par commune et type d'usage
+Filtres par commune et type d’usage
 
-Légende colorée selon le nombre de parcelles (0-5, 6-10, 11+)
+Légende colorée (nombre de parcelles : 0–5, 6–10, 11+)
 
-Interface basée sur OpenStreetMap
+Fond de carte basé sur OpenStreetMap
 
-2. Tableaux de Bord
-Dashboard PROCASEF avec indicateurs clés
-
+📈 Tableaux de Bord (Dashboard PROCASEF)
 Suivi des parcelles identifiées et délibérées
 
-Projections mensuelles 2025
+Projections mensuelles (année 2025)
 
 Répartition par genre
 
 Top des communes par nombre de parcelles
 
-3. Statistiques
-Vue d'ensemble des 14 communes
+📊 Statistiques détaillées
+Vue d’ensemble des 14 communes avec données disponibles
 
-Répartition détaillée par types d'usage :
+Répartition par types d’usage :
 
-Agriculture (irriguée, pluviale, traditionnelle)
+Agriculture : irriguée, pluviale, traditionnelle
 
 Arboriculture
 
@@ -71,7 +66,7 @@ Industrie et équipements
 Jachère
 
 🏘️ Communes couvertes
-Le projet couvre les communes suivantes :
+Le projet couvre les 17 communes suivantes :
 
 BALABOU
 
@@ -99,21 +94,37 @@ NETTEBOULOU
 
 TOMBORONKO
 
-🔧 Utilisation
-Accès au portail : https://portalboundou.netlify.app/
+🔗 Accès et Navigation
+🌐 Portail Web : https://portalboundou.netlify.app/
 
-Navigation : Utilisez les onglets en haut (Carte Interactive, Tableaux de Bord, Statistiques)
+🧭 Navigation : Utilisez les onglets principaux :
 
-Filtres : Sélectionnez les communes et types d'usage souhaités
+Carte Interactive
 
-Données : Les informations sont mises à jour régulièrement (dernière MAJ : 19/07/2025)
+Tableaux de Bord
 
-🤝 Contribution
-Ce portail s'inscrit dans le cadre du projet PROCASEF visant à moderniser la gestion foncière au Sénégal et à sécuriser les droits de propriété dans la région de Boundou.
+Statistiques
 
-📞 Support
-Pour toute question ou assistance concernant l'utilisation du portail, veuillez contacter l'équipe du projet PROCASEF
-cheikhabgn@gmail.com
-+221778023851
+🔍 Filtres dynamiques : par commune, par usage foncier
 
-🌍 Développé pour le développement territorial et la sécurisation foncière de Boundou
+🔄 Données mises à jour régulièrement
+
+Dernière mise à jour : 19 juillet 2025
+
+🤝 Contribution au développement
+Ce portail est une initiative du projet PROCASEF pour :
+
+🛡️ Moderniser la gestion foncière au Sénégal
+
+📄 Sécuriser les droits de propriété des populations locales
+
+🌍 Soutenir le développement territorial de la région de Boundou
+
+📞 Support et contact
+Pour toute question, suggestion ou demande d’assistance :
+
+Contact Projet PROCASEF
+📧 cheikhabgn@gmail.com
+📞 +221 77 802 38 51
+
+© 2025 – Portal Boundou, pour un foncier sécurisé et accessible à tous.
