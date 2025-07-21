@@ -672,7 +672,7 @@ function switchSection(sectionName) {
 
 function switchDashboard(dashboardName) {
   document.querySelectorAll('.dashboard-tab').forEach(btn => btn.classList.remove('active'));
-  const activeTab = document.querySelector([data-dashboard="${dashboardName}"]);
+  const activeTab = document.querySelector(`[data-dashboard="${dashboardName}"]`);
   if (activeTab) activeTab.classList.add('active');
   
   const iframe = document.getElementById('dashboard-frame');
@@ -688,16 +688,14 @@ function switchDashboard(dashboardName) {
   if (loading) loading.style.display = 'block';
   iframe.src = urls[dashboardName] || '';
   
- // Fallback in case onload never fires
-const fallbackTimeout = setTimeout(() => {
-  if (loading) loading.style.display = 'none';
-}, 7000); // 7 seconds max wait
+  const fallbackTimeout = setTimeout(() => {
+    if (loading) loading.style.display = 'none';
+  }, 7000);
 
-// When iframe is fully loaded
-iframe.onload = function() {
-  clearTimeout(fallbackTimeout); // cancel fallback
-  if (loading) loading.style.display = 'none';
-};
+  iframe.onload = function() {
+    clearTimeout(fallbackTimeout);
+    if (loading) loading.style.display = 'none';
+  };
 }
 
 
