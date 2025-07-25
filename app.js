@@ -843,44 +843,106 @@ function switchDashboard(dashboardName) {
   // Réinitialiser l'état de chargement
   if (loading) {
     loading.style.display = 'block';
+    loading.innerHTML = '<div class="loading-spinner"></div><p>Chargement du tableau de bord...</p>';
   }
+  
+  // Nettoyer les anciens gestionnaires d'événements
+  iframe.onload = null;
+  iframe.onerror = null;
   
   // Vider l'iframe avant de charger la nouvelle URL
   iframe.src = 'about:blank';
   
-  // Petit délai pour assurer le nettoyage
-  setTimeout(() => {
-    iframe.src = urls[dashboardName] || '';
-  }, 100);
+  // Variables pour gérer les timeouts
+  let loadingTimeout;
+  let fallbackTimeout;
   
-  // Timeout de sécurité pour masquer le chargement
-  const fallbackTimeout = setTimeout(() => {
+  // Fonction pour masquer le loading
+  function hideLoading() {
     if (loading) {
       loading.style.display = 'none';
     }
-  }, 10000); // Augmenté à 10 secondes
+    // Nettoyer les timeouts
+    if (loadingTimeout) clearTimeout(loadingTimeout);
+    if (fallbackTimeout) clearTimeout(fallbackTimeout);
+  }
   
-  // Gestionnaire de chargement avec nettoyage du timeout
-  iframe.onload = function() {
-    clearTimeout(fallbackTimeout);
-    if (loading) {
-      // Petit délai pour laisser le contenu se stabiliser
-      setTimeout(() => {
-        loading.style.display = 'none';
-      }, 500);
+  // Fonction pour vérifier si l'iframe est chargé
+  function checkIframeLoaded() {
+    try {
+      // Tentative d'accès au contenu de l'iframe (peut échouer avec CORS)
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (iframeDoc && iframeDoc.readyState === 'complete') {
+        hideLoading();
+        return true;
+      }
+    } catch (e) {
+      // Erreur CORS normale pour les domaines externes
+      // On considère que l'iframe est chargé après un délai raisonnable
     }
+    return false;
+  }
+  
+  // Charger la nouvelle URL après un petit délai
+  setTimeout(() => {
+    iframe.src = urls[dashboardName] || '';
+    
+    // Démarrer le timeout de chargement (3 secondes)
+    loadingTimeout = setTimeout(() => {
+      hideLoading();
+      console.log('Dashboard loading timeout - masquage du loading');
+    }, 3000);
+    
+    // Timeout de sécurité (8 secondes)
+    fallbackTimeout = setTimeout(() => {
+      hideLoading();
+      console.log('Dashboard fallback timeout - masquage forcé du loading');
+    }, 8000);
+    
+    // Vérification périodique du chargement
+    const checkInterval = setInterval(() => {
+      if (checkIframeLoaded()) {
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    
+    // Nettoyer l'intervalle après 10 secondes
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
+    
+  }, 100);
+  
+  // Gestionnaire onload (peut ne pas se déclencher avec les domaines externes)
+  iframe.onload = function() {
+    console.log('Iframe onload event triggered');
+    hideLoading();
   };
   
   // Gestionnaire d'erreur
   iframe.onerror = function() {
-    clearTimeout(fallbackTimeout);
+    console.log('Iframe error event triggered');
     if (loading) {
-      loading.innerHTML = '<p>Erreur de chargement du tableau de bord</p>';
-      setTimeout(() => {
-        loading.style.display = 'none';
-      }, 2000);
+      loading.innerHTML = '<p>❌ Erreur de chargement du tableau de bord</p>';
+      setTimeout(hideLoading, 2000);
     }
   };
+  
+  // Alternative : Utiliser postMessage si les dashboards le supportent
+  window.addEventListener('message', function(event) {
+    // Vérifier que le message vient d'un de nos dashboards
+    const allowedOrigins = [
+      'https://boundoudash.netlify.app',
+      'https://edlinventairesboundou.netlify.app'
+    ];
+    
+    if (allowedOrigins.includes(event.origin)) {
+      if (event.data === 'dashboard-loaded' || event.data.type === 'dashboard-loaded') {
+        console.log('Dashboard loaded via postMessage');
+        hideLoading();
+      }
+    }
+  });
 }
 
 function toggleTheme() {
