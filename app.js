@@ -9,12 +9,29 @@ let filteredParcellesData = []; // Pour les données filtrées
 
 // Configuration des communes avec statut d'opération
 const communesConfig = {
-  'KOUSSAN': { status: 'active', hasOperations: true },
-  'DOUGUE': { status: 'active', hasOperations: true },
-  'BANI ISRAEL': { status: 'active', hasOperations: true },
-  'SINTHIOU MALEME': { status: 'pending', hasOperations: false },
+  // Communes avec opérations en cours (selon vos données)
+  'NDOGA BABACAR': { status: 'active', hasOperations: true },
+  'MISSIRAH': { status: 'active', hasOperations: true },
+  'BANDAFASSI': { status: 'active', hasOperations: true },
+  'NETTEBOULOU': { status: 'active', hasOperations: true },
+  'FONGOLEMBI': { status: 'active', hasOperations: true },
+  'DIMBOLI': { status: 'active', hasOperations: true },
+  'GABOU': { status: 'active', hasOperations: true },
+  'BEMBOU': { status: 'active', hasOperations: true },
+  'DINDEFELLO': { status: 'active', hasOperations: true },
+  'TOMBORONKOTO': { status: 'active', hasOperations: true },
+  'BALLOU': { status: 'active', hasOperations: true },
+  'MOUDERY': { status: 'active', hasOperations: true },
+  'BALA': { status: 'active', hasOperations: true },
+  'KOAR': { status: 'active', hasOperations: true },
+  
+  // Communes avec opérations non démarrées
   'SABODALA': { status: 'pending', hasOperations: false },
-  'MEDINA BAFFE': { status: 'pending', hasOperations: false }
+  'MEDINA BAFFE': { status: 'pending', hasOperations: false },
+  'SINTHIOU MALEME': { status: 'pending', hasOperations: false }
+  
+  // Note: KOUSSAN, DOUGUE, BANI ISRAEL ne sont plus dans vos données
+  // Les communes restantes du GeoJSON (sans configuration) seront considérées comme "hors zone"
 };
 
 // Colors palette
@@ -105,6 +122,38 @@ function validateData(communesData, parcellesData) {
   return errors;
 }
 
+// Fonction pour débugger les données
+function debugData() {
+  console.log('=== DEBUG BOUNDOU DASHBOARD ===');
+  console.log('Communes dans GeoJSON:', communesData?.features?.map(f => getCommuneName(f.properties)));
+  console.log('Communes dans parcelles:', [...new Set(parcellesData.map(p => p.commune).filter(Boolean))]);
+  console.log('Configuration communes:', Object.keys(communesConfig));
+  
+  // Analyse détaillée par commune
+  const communesAvecParcelles = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))];
+  console.log('Analyse par commune:', 
+    communesAvecParcelles.map(commune => ({
+      commune,
+      count: parcellesData.filter(p => p.commune === commune).length,
+      config: communesConfig[commune.toUpperCase()] || 'Non configurée',
+      status: communesConfig[commune.toUpperCase()]?.status || 'non défini'
+    }))
+  );
+  
+  // Vérifier les communes du GeoJSON sans parcelles
+  const communesGeoJSON = communesData?.features?.map(f => getCommuneName(f.properties)) || [];
+  const communesSansParcelles = communesGeoJSON.filter(c => !communesAvecParcelles.includes(c));
+  console.log('Communes du GeoJSON sans parcelles:', communesSansParcelles);
+  
+  // Statistiques générales
+  console.log('Statistiques générales:', {
+    totalParcelles: parcellesData.length,
+    totalCommunesAvecParcelles: communesAvecParcelles.length,
+    totalCommunesGeoJSON: communesGeoJSON.length,
+    filteredParcelles: filteredParcellesData.length
+  });
+}
+
 // Data loading functions
 async function loadExternalData() {
   try {
@@ -140,6 +189,9 @@ async function loadExternalData() {
     console.log('Communes dans GeoJSON:', communeNames);
     console.log('Communes dans parcelles:', parcelleCommunes);
     
+    // *** AJOUT : Appel de la fonction debug après chargement des données ***
+    debugData();
+    
     showToast('Données chargées avec succès!', 'success');
     return true;
     
@@ -152,6 +204,10 @@ async function loadExternalData() {
     communesData = getSampleGeoJSON();
     parcellesData = getSampleParcelles();
     filteredParcellesData = [...parcellesData];
+    
+    // Debug même avec les données d'exemple
+    debugData();
+    
     return false;
   }
 }
@@ -216,6 +272,10 @@ function calculateCommuneStats(commune, dataSource = parcellesData) {
 
 // Nouvelle fonction pour obtenir la couleur basée sur le statut d'opération
 function getColorByOperationStatus(communeName, parcelleCount) {
+  if (!communeName || typeof communeName !== 'string') {
+    return '#F0F0F0'; // Gris pour données invalides
+  }
+  
   const config = communesConfig[communeName.toUpperCase()];
   
   if (!config) {
@@ -228,7 +288,7 @@ function getColorByOperationStatus(communeName, parcelleCount) {
     return colors.operationsPending;
   }
   
-  // Opérations en cours - couleur basée sur l'intensité
+  // Opérations en cours - couleur verte
   return colors.operationsActive;
 }
 
@@ -538,17 +598,19 @@ function createCommunesChart() {
   const ctx = document.getElementById('communes-chart');
   if (!ctx || !communesData || !communesData.features) return;
   
-  // Filtrer pour ne montrer que les communes avec des opérations
-  const communeNames = communesData.features
-    .map(f => getCommuneName(f.properties))
-    .filter(name => {
-      const config = communesConfig[name.toUpperCase()];
-      return config && config.hasOperations;
-    });
-    
+  // *** CORRECTION ***
+  // Afficher toutes les communes qui ont des parcelles, avec couleurs différentes selon le statut
+  const communeNames = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))].sort();
   const parcelleCounts = communeNames.map(name => 
     calculateCommuneStats(name, filteredParcellesData).totalParcelles
   );
+  
+  // Définir les couleurs selon le statut de chaque commune
+  const backgroundColors = communeNames.map(name => {
+    const config = communesConfig[name.toUpperCase()];
+    if (!config) return '#F0F0F0'; // Hors zone
+    return config.status === 'active' ? colors.operationsActive : colors.operationsPending;
+  });
   
   if (currentCharts.communes) {
     currentCharts.communes.destroy();
@@ -561,7 +623,7 @@ function createCommunesChart() {
       datasets: [{
         label: 'Nombre de parcelles levées',
         data: parcelleCounts,
-        backgroundColor: colors.chartColors.slice(0, communeNames.length),
+        backgroundColor: backgroundColors,
         borderRadius: 4,
         borderWidth: 1,
         borderColor: '#fff'
@@ -591,7 +653,16 @@ function createCommunesChart() {
         tooltip: {
           callbacks: {
             label: function(context) {
-              return `${context.label}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''} levée${context.parsed.y > 1 ? 's' : ''}`;
+              const communeName = context.label;
+              const config = communesConfig[communeName.toUpperCase()];
+              let status = 'Hors zone PROCASEF';
+              if (config) {
+                status = config.status === 'active' ? 'Opérations en cours' : 'Opérations non démarrées';
+              }
+              return [
+                `${context.label}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''} levée${context.parsed.y > 1 ? 's' : ''}`,
+                `Statut: ${status}`
+              ];
             }
           }
         }
@@ -912,17 +983,12 @@ function initializeFilters() {
   communeSelect.innerHTML = '<option value="">Toutes les communes</option>';
   usageSelect.innerHTML = '<option value="">Tous les usages</option>';
   
-  // Populate commune filter - seulement les communes avec opérations
-  // CORRECTION: Filtrer d'abord les valeurs null/undefined
+  // *** CORRECTION PRINCIPALE *** 
+  // Utiliser toutes les communes qui ont des parcelles, pas seulement celles avec hasOperations: true
   const communes = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))]
-    .filter(commune => {
-      // CORRECTION: Vérifier que commune est une chaîne non vide avant d'appeler toUpperCase()
-      if (!commune || typeof commune !== 'string') return false;
-      
-      const config = communesConfig[commune.toUpperCase()];
-      return config && config.hasOperations;
-    })
     .sort();
+    
+  console.log('Communes trouvées pour le filtre:', communes); // Debug
     
   communes.forEach(commune => {
     const option = document.createElement('option');
@@ -933,7 +999,7 @@ function initializeFilters() {
   
   // Populate usage filter - avec vérification des valeurs null
   const usageSet = new Set(
-    parcellesData.map(p => p.type_usag).filter(Boolean) // filtre les null/undefined
+    parcellesData.map(p => p.type_usag).filter(Boolean)
   );
   const usages = Array.from(usageSet).sort();
   usages.forEach(usage => {
@@ -946,19 +1012,14 @@ function initializeFilters() {
 
 // Update global statistics
 function updateGlobalStats() {
-  // Utiliser filteredParcellesData au lieu de parcellesData pour les statistiques
   const dataToUse = filteredParcellesData.length > 0 ? filteredParcellesData : parcellesData;
   
-  // Compter seulement les communes avec des opérations actives
-  // CORRECTION: Filtrer d'abord les valeurs null/undefined avant d'appeler toUpperCase()
-  const communesAvecOperations = new Set(
+  // *** CORRECTION *** 
+  // Compter toutes les communes qui ont des parcelles (pas seulement celles avec hasOperations)
+  const communesAvecParcelles = new Set(
     dataToUse
       .map(p => p.commune)
-      .filter(commune => commune && typeof commune === 'string') // ← Ajout de cette vérification
-      .filter(commune => {
-        const config = communesConfig[commune.toUpperCase()];
-        return config && config.hasOperations;
-      })
+      .filter(commune => commune && typeof commune === 'string')
   ).size;
   
   const totalParcelles = dataToUse.length;
@@ -973,7 +1034,7 @@ function updateGlobalStats() {
   const nicadPercentageEl = document.getElementById('nicad-percentage-global');
   const delibereesPercentageEl = document.getElementById('deliberees-percentage-global');
   
-  if (totalCommunesEl) totalCommunesEl.textContent = communesAvecOperations;
+  if (totalCommunesEl) totalCommunesEl.textContent = communesAvecParcelles;
   if (totalParcellesEl) totalParcellesEl.textContent = totalParcelles;
   if (superficieEl) superficieEl.textContent = superficieGlobale.toFixed(1);
   
