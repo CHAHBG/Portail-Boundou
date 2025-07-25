@@ -357,6 +357,7 @@ function showCommuneDetails(communeName) {
   }, 500);
 
   panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth' });
   setTimeout(() => {
     createUsageChart(stats.typesUsage);
     createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
