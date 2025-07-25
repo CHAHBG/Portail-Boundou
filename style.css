@@ -220,13 +220,13 @@
     --color-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
     --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
 
-    /* Boundou SIG Portal Dark Mode */
-    --color-bg-main: #1B3B59;
-    --color-surface: #2A4A6A;
-    --color-text-main: #F5E6D3;
-    --color-text-secondary: rgba(245, 230, 211, 0.8);
-    --color-card-bg: rgba(42, 74, 106, 0.9);
-    --color-border: rgba(245, 230, 211, 0.2);
+        /* Common style patterns - updated for dark mode */
+    --focus-ring: 0 0 0 3px var(--color-focus-ring);
+    --focus-outline: 2px solid var(--color-primary);
+    --status-bg-opacity: 0.15;
+    --status-border-opacity: 0.25;
+    --select-caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    --select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 
     /* RGB versions for dark mode */
     --color-success-rgb: var(--color-teal-300-rgb);
@@ -235,6 +235,7 @@
     --color-info-rgb: var(--color-gray-300-rgb);
   }
 }
+
 
 /* Data attribute for manual theme switching */
 [data-color-scheme="dark"] {
@@ -279,13 +280,13 @@
   --color-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
   --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
 
-  /* Boundou SIG Portal Dark Mode */
-  --color-bg-main: #1B3B59;
-  --color-surface: #2A4A6A;
-  --color-text-main: #F5E6D3;
-  --color-text-secondary: rgba(245, 230, 211, 0.8);
-  --color-card-bg: rgba(42, 74, 106, 0.9);
-  --color-border: rgba(245, 230, 211, 0.2);
+  /* Common style patterns - updated for dark mode */
+  --focus-ring: 0 0 0 3px var(--color-focus-ring);
+  --focus-outline: 2px solid var(--color-primary);
+  --status-bg-opacity: 0.15;
+  --status-border-opacity: 0.25;
+  --select-caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  --select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 
   /* RGB versions for dark mode */
   --color-success-rgb: var(--color-teal-300-rgb);
@@ -293,6 +294,7 @@
   --color-warning-rgb: var(--color-orange-400-rgb);
   --color-info-rgb: var(--color-gray-300-rgb);
 }
+
 
 [data-color-scheme="light"] {
   /* RGB versions for opacity control (light mode) */
