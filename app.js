@@ -913,8 +913,12 @@ function initializeFilters() {
   usageSelect.innerHTML = '<option value="">Tous les usages</option>';
   
   // Populate commune filter - seulement les communes avec opérations
+  // CORRECTION: Filtrer d'abord les valeurs null/undefined
   const communes = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))]
     .filter(commune => {
+      // CORRECTION: Vérifier que commune est une chaîne non vide avant d'appeler toUpperCase()
+      if (!commune || typeof commune !== 'string') return false;
+      
       const config = communesConfig[commune.toUpperCase()];
       return config && config.hasOperations;
     })
@@ -946,9 +950,11 @@ function updateGlobalStats() {
   const dataToUse = filteredParcellesData.length > 0 ? filteredParcellesData : parcellesData;
   
   // Compter seulement les communes avec des opérations actives
+  // CORRECTION: Filtrer d'abord les valeurs null/undefined avant d'appeler toUpperCase()
   const communesAvecOperations = new Set(
     dataToUse
       .map(p => p.commune)
+      .filter(commune => commune && typeof commune === 'string') // ← Ajout de cette vérification
       .filter(commune => {
         const config = communesConfig[commune.toUpperCase()];
         return config && config.hasOperations;
