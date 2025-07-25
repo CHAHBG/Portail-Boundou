@@ -1,3 +1,4 @@
+// === Boundou Dashboard Application ===
 // Global variables
 let map;
 let communesLayer;
@@ -11,10 +12,10 @@ let filteredParcellesData = [];
 const communesConfig = {
   'NDOGA BABACAR': { status: 'active', hasOperations: true },
   'MISSIRAH': { status: 'active', hasOperations: true },
-  'BANDAFASSI': { status: 'completed', hasOperations: true }, // Modifié : terminé
+  'BANDAFASSI': { status: 'completed', hasOperations: true },
   'NETTEBOULOU': { status: 'active', hasOperations: true },
-  'FONGOLEMBI': { status: 'completed', hasOperations: true }, // Modifié : terminé
-  'DIMBOLI': { status: 'completed', hasOperations: true }, // Modifié : terminé
+  'FONGOLEMBI': { status: 'completed', hasOperations: true },
+  'DIMBOLI': { status: 'completed', hasOperations: true },
   'GABOU': { status: 'active', hasOperations: true },
   'BEMBOU': { status: 'active', hasOperations: true },
   'DINDEFELLO': { status: 'active', hasOperations: true },
@@ -35,16 +36,16 @@ const colors = {
   accent: '#4A7C59',
   warning: '#F4A460',
   background: '#F5E6D3',
-  operationsActive: '#2E8B57',    // Vert pour opérations en cours
-  operationsCompleted: '#4682B4', // Bleu pour opérations terminées
-  operationsPending: '#D3D3D3',   // Gris pour opérations non démarrées
+  operationsActive: '#2E8B57',
+  operationsCompleted: '#4682B4',
+  operationsPending: '#D3D3D3',
   operationsActiveHover: '#228B22',
   operationsCompletedHover: '#3A6B9C',
   operationsPendingHover: '#A9A9A9',
   chartColors: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5', '#5D878F', '#DB4545', '#D2BA4C', '#964325', '#944454', '#13343B']
 };
 
-// Utility functions
+// === Utility Functions ===
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -75,14 +76,13 @@ function animateValue(element, start, end, duration = 1000) {
   requestAnimationFrame(update);
 }
 
-// Nouvelle fonction pour faire clignoter une couche
 function blinkLayer(layer, duration = 2000, interval = 300) {
   let isVisible = true;
   const start = performance.now();
 
   function blink(currentTime) {
     if (currentTime - start > duration) {
-      layer.setStyle({ fillOpacity: 0.7 }); // Restaurer l'opacité par défaut
+      layer.setStyle({ fillOpacity: 0.7 });
       return;
     }
     layer.setStyle({ fillOpacity: isVisible ? 0.7 : 0.2 });
@@ -92,7 +92,6 @@ function blinkLayer(layer, duration = 2000, interval = 300) {
   requestAnimationFrame(blink);
 }
 
-// Fonction de validation des données
 function validateData(communesData, parcellesData) {
   const errors = [];
   if (!communesData || !communesData.features || !Array.isArray(communesData.features)) {
@@ -104,7 +103,6 @@ function validateData(communesData, parcellesData) {
   return errors;
 }
 
-// Fonction pour débugger les données
 function debugData() {
   console.log('=== DEBUG BOUNDOU DASHBOARD ===');
   console.log('Communes dans GeoJSON:', communesData?.features?.map(f => getCommuneName(f.properties)));
@@ -112,7 +110,7 @@ function debugData() {
   console.log('Configuration communes:', Object.keys(communesConfig));
 }
 
-// Data loading functions
+// === Data Loading Functions ===
 async function loadExternalData() {
   try {
     showToast('Chargement des données...', 'info');
@@ -170,7 +168,7 @@ function getSampleParcelles() {
   }];
 }
 
-// Data processing functions
+// === Data Processing Functions ===
 function calculateCommuneStats(commune, dataSource = parcellesData) {
   const communeParcelles = dataSource.filter(p => p.commune === commune);
   return {
@@ -198,11 +196,12 @@ function getCommuneName(properties) {
   return properties?.CCRCA_1 || properties?.CCRCA || properties?.NOM || 'Commune inconnue';
 }
 
-// Map functions
+// === Map Functions ===
 function initializeMap() {
   const mapElement = document.getElementById('map');
   if (!mapElement) {
     console.warn('Element map non trouvé');
+    showToast('Erreur : conteneur de la carte non trouvé', 'error');
     return;
   }
 
@@ -284,7 +283,6 @@ function loadCommunesLayer() {
   if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
 }
 
-// Nouvelle fonction pour zoomer et faire clignoter une commune
 function zoomToCommune(communeName, layer) {
   const feature = communesData.features.find(f => getCommuneName(f.properties) === communeName);
   if (!feature || !layer) return;
@@ -295,28 +293,44 @@ function zoomToCommune(communeName, layer) {
 }
 
 function updateMapLegend() {
-  const legendElement = document.querySelector('.map-legend');
-  if (!legendElement) return;
+  let legendElement = document.querySelector('.map-legend');
+  
+  if (!legendElement) {
+    console.warn('Élément .map-legend non trouvé, création dynamique...');
+    legendElement = document.createElement('div');
+    legendElement.className = 'map-legend';
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+      mapContainer.appendChild(legendElement);
+    } else {
+      console.error('Conteneur de la carte non trouvé pour ajouter la légende');
+      showToast('Erreur : impossible d\'afficher la légende', 'error');
+      return;
+    }
+  }
 
   legendElement.innerHTML = `
     <h4>Légende</h4>
     <div class="legend-item">
-      <span class="legend-color" style="background: ${colors.operationsActive}"></span>
+      <span class="legend-color" style="background: ${colors.operationsActive};"></span>
       <span>Opérations foncières en cours</span>
     </div>
     <div class="legend-item">
-      <span class="legend-color" style="background: ${colors.operationsCompleted}"></span>
+      <span class="legend-color" style="background: ${colors.operationsCompleted};"></span>
       <span>Opérations foncières terminées</span>
     </div>
     <div class="legend-item">
-      <span class="legend-color" style="background: ${colors.operationsPending}"></span>
+      <span class="legend-color" style="background: ${colors.operationsPending};"></span>
       <span>Opérations foncières non démarrées</span>
     </div>
     <div class="legend-item">
-      <span class="legend-color" style="background: #F0F0F0; border: 1px dashed #999"></span>
+      <span class="legend-color" style="background: #F0F0F0; border: 1px dashed #999;"></span>
       <span>Hors zone PROCASEF</span>
     </div>
   `;
+
+  legendElement.style.display = 'block';
+  console.log('Légende mise à jour avec succès');
 }
 
 function showCommuneDetails(communeName) {
@@ -342,14 +356,13 @@ function showCommuneDetails(communeName) {
     createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
   }, 600);
 
-  // Zoom et clignotement sur la commune
   const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
   if (layer) zoomToCommune(communeName, layer);
 
   showToast(`Détails chargés pour ${communeName}`, 'success');
 }
 
-// Chart functions
+// === Chart Functions ===
 function createUsageChart(typesUsage) {
   const ctx = document.getElementById('usage-chart');
   if (!ctx) return;
@@ -405,13 +418,6 @@ function createStatusChart(nicadCount, delibereesCount, total) {
       animation: { duration: 1000, easing: 'easeInOutQuart' }
     }
   });
-}
-
-function createGlobalCharts() {
-  setTimeout(() => {
-    createCommunesChart();
-    createGlobalUsageChart();
-  }, 300);
 }
 
 function createCommunesChart() {
@@ -531,7 +537,7 @@ function createGlobalUsageChart() {
   });
 }
 
-// Event handlers
+// === Event Handlers ===
 function initializeEventHandlers() {
   document.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => switchSection(button.dataset.section));
@@ -569,7 +575,10 @@ function switchSection(sectionName) {
   document.getElementById(`${sectionName}-section`)?.classList.add('active');
 
   if (sectionName === 'stats') createGlobalCharts();
-  else if (sectionName === 'map') setTimeout(() => map?.invalidateSize(), 100);
+  else if (sectionName === 'map') {
+    setTimeout(() => map?.invalidateSize(), 100);
+    updateMapLegend();
+  }
 }
 
 function switchDashboard(dashboardName) {
@@ -588,7 +597,6 @@ function switchDashboard(dashboardName) {
   if (loading) loading.style.display = 'block';
   iframe.src = urls[dashboardName] || '';
 
-  // Masquer le loading après le chargement complet
   iframe.onload = () => {
     if (loading) loading.style.display = 'none';
     showToast(`Dashboard ${dashboardName} chargé`, 'success');
@@ -628,7 +636,6 @@ function applyFilters() {
   if (communesLayer) loadCommunesLayer();
   createGlobalCharts();
 
-  // Zoom et clignotement si une commune est sélectionnée
   if (communeValue) {
     const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
     if (layer) zoomToCommune(communeValue, layer);
@@ -716,6 +723,13 @@ function updateGlobalStats() {
   }
 }
 
+function createGlobalCharts() {
+  setTimeout(() => {
+    createCommunesChart();
+    createGlobalUsageChart();
+  }, 300);
+}
+
 function initializeTheme() {
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.dataset.colorScheme = savedTheme;
@@ -783,14 +797,6 @@ function registerServiceWorker() {
       .then(reg => console.log('Service Worker registered:', reg))
       .catch(err => console.warn('Service Worker registration failed:', err));
   }
-}
-
-function validateParcelleData(parcelle) {
-  const required = ['id_parcelle', 'commune'];
-  const errors = [];
-  required.forEach(field => !parcelle[field] && errors.push(`Champ requis manquant: ${field}`));
-  if (parcelle.superficie && isNaN(parseFloat(parcelle.superficie))) errors.push('Superficie doit être un nombre');
-  return errors;
 }
 
 function initializeSearch() {
