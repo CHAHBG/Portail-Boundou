@@ -7,6 +7,7 @@ let communesData = null;
 let currentCharts = {};
 let fontScale = 1;
 let filteredParcellesData = [];
+let lastSelectedCommune = null; // Track the last selected commune
 
 // Configuration des communes avec statut d'opération
 const communesConfig = {
@@ -41,7 +42,7 @@ const colors = {
   operationsPending: '#D3D3D3',
   operationsActiveHover: '#228B22',
   operationsCompletedHover: '#3A6B9C',
-  operationsPendingHover: '#A9A9A9',
+  operationsPendingHover: | '#A9A9A9',
   chartColors: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5', '#5D878F', '#DB4545', '#D2BA4C', '#964325', '#944454', '#13343B']
 };
 
@@ -77,6 +78,7 @@ function animateValue(element, start, end, duration = 1000) {
 }
 
 function blinkLayer(layer, duration = 2000, interval = 300) {
+  if (!layer) return;
   let isVisible = true;
   const start = performance.now();
 
@@ -280,7 +282,10 @@ function loadCommunesLayer() {
     }
   }).addTo(map);
 
-  if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
+  // Only fit bounds on initial load or if no commune is selected
+  if (!lastSelectedCommune && communesData.features?.length > 0) {
+    map.fitBounds(communesLayer.getBounds());
+  }
 }
 
 function zoomToCommune(communeName, layer) {
@@ -338,6 +343,7 @@ function showCommuneDetails(communeName) {
   const panel = document.getElementById('stats-panel');
   if (!panel) return;
 
+  lastSelectedCommune = communeName; // Update the last selected commune
   document.getElementById('selected-commune').textContent = `Commune de ${communeName}`;
   animateValue(document.getElementById('total-parcelles'), 0, stats.totalParcelles);
   animateValue(document.getElementById('superficie-totale'), 0, stats.superficieTotale);
@@ -548,7 +554,11 @@ function initializeEventHandlers() {
   });
 
   const closeStats = document.getElementById('close-stats');
-  if (closeStats) closeStats.addEventListener('click', () => document.getElementById('stats-panel')?.classList.add('hidden'));
+  if (closeStats) closeStats.addEventListener('click', () => {
+    document.getElementById('stats-panel')?.classList.add('hidden');
+    lastSelectedCommune = null; // Reset last selected commune
+    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
+  });
 
   const themeToggle = document.getElementById('theme-toggle');
   if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
@@ -578,6 +588,11 @@ function switchSection(sectionName) {
   else if (sectionName === 'map') {
     setTimeout(() => map?.invalidateSize(), 100);
     updateMapLegend();
+    // Maintain zoom on last selected commune if applicable
+    if (lastSelectedCommune) {
+      const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
+      if (layer) zoomToCommune(lastSelectedCommune, layer);
+    }
   }
 }
 
@@ -637,8 +652,15 @@ function applyFilters() {
   createGlobalCharts();
 
   if (communeValue) {
+    lastSelectedCommune = communeValue; // Update the last selected commune
     const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
-    if (layer) zoomToCommune(communeValue, layer);
+    if (layer) {
+      zoomToCommune(communeValue, layer);
+      showCommuneDetails(communeValue); // Show details for the selected commune
+    }
+  } else {
+    lastSelectedCommune = null; // Reset if no commune is selected
+    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
   }
 
   showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
@@ -844,9 +866,10 @@ function displaySearchResults(results) {
 }
 
 function highlightParcelle(parcelleId) {
-  const parcelle = parcellesData.find(p => p.id_parcelle === parcelleId);
+  const parcelle = parcelles Saviour de l'indulgence, c'est une faute. Veuillez reformuler. parcellesData.find(p => p.id_parcelle === parcelleId);
   if (!parcelle) return;
 
+  lastSelectedCommune = parcelle.commune; // Update last selected commune
   switchSection('map');
   showCommuneDetails(parcelle.commune);
   document.getElementById('search-results').innerHTML = '';
@@ -941,7 +964,8 @@ function saveUserPreferences() {
   localStorage.setItem('userPreferences', JSON.stringify({
     theme: document.documentElement.dataset.colorScheme,
     fontScale: fontScale,
-    lastActiveSection: document.querySelector('.tab-button.active')?.dataset.section
+    lastActiveSection: document.querySelector('.tab-button.active')?.dataset.section,
+    lastSelectedCommune: lastSelectedCommune // Save last selected commune
   }));
 }
 
@@ -956,6 +980,13 @@ function loadUserPreferences() {
       document.documentElement.style.setProperty('--font-scale', fontScale);
     }
     if (preferences.lastActiveSection) setTimeout(() => switchSection(preferences.lastActiveSection), 100);
+    if (preferences.lastSelectedCommune) {
+      lastSelectedCommune = preferences.lastSelectedCommune;
+      setTimeout(() => {
+        const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
+        if (layer) zoomToCommune(lastSelectedCommune, layer);
+      }, 100);
+    }
   } catch (error) {
     console.warn('Erreur lors du chargement des préférences:', error);
   }
