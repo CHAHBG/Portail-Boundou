@@ -7,6 +7,16 @@ let currentCharts = {};
 let fontScale = 1;
 let filteredParcellesData = []; // Pour les données filtrées
 
+// Configuration des communes avec statut d'opération
+const communesConfig = {
+  'KOUSSAN': { status: 'active', hasOperations: true },
+  'DOUGUE': { status: 'active', hasOperations: true },
+  'BANI ISRAEL': { status: 'active', hasOperations: true },
+  'SINTHIOU MALEME': { status: 'pending', hasOperations: false },
+  'SABODALA': { status: 'pending', hasOperations: false },
+  'MEDINA BAFFE': { status: 'pending', hasOperations: false }
+};
+
 // Colors palette
 const colors = {
   primary: '#1B3B59',
@@ -14,6 +24,11 @@ const colors = {
   accent: '#4A7C59',
   warning: '#F4A460',
   background: '#F5E6D3',
+  // Nouvelles couleurs pour les statuts d'opération
+  operationsActive: '#2E8B57',    // Vert pour opérations en cours
+  operationsPending: '#D3D3D3',   // Gris pour opérations non démarrées
+  operationsActiveHover: '#228B22',
+  operationsPendingHover: '#A9A9A9',
   chartColors: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5', '#5D878F', '#DB4545', '#D2BA4C', '#964325', '#944454', '#13343B']
 };
 
@@ -199,11 +214,22 @@ function calculateCommuneStats(commune, dataSource = parcellesData) {
   };
 }
 
-function getColorByParcelleCount(count) {
-  if (count === 0) return '#E5E5E5';
-  if (count <= 1) return colors.primary;
-  if (count <= 2) return colors.accent; 
-  return colors.warning;
+// Nouvelle fonction pour obtenir la couleur basée sur le statut d'opération
+function getColorByOperationStatus(communeName, parcelleCount) {
+  const config = communesConfig[communeName.toUpperCase()];
+  
+  if (!config) {
+    // Commune non configurée (hors zone PROCASEF)
+    return '#F0F0F0'; // Gris très clair
+  }
+  
+  if (config.status === 'pending') {
+    // Opérations non démarrées
+    return colors.operationsPending;
+  }
+  
+  // Opérations en cours - couleur basée sur l'intensité
+  return colors.operationsActive;
 }
 
 function getCommuneName(properties) {
@@ -226,6 +252,7 @@ function initializeMap() {
   }).addTo(map);
   
   loadCommunesLayer();
+  updateMapLegend();
 }
 
 function loadCommunesLayer() {
@@ -240,30 +267,56 @@ function loadCommunesLayer() {
       const communeName = getCommuneName(feature.properties);
       const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
       const count = communeStats.totalParcelles;
+      const config = communesConfig[communeName.toUpperCase()];
+      
+      let fillColor = getColorByOperationStatus(communeName, count);
+      let opacity = 0.7;
+      
+      // Si c'est une commune hors zone PROCASEF, réduire l'opacité
+      if (!config) {
+        opacity = 0.3;
+      }
       
       return {
-        fillColor: getColorByParcelleCount(count),
+        fillColor: fillColor,
         weight: 2,
         opacity: 1,
         color: '#2C2C2C',
-        dashArray: '3',
-        fillOpacity: 0.7
+        dashArray: config ? '0' : '5,5', // Ligne pointillée pour les communes hors zone
+        fillOpacity: opacity
       };
     },
     onEachFeature: function(feature, layer) {
       const communeName = getCommuneName(feature.properties);
       const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
+      const config = communesConfig[communeName.toUpperCase()];
+      
+      let statusText = 'Hors zone PROCASEF';
+      let buttonHtml = '';
+      
+      if (config) {
+        statusText = config.status === 'active' ? 
+          'Opérations foncières en cours' : 
+          'Opérations foncières non démarrées';
+        
+        if (config.hasOperations && communeStats.totalParcelles > 0) {
+          buttonHtml = `
+            <button onclick="showCommuneDetails('${communeName}')" class="btn btn--primary btn--sm">
+              Voir les détails
+            </button>
+          `;
+        }
+      }
       
       const popupContent = `
         <div class="popup-content">
           <h3>${communeName}</h3>
           <p><strong>Région:</strong> ${feature.properties.REG || 'N/A'}</p>
           <p><strong>Département:</strong> ${feature.properties.DEPT || 'N/A'}</p>
-          <p><strong>Parcelles:</strong> ${communeStats.totalParcelles}</p>
-          <p><strong>Superficie:</strong> ${communeStats.superficieTotale.toFixed(1)} ha</p>
-          <button onclick="showCommuneDetails('${communeName}')" class="btn btn--primary btn--sm">
-            Voir les détails
-          </button>
+          <p><strong>Statut:</strong> <span class="status-${config?.status || 'none'}">${statusText}</span></p>
+          <p><strong>Parcelles levées:</strong> ${communeStats.totalParcelles}</p>
+          <p><strong>Superficie totale:</strong> ${communeStats.superficieTotale.toFixed(1)} ha</p>
+          ${buttonHtml}
         </div>
       `;
       
@@ -274,14 +327,16 @@ function loadCommunesLayer() {
           const layer = e.target;
           layer.setStyle({
             weight: 3,
-            fillOpacity: 0.9
+            fillOpacity: config ? 0.9 : 0.5
           });
         },
         mouseout: function(e) {
           communesLayer.resetStyle(e.target);
         },
         click: function(e) {
-          showCommuneDetails(communeName);
+          if (config && config.hasOperations && communeStats.totalParcelles > 0) {
+            showCommuneDetails(communeName);
+          }
         }
       });
     }
@@ -290,6 +345,28 @@ function loadCommunesLayer() {
   if (communesData.features && communesData.features.length > 0) {
     map.fitBounds(communesLayer.getBounds());
   }
+}
+
+// Nouvelle fonction pour mettre à jour la légende de la carte
+function updateMapLegend() {
+  const legendElement = document.querySelector('.map-legend');
+  if (!legendElement) return;
+  
+  legendElement.innerHTML = `
+    <h4>Légende</h4>
+    <div class="legend-item">
+      <span class="legend-color" style="background: ${colors.operationsActive}"></span>
+      <span>Opérations foncières en cours</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: ${colors.operationsPending}"></span>
+      <span>Opérations foncières non démarrées</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: #F0F0F0; border: 1px dashed #999"></span>
+      <span>Hors zone PROCASEF</span>
+    </div>
+  `;
 }
 
 function showCommuneDetails(communeName) {
@@ -304,7 +381,7 @@ function showCommuneDetails(communeName) {
     selectedCommune.textContent = `Commune de ${communeName}`;
   }
   
-  // Animate statistics
+  // Animate statistics avec nouveau libellé
   animateValue(document.getElementById('total-parcelles'), 0, stats.totalParcelles);
   animateValue(document.getElementById('superficie-totale'), 0, stats.superficieTotale);
   
@@ -461,7 +538,14 @@ function createCommunesChart() {
   const ctx = document.getElementById('communes-chart');
   if (!ctx || !communesData || !communesData.features) return;
   
-  const communeNames = communesData.features.map(f => getCommuneName(f.properties));
+  // Filtrer pour ne montrer que les communes avec des opérations
+  const communeNames = communesData.features
+    .map(f => getCommuneName(f.properties))
+    .filter(name => {
+      const config = communesConfig[name.toUpperCase()];
+      return config && config.hasOperations;
+    });
+    
   const parcelleCounts = communeNames.map(name => 
     calculateCommuneStats(name, filteredParcellesData).totalParcelles
   );
@@ -475,7 +559,7 @@ function createCommunesChart() {
     data: {
       labels: communeNames,
       datasets: [{
-        label: 'Nombre de parcelles',
+        label: 'Nombre de parcelles levées',
         data: parcelleCounts,
         backgroundColor: colors.chartColors.slice(0, communeNames.length),
         borderRadius: 4,
@@ -507,7 +591,7 @@ function createCommunesChart() {
         tooltip: {
           callbacks: {
             label: function(context) {
-              return `${context.label}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''}`;
+              return `${context.label}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''} levée${context.parsed.y > 1 ? 's' : ''}`;
             }
           }
         }
@@ -685,19 +769,48 @@ function switchDashboard(dashboardName) {
     'edl': 'https://edlinventairesboundou.netlify.app/'
   };
   
-  if (loading) loading.style.display = 'block';
-  iframe.src = urls[dashboardName] || '';
+  // Réinitialiser l'état de chargement
+  if (loading) {
+    loading.style.display = 'block';
+  }
   
+  // Vider l'iframe avant de charger la nouvelle URL
+  iframe.src = 'about:blank';
+  
+  // Petit délai pour assurer le nettoyage
+  setTimeout(() => {
+    iframe.src = urls[dashboardName] || '';
+  }, 100);
+  
+  // Timeout de sécurité pour masquer le chargement
   const fallbackTimeout = setTimeout(() => {
-    if (loading) loading.style.display = 'none';
-  }, 7000);
-
+    if (loading) {
+      loading.style.display = 'none';
+    }
+  }, 10000); // Augmenté à 10 secondes
+  
+  // Gestionnaire de chargement avec nettoyage du timeout
   iframe.onload = function() {
     clearTimeout(fallbackTimeout);
-    if (loading) loading.style.display = 'none';
+    if (loading) {
+      // Petit délai pour laisser le contenu se stabiliser
+      setTimeout(() => {
+        loading.style.display = 'none';
+      }, 500);
+    }
+  };
+  
+  // Gestionnaire d'erreur
+  iframe.onerror = function() {
+    clearTimeout(fallbackTimeout);
+    if (loading) {
+      loading.innerHTML = '<p>Erreur de chargement du tableau de bord</p>';
+      setTimeout(() => {
+        loading.style.display = 'none';
+      }, 2000);
+    }
   };
 }
-
 
 function toggleTheme() {
   const currentTheme = document.documentElement.dataset.colorScheme || 'light';
@@ -745,7 +858,7 @@ function applyFilters() {
   }
   
   // Mettre à jour les graphiques globaux si on est sur la section stats
-    createGlobalCharts();
+  createGlobalCharts();
   
   showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
 }
@@ -799,8 +912,14 @@ function initializeFilters() {
   communeSelect.innerHTML = '<option value="">Toutes les communes</option>';
   usageSelect.innerHTML = '<option value="">Tous les usages</option>';
   
-  // Populate commune filter
-  const communes = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))].sort();
+  // Populate commune filter - seulement les communes avec opérations
+  const communes = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))]
+    .filter(commune => {
+      const config = communesConfig[commune.toUpperCase()];
+      return config && config.hasOperations;
+    })
+    .sort();
+    
   communes.forEach(commune => {
     const option = document.createElement('option');
     option.value = commune;
@@ -826,7 +945,16 @@ function updateGlobalStats() {
   // Utiliser filteredParcellesData au lieu de parcellesData pour les statistiques
   const dataToUse = filteredParcellesData.length > 0 ? filteredParcellesData : parcellesData;
   
-  const totalCommunes = new Set(dataToUse.map(p => p.commune).filter(Boolean)).size;
+  // Compter seulement les communes avec des opérations actives
+  const communesAvecOperations = new Set(
+    dataToUse
+      .map(p => p.commune)
+      .filter(commune => {
+        const config = communesConfig[commune.toUpperCase()];
+        return config && config.hasOperations;
+      })
+  ).size;
+  
   const totalParcelles = dataToUse.length;
   const superficieGlobale = dataToUse.reduce((sum, p) => sum + (parseFloat(p.superficie) || 0), 0);
   const nicadCount = dataToUse.filter(p => p.nicad === 'Oui').length;
@@ -839,7 +967,7 @@ function updateGlobalStats() {
   const nicadPercentageEl = document.getElementById('nicad-percentage-global');
   const delibereesPercentageEl = document.getElementById('deliberees-percentage-global');
   
-  if (totalCommunesEl) totalCommunesEl.textContent = totalCommunes;
+  if (totalCommunesEl) totalCommunesEl.textContent = communesAvecOperations;
   if (totalParcellesEl) totalParcellesEl.textContent = totalParcelles;
   if (superficieEl) superficieEl.textContent = superficieGlobale.toFixed(1);
   
@@ -1194,7 +1322,7 @@ async function initializeApp() {
     console.error('Erreur lors de l\'initialisation:', error);
     showToast('Erreur lors du chargement de l\'application', 'error');
   } finally {
-    // PATCH: Masquer l'écran de chargement
+    // Masquer l'écran de chargement
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) loadingScreen.classList.add('hidden');
   }
