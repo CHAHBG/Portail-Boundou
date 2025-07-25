@@ -42,7 +42,7 @@ const colors = {
   operationsPending: '#D3D3D3',
   operationsActiveHover: '#228B22',
   operationsCompletedHover: '#3A6B9C',
-  operationsPendingHover: | '#A9A9A9',
+  operationsPendingHover: '#A9A9A9',
   chartColors: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5', '#5D878F', '#DB4545', '#D2BA4C', '#964325', '#944454', '#13343B']
 };
 
