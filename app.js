@@ -767,7 +767,7 @@ function handleResize() {
 
 function initializeAccessibility() {
   document.querySelectorAll('.tab-button').forEach((tab, index, tabs) => {
-    tab.setAttribute('tabindex', index === 0 ? '0' : '-1');
+    tab.setAttribute('tabindex', index === 0 ? '0' : '-1';
     tab.setAttribute('role', 'tab');
     tab.addEventListener('keydown', (e) => {
       let nextIndex;
