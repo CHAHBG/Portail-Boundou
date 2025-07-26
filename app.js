@@ -1161,5 +1161,6 @@ Object.assign(window.BoundouDashboard, {
   processIndividualFile,
   processCollectiveFile,
   generateDeliberationList,
-  resetDeliberationData
+  resetDeliberationData,
+  showToast
 });
