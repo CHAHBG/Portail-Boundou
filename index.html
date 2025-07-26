@@ -239,61 +239,67 @@
 
             <!-- Individual Deliberations Sub-section -->
             <div id="individual-subsection" class="sub-content-section active">
-                <div class="deliberation-container">
-                    <div class="upload-section">
-                        <div class="file-upload-area" id="individual-upload">
-                            <div class="upload-icon">📄</div>
-                            <h3>Télécharger le fichier Excel des parcelles individuelles</h3>
-                            <p>Formats supportés: .xlsx, .xls</p>
-                            <input type="file" id="individual-file" accept=".xlsx,.xls" style="display: none;">
-                            <button class="btn btn--primary" onclick="document.getElementById('individual-file').click()">
-                                📁 Choisir un fichier
-                            </button>
-                        </div>
+                <div class="container">
+                    <div class="header">
+                        <h3>Parcelles Individuelles</h3>
+                        <p>Traitement automatique des données individuelles</p>
                     </div>
-
-                    <div class="processing-section">
-                        <div class="processing-stats" id="deliberation-stats">
-                            <div class="no-data">Aucun fichier traité</div>
+                    <div class="content">
+                        <div class="upload-section upload-section-individual" id="uploadSectionIndividual">
+                            <h3>📁 Sélectionner le fichier Excel</h3>
+                            <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
+                            <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls">
+                            <button class="upload-btn btn btn--primary" onclick="document.getElementById('individual-file').click()">
+                                Choisir un fichier
+                            </button>
+                            <p id="fileNameIndividual" style="margin-top: 15px; font-weight: bold; color: #4CAF50;"></p>
                         </div>
 
-                        <div class="action-buttons">
-                            <button id="generate-individual" class="btn btn--success" disabled>
-                                📋 Générer Liste Individuelle
+                        <div id="fileInfoIndividual" style="display: none;"></div>
+
+                        <div style="text-align: center;">
+                            <button id="generate-individual" class="process-btn btn btn--success" disabled>
+                                <span id="processTextIndividual">Traiter et Générer Liste Individuelle</span>
                             </button>
-                            <button id="reset-deliberation" class="btn btn--secondary">
+                            <button id="reset-deliberation" class="download-btn btn btn--secondary">
                                 🔄 Réinitialiser
                             </button>
                         </div>
+
+                        <div id="resultsIndividual" style="display: none;"></div>
+                        <div id="previewIndividual" style="display: none;"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Collective Deliberations Sub-section -->
             <div id="collective-subsection" class="sub-content-section">
-                <div class="deliberation-container">
-                    <div class="upload-section">
-                        <div class="file-upload-area" id="collective-upload">
-                            <div class="upload-icon">📄</div>
-                            <h3>Télécharger le fichier Excel des parcelles collectives</h3>
-                            <p>Formats supportés: .xlsx, .xls</p>
-                            <input type="file" id="collective-file" accept=".xlsx,.xls" style="display: none;">
-                            <button class="btn btn--primary" onclick="document.getElementById('collective-file').click()">
-                                📁 Choisir un fichier
-                            </button>
-                        </div>
+                <div class="container">
+                    <div class="header">
+                        <h3>Parcelles Collectives</h3>
+                        <p>Traitement automatique des données collectives</p>
                     </div>
-
-                    <div class="processing-section">
-                        <div class="processing-stats" id="collective-deliberation-stats">
-                            <div class="no-data">Aucun fichier traité</div>
+                    <div class="content">
+                        <div class="upload-section upload-section-collective" id="uploadSectionCollective">
+                            <h3>📁 Sélectionner le fichier Excel</h3>
+                            <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
+                            <input type="file" id="collective-file" class="file-input" accept=".xlsx,.xls">
+                            <button class="upload-btn btn btn--primary" onclick="document.getElementById('collective-file').click()">
+                                Choisir un fichier
+                            </button>
+                            <p id="fileNameCollective" style="margin-top: 15px; font-weight: bold; color: #4CAF50;"></p>
                         </div>
 
-                        <div class="action-buttons">
-                            <button id="generate-collective" class="btn btn--success" disabled>
-                                📋 Générer Liste Collective
+                        <div id="fileInfoCollective" style="display: none;"></div>
+
+                        <div style="text-align: center;">
+                            <button id="generate-collective" class="process-btn btn btn--success" disabled>
+                                <span id="processTextCollective">Traiter et Générer Liste Collective</span>
                             </button>
                         </div>
+
+                        <div id="resultsCollective" style="display: none;"></div>
+                        <div id="previewCollective" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -308,10 +314,10 @@
     
     <!-- Main JavaScript -->
     <script src="app.js"></script>
+    <script src="generatedeliblist.js"></script>
 
-    <!-- Additional JavaScript for sub-tabs functionality -->
+    <!-- Sub-tabs functionality -->
     <script>
-        // Handle sub-section tabs for deliberations
         document.addEventListener('DOMContentLoaded', function() {
             const subTabButtons = document.querySelectorAll('.sub-tab-button');
             const subContentSections = document.querySelectorAll('.sub-content-section');
@@ -327,6 +333,15 @@
                     // Add active class to clicked tab and corresponding section
                     this.classList.add('active');
                     document.getElementById(`${subsection}-subsection`).classList.add('active');
+
+                    // Update file info and preview based on active subsection
+                    if (subsection === 'individual') {
+                        window.DeliberationListGenerator.displayFileInfo(null, 'individual');
+                        window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedDeliberationData, 'individual');
+                    } else {
+                        window.DeliberationListGenerator.displayFileInfo(null, 'collective');
+                        window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedDeliberationData, 'collective');
+                    }
                 });
             });
         });
