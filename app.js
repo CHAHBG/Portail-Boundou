@@ -1,4 +1,7 @@
 // === Boundou Dashboard Application ===
+// Initialize BoundouDashboard
+window.BoundouDashboard = window.BoundouDashboard || {};
+
 // Global variables
 let map;
 let communesLayer;
