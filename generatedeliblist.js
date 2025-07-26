@@ -15,14 +15,15 @@ const colonnesAConserver = [
 
 // Initialisation du drag & drop et des gestionnaires d'événements
 function initializeDeliberationHandlers() {
-  const uploadSection = document.getElementById('uploadSection');
+  const uploadSectionIndividual = document.getElementById('uploadSectionIndividual');
+  const uploadSectionCollective = document.getElementById('uploadSectionCollective');
   const fileInputIndividual = document.getElementById('individual-file');
   const fileInputCollective = document.getElementById('collective-file');
   const processBtnIndividual = document.getElementById('generate-individual');
   const processBtnCollective = document.getElementById('generate-collective');
-  const resetBtn = document.getElementById xlim:1,750,000,000 document.getElementById('reset-deliberation');
+  const resetBtn = document.getElementById('reset-deliberation');
 
-  if (!uploadSection || !fileInputIndividual || !fileInputCollective) {
+  if (!uploadSectionIndividual || !uploadSectionCollective || !fileInputIndividual || !fileInputCollective) {
     console.error('Éléments nécessaires pour le drag & drop non trouvés');
     window.BoundouDashboard.showToast('Erreur : conteneur de téléchargement non trouvé', 'error');
     return;
@@ -30,18 +31,22 @@ function initializeDeliberationHandlers() {
 
   // Configuration du drag & drop
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    uploadSection.addEventListener(eventName, preventDefaults, false);
+    uploadSectionIndividual.addEventListener(eventName, preventDefaults, false);
+    uploadSectionCollective.addEventListener(eventName, preventDefaults, false);
   });
 
   ['dragenter', 'dragover'].forEach(eventName => {
-    uploadSection.addEventListener(eventName, highlight, false);
+    uploadSectionIndividual.addEventListener(eventName, highlightIndividual, false);
+    uploadSectionCollective.addEventListener(eventName, highlightCollective, false);
   });
 
   ['dragleave', 'drop'].forEach(eventName => {
-    uploadSection.addEventListener(eventName, unhighlight, false);
+    uploadSectionIndividual.addEventListener(eventName, unhighlightIndividual, false);
+    uploadSectionCollective.addEventListener(eventName, unhighlightCollective, false);
   });
 
-  uploadSection.addEventListener('drop', handleDrop, false);
+  uploadSectionIndividual.addEventListener('drop', (e) => handleDrop(e, 'individual'), false);
+  uploadSectionCollective.addEventListener('drop', (e) => handleDrop(e, 'collective'), false);
 
   // Gestion des fichiers via input
   fileInputIndividual.addEventListener('change', (e) => handleFiles(e.target.files, 'individual'));
@@ -64,20 +69,29 @@ function preventDefaults(e) {
   e.stopPropagation();
 }
 
-function highlight(e) {
-  const uploadSection = document.getElementById('uploadSection');
+function highlightIndividual(e) {
+  const uploadSection = document.getElementById('uploadSectionIndividual');
   uploadSection.classList.add('dragover');
 }
 
-function unhighlight(e) {
-  const uploadSection = document.getElementById('uploadSection');
+function highlightCollective(e) {
+  const uploadSection = document.getElementById('uploadSectionCollective');
+  uploadSection.classList.add('dragover');
+}
+
+function unhighlightIndividual(e) {
+  const uploadSection = document.getElementById('uploadSectionIndividual');
   uploadSection.classList.remove('dragover');
 }
 
-function handleDrop(e) {
+function unhighlightCollective(e) {
+  const uploadSection = document.getElementById('uploadSectionCollective');
+  uploadSection.classList.remove('dragover');
+}
+
+function handleDrop(e, type) {
   const dt = e.dataTransfer;
   const files = dt.files;
-  const type = e.target.closest('.upload-section-individual') ? 'individual' : 'collective';
   handleFiles(files, type);
 }
 
@@ -90,7 +104,7 @@ async function handleFiles(files, type) {
   }
 
   try {
-    document.getElementById('fileName').textContent = `📄 ${file.name}`;
+    document.getElementById(`fileName${type === 'individual' ? 'Individual' : 'Collective'}`).textContent = `📄 ${file.name}`;
     isProcessing = true;
     window.BoundouDashboard.showToast(`Chargement du fichier ${type}...`, 'info');
     if (type === 'individual') {
@@ -112,13 +126,20 @@ function displayFileInfo(file, type) {
   if (!data || data.length === 0) return;
 
   const headers = Object.keys(data[0] || {});
+  const validCount = data.length;
+  const errorCount = originalData ? (originalData.slice(1).length - validCount) : 0;
+
   const infoHtml = `
     <div class="info-section">
       <h3>📊 Informations du fichier</h3>
       <div class="stats">
         <div class="stat-card">
           <h3>${data.length}</h3>
-          <p>Parcelles</p>
+          <p>Parcelles valides</p>
+        </div>
+        <div class="stat-card">
+          <h3>${errorCount}</h3>
+          <p>Parcelles avec erreurs</p>
         </div>
         <div class="stat-card">
           <h3>${headers.length}</h3>
@@ -131,7 +152,7 @@ function displayFileInfo(file, type) {
       </div>
     </div>
   `;
-  const fileInfo = document.getElementById('fileInfo');
+  const fileInfo = document.getElementById(`fileInfo${type === 'individual' ? 'Individual' : 'Collective'}`);
   if (fileInfo) {
     fileInfo.innerHTML = infoHtml;
     fileInfo.style.display = 'block';
@@ -143,7 +164,7 @@ function displayPreview(data, type) {
   if (!data || data.length === 0) return;
 
   const previewData = data.slice(0, 3); // Afficher les 3 premières lignes
-  const columns = getOrderedColumns(data);
+  const columns = getOrderedColumns(data, type);
 
   let tableHtml = `
     <div class="info-section">
@@ -182,14 +203,14 @@ function displayPreview(data, type) {
     </div>
   `;
 
-  const preview = document.getElementById('preview');
+  const preview = document.getElementById(`preview${type === 'individual' ? 'Individual' : 'Collective'}`);
   if (preview) {
     preview.innerHTML = tableHtml;
     preview.style.display = 'block';
   }
 }
 
-function getOrderedColumns(data) {
+function getOrderedColumns(data, type) {
   const orderedColumns = type === 'individual' ? colonnesAConserver : [
     'Village', 'nicad', 'Num_parcel_2', 'Prenom', 'Nom', 'Sexe',
     'Numero_piece', 'Telephone', 'Date_naissance', 'Residence',
