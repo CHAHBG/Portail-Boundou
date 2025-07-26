@@ -10,6 +10,7 @@ let filteredParcellesData = [];
 let lastSelectedCommune = null; // Track the last selected commune
 window.BoundouDashboard.processedDeliberationData = [];
 window.BoundouDashboard.isProcessingFile = false;
+window.BoundouDashboard.originalData = null; // Added for deliberation data
 
 // Configuration des communes avec statut d'opération
 const communesConfig = {
@@ -586,7 +587,6 @@ function initializeEventHandlers() {
     console.warn('Module DeliberationListGenerator non chargé');
     showToast('Erreur : module de gestion des délibérations non disponible', 'error');
   }
-
 }
 
 function switchSection(sectionName) {
@@ -684,9 +684,9 @@ function exportDataHandler() {
   showToast('Données exportées avec succès', 'success');
 }
 
-function convertToCSV(data) {
+function convertToCSV(data, columns = null) {
   if (data.length === 0) return '';
-  const headers = Object.keys(data[0]);
+  const headers = columns || Object.keys(data[0]);
   const csvRows = [headers.join(',')].concat(
     data.map(row => headers.map(header => {
       const value = row[header];
@@ -948,6 +948,133 @@ function slideDown(element, duration = 300) {
   requestAnimationFrame(animate);
 }
 
+// === Deliberation Processing Functions ===
+async function processIndividualFile(file) {
+  try {
+    const data = await readExcelFile(file);
+    window.BoundouDashboard.originalData = data; // Store raw data for error counting
+    const processed = processIndividualData(data);
+    window.BoundouDashboard.processedDeliberationData = processed;
+    document.getElementById('generate-individual').disabled = processed.length === 0;
+    showToast(`Fichier individuel chargé : ${processed.length} parcelles valides`, 'success');
+    return processed;
+  } catch (error) {
+    throw new Error(`Erreur lors du traitement du fichier individuel : ${error.message}`);
+  }
+}
+
+async function processCollectiveFile(file) {
+  try {
+    const data = await readExcelFile(file);
+    window.BoundouDashboard.originalData = data; // Store raw data for error counting
+    const processed = processCollectiveData(data);
+    window.BoundouDashboard.processedDeliberationData = processed;
+    document.getElementById('generate-collective').disabled = processed.length === 0;
+    showToast(`Fichier collectif chargé : ${processed.length} parcelles valides`, 'success');
+    return processed;
+  } catch (error) {
+    throw new Error(`Erreur lors du traitement du fichier collectif : ${error.message}`);
+  }
+}
+
+async function readExcelFile(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const firstSheet = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheet];
+  return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+}
+
+function processIndividualData(data) {
+  if (!data || data.length <= 1) return []; // Skip if no data or only headers
+  const headers = data[0];
+  const rows = data.slice(1).filter(row => row.some(cell => cell !== '')); // Remove empty rows
+  const validRows = rows.map(row => {
+    const rowData = {};
+    headers.forEach((header, i) => {
+      if (window.DeliberationListGenerator.colonnesAConserver.includes(header)) {
+        rowData[header] = row[i] || '';
+      }
+    });
+    return rowData;
+  }).filter(row => row['Num_parcel_2'] && row['Village']); // Require parcel number and village
+  return validRows;
+}
+
+function processCollectiveData(data) {
+  if (!data || data.length <= 1) return []; // Skip if no data or only headers
+  const headers = data[0];
+  const rows = data.slice(1).filter(row => row.some(cell => cell !== '')); // Remove empty rows
+  const groupedByParcel = {};
+  
+  rows.forEach(row => {
+    const parcelNumber = row[headers.indexOf('Num_parcel_2')];
+    if (!parcelNumber) return;
+    if (!groupedByParcel[parcelNumber]) {
+      groupedByParcel[parcelNumber] = {
+        Village: row[headers.indexOf('Village')] || '',
+        nicad: row[headers.indexOf('nicad')] || '',
+        Num_parcel_2: parcelNumber,
+        Prenom: [],
+        Nom: [],
+        Sexe: [],
+        Numero_piece: [],
+        Telephone: [],
+        Date_naissance: [],
+        Residence: [],
+        superficie: row[headers.indexOf('superficie')] || '',
+        Vocation_1: row[headers.indexOf('Vocation_1')] || '',
+        type_usa: row[headers.indexOf('type_usa')] || ''
+      };
+    }
+    groupedByParcel[parcelNumber].Prenom.push(row[headers.indexOf('Prenom')] || '');
+    groupedByParcel[parcelNumber].Nom.push(row[headers.indexOf('Nom')] || '');
+    groupedByParcel[parcelNumber].Sexe.push(row[headers.indexOf('Sexe')] || '');
+    groupedByParcel[parcelNumber].Numero_piece.push(row[headers.indexOf('Numero_piece')] || '');
+    groupedByParcel[parcelNumber].Telephone.push(row[headers.indexOf('Telephone')] || '');
+    groupedByParcel[parcelNumber].Date_naissance.push(row[headers.indexOf('Date_naissance')] || '');
+    groupedByParcel[parcelNumber].Residence.push(row[headers.indexOf('Residence')] || '');
+  });
+
+  return Object.values(groupedByParcel).map(parcel => ({
+    ...parcel,
+    Prenom: parcel.Prenom.join('\n'),
+    Nom: parcel.Nom.join('\n'),
+    Sexe: parcel.Sexe.join('\n'),
+    Numero_piece: parcel.Numero_piece.join('\n'),
+    Telephone: parcel.Telephone.join('\n'),
+    Date_naissance: parcel.Date_naissance.join('\n'),
+    Residence: parcel.Residence.join('\n')
+  })).filter(parcel => parcel.Village);
+}
+
+function generateDeliberationList(type) {
+  if (window.BoundouDashboard.isProcessingFile || !window.BoundouDashboard.processedDeliberationData.length) {
+    showToast('Aucune donnée à traiter ou traitement en cours', 'error');
+    return;
+  }
+  const data = window.BoundouDashboard.processedDeliberationData;
+  const columns = window.DeliberationListGenerator.getOrderedColumns(data, type);
+  const csv = convertToCSV(data, columns);
+  const filename = `deliberation_${type}_${new Date().toISOString().slice(0, 10)}.csv`;
+  downloadCSV(csv, filename);
+  showToast(`Liste de délibération ${type} générée`, 'success');
+}
+
+function resetDeliberationData() {
+  window.BoundouDashboard.processedDeliberationData = [];
+  window.BoundouDashboard.originalData = null;
+  document.getElementById('fileNameIndividual').textContent = '';
+  document.getElementById('fileNameCollective').textContent = '';
+  document.getElementById('fileInfoIndividual').style.display = 'none';
+  document.getElementById('fileInfoCollective').style.display = 'none';
+  document.getElementById('previewIndividual').style.display = 'none';
+  document.getElementById('previewCollective').style.display = 'none';
+  document.getElementById('generate-individual').disabled = true;
+  document.getElementById('generate-collective').disabled = true;
+  showToast('Données de délibération réinitialisées', 'info');
+}
+
 async function initializeApp() {
   try {
     initializePerformanceMonitoring();
@@ -1020,11 +1147,16 @@ window.addEventListener('unhandledrejection', (event) => {
   showToast('Erreur de traitement des données', 'error');
 });
 
- = {
+// Extend the global BoundouDashboard object with additional methods
+Object.assign(window.BoundouDashboard, {
   switchSection,
   showCommuneDetails,
   applyFilters,
   exportDataHandler,
   exportToGeoJSON,
-  retryDataLoad
-};
+  retryDataLoad,
+  processIndividualFile,
+  processCollectiveFile,
+  generateDeliberationList,
+  resetDeliberationData
+});
