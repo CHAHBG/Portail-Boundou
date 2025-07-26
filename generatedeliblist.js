@@ -228,6 +228,6 @@ window.DeliberationListGenerator = {
 };
 
 // Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.DeliberationListGenerator.initializeDeliberationHandlers();
-});
+//document.addEventListener('DOMContentLoaded', () => {
+//  window.DeliberationListGenerator.initializeDeliberationHandlers();
+//});
