@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portail PROCASEF Boundou - Inventaires Fonciers</title>
-    <meta name="description" content="Portail de visualisation des inventaires fonciers dans la région de Boundou, Sénégal">
+    <meta name="description" content="Portail de visualisation des inventaires fonciers et traitement des parcelles dans la région de Boundou, Sénégal">
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- SheetJS for Excel processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
@@ -33,7 +36,7 @@
         <div class="nav-container">
             <div class="nav-brand">
                 <h1>🗺️ SIG PROCASEF Boundou</h1>
-                <span class="nav-subtitle">Inventaires Fonciers</span>
+                <span class="nav-subtitle">Inventaires Fonciers et Traitement</span>
             </div>
             
             <div class="nav-controls">
@@ -63,6 +66,10 @@
             <button class="tab-button" data-section="stats">
                 <span class="tab-icon">📈</span>
                 Statistiques
+            </button>
+            <button class="tab-button" data-section="parcels">
+                <span class="tab-icon">📋</span>
+                Traitement Parcelles
             </button>
         </div>
 
@@ -208,6 +215,168 @@
                         <canvas id="global-usage-chart"></canvas>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Parcels Processing Section -->
+        <section id="parcels-section" class="content-section">
+            <div class="main-section-tab">
+                <div class="main-tab-header">
+                    <h1 class="main-tab-title">📋 Génération de Liste de Délibération</h1>
+                    <p class="main-tab-subtitle">Traitement des parcelles individuelles et collectives pour la génération des listes officielles</p>
+                </div>
+
+                <!-- Sub-section Tabs -->
+                <div class="section-tabs">
+                    <button class="tab-button active" data-section="individual">
+                        <span class="tab-icon">👤</span>
+                        Parcelles Individuelles
+                    </button>
+                    <button class="tab-button" data-section="collective">
+                        <span class="tab-icon">👥</span>
+                        Parcelles Collectives
+                    </button>
+                    <button class="tab-button" data-section="results">
+                        <span class="tab-icon">📋</span>
+                        Résultats
+                    </button>
+                </div>
+
+                <!-- Individual Parcels Section -->
+                <section id="individual-section" class="content-section active">
+                    <div class="section-header">
+                        <h2>Traitement des Parcelles Individuelles</h2>
+                    </div>
+
+                    <div class="processing-section">
+                        <div class="file-upload-area" id="individual-upload">
+                            <div class="upload-icon">📄</div>
+                            <h3>Télécharger le fichier Excel des parcelles individuelles</h3>
+                            <p>Glissez-déposez votre fichier .xlsx ici ou cliquez pour sélectionner</p>
+                            <input type="file" id="individual-file" accept=".xlsx,.xls" style="display: none;">
+                            <button class="btn btn--primary" onclick="document.getElementById('individual-file').click()">
+                                Choisir un fichier
+                            </button>
+                        </div>
+
+                        <div class="filter-controls">
+                            <div>
+                                <label for="individual-commune-filter">Commune:</label>
+                                <select id="individual-commune-filter" class="form-control">
+                                    <option value="">Toutes les communes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="individual-village-filter">Village:</label>
+                                <select id="individual-village-filter" class="form-control">
+                                    <option value="">Tous les villages</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="individual-usage-filter">Type d'usage:</label>
+                                <select id="individual-usage-filter" class="form-control">
+                                    <option value="">Tous les types</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="controls-group">
+                            <button id="process-individual" class="btn btn--success" disabled>
+                                🔄 Traiter les Données
+                            </button>
+                            <button id="export-individual" class="btn btn--secondary" disabled>
+                                📥 Exporter Excel
+                            </button>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="individual-progress"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Collective Parcels Section -->
+                <section id="collective-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Traitement des Parcelles Collectives</h2>
+                    </div>
+
+                    <div class="processing-section">
+                        <div class="file-upload-area" id="collective-upload">
+                            <div class="upload-icon">📄</div>
+                            <h3>Télécharger le fichier Excel des parcelles collectives</h3>
+                            <p>Glissez-déposez votre fichier .xlsx ici ou cliquez pour sélectionner</p>
+                            <input type="file" id="collective-file" accept=".xlsx,.xls" style="display: none;">
+                            <button class="btn btn--primary" onclick="document.getElementById('collective-file').click()">
+                                Choisir un fichier
+                            </button>
+                        </div>
+
+                        <div class="filter-controls">
+                            <div>
+                                <label for="collective-commune-filter">Commune:</label>
+                                <select id="collective-commune-filter" class="form-control">
+                                    <option value="">Toutes les communes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="collective-village-filter">Village:</label>
+                                <select id="collective-village-filter" class="form-control">
+                                    <option value="">Tous les villages</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="collective-usage-filter">Type d'usage:</label>
+                                <select id="collective-usage-filter" class="form-control">
+                                    <option value="">Tous les types</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="controls-group">
+                            <button id="process-collective" class="btn btn--success" disabled>
+                                🔄 Traiter les Données
+                            </button>
+                            <button id="export-collective" class="btn btn--secondary" disabled>
+                                📥 Exporter Excel
+                            </button>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="collective-progress"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results Section -->
+                <section id="results-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Résultats du Traitement</h2>
+                        <button id="clear-results" class="btn btn--secondary">🗑️ Effacer</button>
+                    </div>
+
+                    <div class="results-summary">
+                        <div class="summary-card">
+                            <div class="summary-value" id="total-individual">0</div>
+                            <div class="summary-label">Parcelles Individuelles</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-value" id="total-collective">0</div>
+                            <div class="summary-label">Parcelles Collectives</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-value" id="total-processed">0</div>
+                            <div class="summary-label">Total Traité</div>
+                        </div>
+                    </div>
+
+                    <div class="results-container">
+                        <h3>Aperçu des Données Traitées</h3>
+                        <div id="results-content">
+                            <p>Aucune donnée traitée pour le moment.</p>
+                        </div>
+                    </div>
+                </section>
             </div>
         </section>
     </main>
