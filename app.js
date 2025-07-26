@@ -1004,22 +1004,52 @@ function loadUserPreferences() {
     const preferences = JSON.parse(saved);
     if (preferences.theme) {
       document.documentElement.dataset.colorScheme = preferences.theme;
-      document.querySelector('.theme-icon').textContent = preferences.theme === 'light' ? '🌙' : '☀️';
+      const themeIcon = document.querySelector('.theme-icon');
+      if (themeIcon) {
+        themeIcon.textContent = preferences.theme === 'light' ? '🌙' : '☀️';
+      }
     }
     if (preferences.fontScale) {
       fontScale = preferences.fontScale;
       document.documentElement.style.setProperty('--font-scale', fontScale);
     }
-    if (preferences.lastActiveSection) setTimeout(() => switchSection(preferences.lastActiveSection), 100);
+    if (preferences.lastActiveSection) {
+      setTimeout(() => switchSection(preferences.lastActiveSection), 100);
+    }
     if (preferences.lastSelectedCommune) {
       lastSelectedCommune = preferences.lastSelectedCommune;
-      setTimeout(() => {
-        const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
-        if (layer) zoomToCommune(lastSelectedCommune, layer);
-      }, 100);
     }
   } catch (error) {
     console.warn('Erreur lors du chargement des préférences:', error);
+  }
+}
+
+async function initializeApp() {
+  try {
+    initializePerformanceMonitoring();
+    initializeTheme();
+    await retryDataLoad();
+    initializeMap();
+    initializeEventHandlers();
+    initializeFilters();
+    initializeSearch();
+    initializeAccessibility();
+    updateGlobalStats();
+    
+    // Restore selected commune after map is fully loaded
+    setTimeout(() => {
+      restoreSelectedCommune();
+    }, 300);
+    
+    window.addEventListener('resize', handleResize);
+    registerServiceWorker();
+    showToast('Application initialisée avec succès!', 'success');
+    console.log('Application Boundou Dashboard initialisée');
+  } catch (error) {
+    console.error('Erreur lors de l\'initialisation:', error);
+    showToast('Erreur lors du chargement de l\'application', 'error');
+  } finally {
+    document.getElementById('loading-screen')?.classList.add('hidden');
   }
 }
 
