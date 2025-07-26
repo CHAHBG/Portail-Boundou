@@ -1,5 +1,4 @@
-// === Boundou Dashboard Application ===
-// Global variables
+/* Boundou Dashboard Application */
 let map;
 let communesLayer;
 let parcellesData = [];
@@ -7,7 +6,7 @@ let communesData = null;
 let currentCharts = {};
 let fontScale = 1;
 let filteredParcellesData = [];
-let lastSelectedCommune = null; // Track the last selected commune
+let lastSelectedCommune = null;
 
 // Configuration des communes avec statut d'opération
 const communesConfig = {
@@ -96,7 +95,7 @@ function blinkLayer(layer, duration = 2000, interval = 300) {
 
 function validateData(communesData, parcellesData) {
   const errors = [];
-  if (!communesData || !communesData.features || !Array.isArray(communesData.features)) {
+  if (!communesData?.features || !Array.isArray(communesData.features)) {
     errors.push('Structure GeoJSON invalide');
   }
   if (!Array.isArray(parcellesData)) {
@@ -282,7 +281,6 @@ function loadCommunesLayer() {
     }
   }).addTo(map);
 
-  // Only fit bounds on initial load or if no commune is selected
   if (!lastSelectedCommune && communesData.features?.length > 0) {
     map.fitBounds(communesLayer.getBounds());
   }
@@ -335,38 +333,6 @@ function updateMapLegend() {
   `;
 
   legendElement.style.display = 'block';
-  console.log('Légende mise à jour avec succès');
-}
-
-function showCommuneDetails(communeName) {
-  const stats = calculateCommuneStats(communeName, filteredParcellesData);
-  const panel = document.getElementById('stats-panel');
-  if (!panel) return;
-
-  lastSelectedCommune = communeName; // Update the last selected commune
-  document.getElementById('selected-commune').textContent = `Commune de ${communeName}`;
-  animateValue(document.getElementById('total-parcelles'), 0, stats.totalParcelles);
-  animateValue(document.getElementById('superficie-totale'), 0, stats.superficieTotale);
-
-  const nicadPercentage = stats.totalParcelles > 0 ? Math.round((stats.nicadCount / stats.totalParcelles) * 100) : 0;
-  const delibereesPercentage = stats.totalParcelles > 0 ? Math.round((stats.delibereesCount / stats.totalParcelles) * 100) : 0;
-
-  setTimeout(() => {
-    document.getElementById('pourcentage-nicad').textContent = `${nicadPercentage}%`;
-    document.getElementById('pourcentage-deliberees').textContent = `${delibereesPercentage}%`;
-  }, 500);
-
-  panel.classList.remove('hidden');
-  panel.scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => {
-    createUsageChart(stats.typesUsage);
-    createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
-  }, 600);
-
-  const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
-  if (layer) zoomToCommune(communeName, layer);
-
-  showToast(`Détails chargés pour ${communeName}`, 'success');
 }
 
 // === Chart Functions ===
@@ -557,8 +523,8 @@ function initializeEventHandlers() {
   const closeStats = document.getElementById('close-stats');
   if (closeStats) closeStats.addEventListener('click', () => {
     document.getElementById('stats-panel')?.classList.add('hidden');
-    lastSelectedCommune = null; // Reset last selected commune
-    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    lastSelectedCommune = null;
+    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
   });
 
   const themeToggle = document.getElementById('theme-toggle');
@@ -576,6 +542,9 @@ function initializeEventHandlers() {
 
   const exportData = document.getElementById('export-data');
   if (exportData) exportData.addEventListener('click', exportDataHandler);
+
+  const printButton = document.getElementById('print-button');
+  if (printButton) printButton.addEventListener('click', handlePrint);
 }
 
 function switchSection(sectionName) {
@@ -583,13 +552,16 @@ function switchSection(sectionName) {
   document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
 
   document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
-  document.getElementById(`${sectionName}-section`)?.classList.add('active');
+  const section = document.getElementById(`${sectionName}-section`);
+  if (section) {
+    section.classList.add('active');
+    fadeIn(section);
+  }
 
   if (sectionName === 'stats') createGlobalCharts();
   else if (sectionName === 'map') {
     setTimeout(() => map?.invalidateSize(), 100);
     updateMapLegend();
-    // Maintain zoom on last selected commune if applicable
     if (lastSelectedCommune) {
       const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
       if (layer) zoomToCommune(lastSelectedCommune, layer);
@@ -653,15 +625,15 @@ function applyFilters() {
   createGlobalCharts();
 
   if (communeValue) {
-    lastSelectedCommune = communeValue; // Update the last selected commune
+    lastSelectedCommune = communeValue;
     const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
     if (layer) {
       zoomToCommune(communeValue, layer);
-      showCommuneDetails(communeValue); // Show details for the selected commune
+      showCommuneDetails(communeValue);
     }
   } else {
-    lastSelectedCommune = null; // Reset if no commune is selected
-    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    lastSelectedCommune = null;
+    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
   }
 
   showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
@@ -735,14 +707,14 @@ function updateGlobalStats() {
   const nicadPercentageEl = document.getElementById('nicad-percentage-global');
   const delibereesPercentageEl = document.getElementById('deliberees-percentage-global');
 
-  if (totalCommunesEl) totalCommunesEl.textContent = communesAvecParcelles;
-  if (totalParcellesEl) totalParcellesEl.textContent = totalParcelles;
-  if (superficieEl) superficieEl.textContent = superficieGlobale.toFixed(1);
+  if (totalCommunesEl) animateValue(totalCommunesEl, parseInt(totalCommunesEl.textContent) || 0, communesAvecParcelles);
+  if (totalParcellesEl) animateValue(totalParcellesEl, parseInt(totalParcellesEl.textContent) || 0, totalParcelles);
+  if (superficieEl) animateValue(superficieEl, parseFloat(superficieEl.textContent) || 0, superficieGlobale.toFixed(1));
   if (nicadPercentageEl && totalParcelles > 0) {
-    nicadPercentageEl.textContent = `${Math.round((nicadCount / totalParcelles) * 100)}%`;
+    animateValue(nicadPercentageEl, parseInt(nicadPercentageEl.textContent) || 0, Math.round((nicadCount / totalParcelles) * 100));
   }
   if (delibereesPercentageEl && totalParcelles > 0) {
-    delibereesPercentageEl.textContent = `${Math.round((delibereesCount / totalParcelles) * 100)}%`;
+    animateValue(delibereesPercentageEl, parseInt(delibereesPercentageEl.textContent) || 0, Math.round((delibereesCount / totalParcelles) * 100));
   }
 }
 
@@ -751,6 +723,38 @@ function createGlobalCharts() {
     createCommunesChart();
     createGlobalUsageChart();
   }, 300);
+}
+
+function showCommuneDetails(communeName) {
+  const stats = calculateCommuneStats(communeName, filteredParcellesData);
+  const panel = document.getElementById('stats-panel');
+  if (!panel) return;
+
+  lastSelectedCommune = communeName;
+  document.getElementById('selected-commune').textContent = `Commune de ${communeName}`;
+  animateValue(document.getElementById('total-parcelles'), 0, stats.totalParcelles);
+  animateValue(document.getElementById('superficie-totale'), 0, stats.superficieTotale);
+
+  const nicadPercentage = stats.totalParcelles > 0 ? Math.round((stats.nicadCount / stats.totalParcelles) * 100) : 0;
+  const delibereesPercentage = stats.totalParcelles > 0 ? Math.round((stats.delibereesCount / stats.totalParcelles) * 100) : 0;
+
+  setTimeout(() => {
+    document.getElementById('pourcentage-nicad').textContent = `${nicadPercentage}%`;
+    document.getElementById('pourcentage-deliberees').textContent = `${delibereesPercentage}%`;
+  }, 500);
+
+  slideDown(panel);
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => {
+    createUsageChart(stats.typesUsage);
+    createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
+  }, 600);
+
+  const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
+  if (layer) zoomToCommune(communeName, layer);
+
+  showToast(`Détails chargés pour ${communeName}`, 'success');
 }
 
 function initializeTheme() {
@@ -767,7 +771,7 @@ function handleResize() {
 
 function initializeAccessibility() {
   document.querySelectorAll('.tab-button').forEach((tab, index, tabs) => {
-    tab.setAttribute('tabindex', index === 0 ? '0' : '-1';
+    tab.setAttribute('tabindex', index === 0 ? '0' : '-1');
     tab.setAttribute('role', 'tab');
     tab.addEventListener('keydown', (e) => {
       let nextIndex;
@@ -822,20 +826,33 @@ function registerServiceWorker() {
   }
 }
 
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 function initializeSearch() {
   const searchInput = document.getElementById('search-input');
   const searchResults = document.getElementById('search-results');
   if (!searchInput) return;
 
-  let searchTimeout;
-  searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.trim().toLowerCase();
-    clearTimeout(searchTimeout);
+  const debouncedSearch = debounce((query) => {
     if (query.length < 2) {
       if (searchResults) searchResults.innerHTML = '';
       return;
     }
-    searchTimeout = setTimeout(() => performSearch(query), 300);
+    performSearch(query);
+  }, 300);
+
+  searchInput.addEventListener('input', (e) => {
+    debouncedSearch(e.target.value.trim().toLowerCase());
   });
 }
 
@@ -855,31 +872,42 @@ function displaySearchResults(results) {
     return;
   }
 
-  searchResults.innerHTML = results.map(parcelle => `
-    <div class="search-result-item" onclick="highlightParcelle('${parcelle.id_parcelle}')">
-      <div class="search-result-title">${parcelle.id_parcelle}</div>
-      <div class="search-result-details">
-        ${parcelle.commune} - ${parcelle.village || 'Village non spécifié'}<br>
-        Superficie: ${parcelle.superficie || 'N/A'} ha
+  searchResults.innerHTML = results.map(parcelle => {
+    if (!parcelle.id_parcelle) {
+      console.warn('Parcelle with missing id_parcelle:', parcelle);
+      return '';
+    }
+    return `
+      <div class="search-result-item" data-parcelle-id="${parcelle.id_parcelle}">
+        <div class="search-result-title">${parcelle.id_parcelle}</div>
+        <div class="search-result-details">
+          ${parcelle.commune} - ${parcelle.village || 'Village non spécifié'}<br>
+          Superficie: ${parcelle.superficie || 'N/A'} ha
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  searchResults.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const parcelleId = item.dataset.parcelleId;
+      highlightParcelle(parcelleId);
+    });
+  });
 }
 
 function highlightParcelle(parcelleId) {
   const parcelle = parcellesData.find(p => p.id_parcelle === parcelleId);
-  if (!parcelle) return;
+  if (!parcelle) {
+    showToast('Parcelle non trouvée', 'error');
+    return;
+  }
 
-  lastSelectedCommune = parcelle.commune; // Update last selected commune
+  lastSelectedCommune = parcelle.commune;
   switchSection('map');
   showCommuneDetails(parcelle.commune);
   document.getElementById('search-results').innerHTML = '';
   showToast(`Parcelle ${parcelleId} sélectionnée`, 'success');
-}
-
-function initializePrint() {
-  const printButton = document.getElementById('print-button');
-  if (printButton) printButton.addEventListener('click', handlePrint);
 }
 
 function handlePrint() {
@@ -946,7 +974,6 @@ async function initializeApp() {
     initializeEventHandlers();
     initializeFilters();
     initializeSearch();
-    initializePrint();
     initializeAccessibility();
     updateGlobalStats();
     window.addEventListener('resize', handleResize);
@@ -966,7 +993,7 @@ function saveUserPreferences() {
     theme: document.documentElement.dataset.colorScheme,
     fontScale: fontScale,
     lastActiveSection: document.querySelector('.tab-button.active')?.dataset.section,
-    lastSelectedCommune: lastSelectedCommune // Save last selected commune
+    lastSelectedCommune: lastSelectedCommune
   }));
 }
 
@@ -975,7 +1002,10 @@ function loadUserPreferences() {
   if (!saved) return;
   try {
     const preferences = JSON.parse(saved);
-    if (preferences.theme) document.documentElement.dataset.colorScheme = preferences.theme;
+    if (preferences.theme) {
+      document.documentElement.dataset.colorScheme = preferences.theme;
+      document.querySelector('.theme-icon').textContent = preferences.theme === 'light' ? '🌙' : '☀️';
+    }
     if (preferences.fontScale) {
       fontScale = preferences.fontScale;
       document.documentElement.style.setProperty('--font-scale', fontScale);
