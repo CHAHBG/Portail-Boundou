@@ -632,11 +632,39 @@ function initializeSubTabs() {
             // Update file info and preview based on active subsection
             if (subsection === 'individual') {
                 window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalIndividualData, 'individual');
-                window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedIndividualData, 'individual');
+                window.DeliberationListGenerator.displayPreview('individual');
             } else {
                 window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalCollectiveData, 'collective');
-                window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedCollectiveData, 'collective');
+                window.DeliberationListGenerator.displayPreview('collective');
             }
+        });
+    });
+
+    // Ajout des attributs ARIA pour l'accessibilité
+    subTabButtons.forEach((tab, index, tabs) => {
+        tab.setAttribute('tabindex', index === 0 ? '0' : '-1');
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => {
+                t.setAttribute('aria-selected', 'false');
+                t.setAttribute('tabindex', '-1');
+            });
+            tab.setAttribute('aria-selected', 'true');
+            tab.setAttribute('tabindex', '0');
+        });
+        tab.addEventListener('keydown', (e) => {
+            let nextIndex;
+            switch (e.key) {
+                case 'ArrowRight': nextIndex = (index + 1) % tabs.length; break;
+                case 'ArrowLeft': nextIndex = (index - 1 + tabs.length) % tabs.length; break;
+                case 'Home': nextIndex = 0; break;
+                case 'End': nextIndex = tabs.length - 1; break;
+                default: return;
+            }
+            e.preventDefault();
+            tabs[nextIndex].focus();
+            tabs[nextIndex].click();
         });
     });
 }
@@ -961,7 +989,7 @@ function fadeIn(element, duration = 300) {
 function validateFileType(data, expectedType) {
     if (!data || data.length === 0) return { valid: false, message: 'Aucune donnée dans le fichier' };
     
-    const headers = data[0];
+    const headers = data[0] || [];
     const collectiveColumns = ['Prenom_1', 'Nom_1', 'Prenom_M', 'Nom_M'];
     const individualColumns = ['Prenom', 'Nom'];
 
@@ -971,14 +999,9 @@ function validateFileType(data, expectedType) {
         if (!hasCollectiveColumns) {
             return { valid: false, message: 'Ce fichier ne contient pas de données collectives (manque de colonnes comme Prenom_1, Nom_1, Prenom_M, etc.)' };
         }
-        // Vérifier qu'il n'a pas uniquement des colonnes individuelles
-        const hasOnlyIndividualColumns = individualColumns.every(col => headers.includes(col)) && !collectiveColumns.some(col => headers.includes(col));
-        if (hasOnlyIndividualColumns) {
-            return { valid: false, message: 'Ce fichier semble être un fichier individuel, non collectif' };
-        }
         return { valid: true, message: 'Fichier collectif valide' };
     } else if (expectedType === 'individual') {
-        // Un fichier individuel doit avoir les colonnes Prenom et Nom, mais pas de colonnes comme Prenom_1, Nom_1
+        // Un fichier individuel doit avoir les colonnes Prenom et Nom
         const hasIndividualColumns = individualColumns.every(col => headers.includes(col));
         const hasCollectiveColumns = collectiveColumns.some(col => headers.includes(col));
         if (!hasIndividualColumns) {
@@ -1025,7 +1048,7 @@ async function loadExcelFile(file, type) {
         // Valider le type de fichier
         const validation = validateFileType(data, type);
         if (!validation.valid) {
-            throw new Error(validation.message);
+            throw new Error(`${validation.message}. Colonnes détectées : ${data[0] ? data[0].join(', ') : 'aucune'}`);
         }
 
         if (type === 'individual') {
