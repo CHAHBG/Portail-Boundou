@@ -169,9 +169,9 @@ function displayResults(totalRows, validCount, errorCount, collectiveErrors = []
 }
 
 function displayPreview(type) {
-    if (!['individual', 'collective'].includes(type)) {
+    if (!type || !['individual', 'collective'].includes(type)) {
         console.error('Type de fichier invalide:', type);
-        window.BoundouDashboard.showToast('Erreur : type de fichier invalide', 'error');
+        window.BoundouDashboard.showToast('Erreur : type de fichier invalide pour l\'aperçu', 'error');
         return;
     }
 
