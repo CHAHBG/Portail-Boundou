@@ -248,5 +248,5 @@ window.DeliberationListGenerator = {
     displayResults,
     displayPreview,
     colonnesAConserver,
-    getSortedColumns
+    getOrderedColumns
 };
