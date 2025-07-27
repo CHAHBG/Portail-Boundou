@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -10,13 +11,20 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <!-- SheetJS for Excel processing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Custom JavaScript -->
+    <script defer src="generatedeliblist.js"></script>
+    <script defer src="app.js"></script>
     
     <!-- Preload key resources -->
     <link rel="preconnect" href="https://unpkg.com">
@@ -242,7 +250,7 @@
                 <div class="container">
                     <div class="header">
                         <h3>Parcelles Individuelles</h3>
-                        <p>Traitement automatique des données individuelles</p>
+                        <p><strong>Instructions :</strong> Téléchargez un fichier Excel contenant des données individuelles avec des colonnes comme <code>Prenom</code>, <code>Nom</code>, <code>Sexe</code>, <code>superficie</code>, etc. Les fichiers collectifs (avec <code>Prenom_1</code>, <code>Nom_1</code>, etc.) ne sont pas acceptés ici.</p>
                     </div>
                     <div class="content">
                         <div class="upload-section upload-section-individual" id="uploadSectionIndividual">
@@ -277,7 +285,7 @@
                 <div class="container">
                     <div class="header">
                         <h3>Parcelles Collectives</h3>
-                        <p>Traitement automatique des données collectives</p>
+                        <p><strong>Instructions :</strong> Téléchargez un fichier Excel contenant des données collectives avec des colonnes comme <code>Prenom_M</code>, <code>Nom_M</code>, <code>Prenom_1</code>, <code>Nom_1</code>, etc. Les fichiers individuels (sans colonnes comme <code>Prenom_1</code>) ne sont pas acceptés ici.</p>
                     </div>
                     <div class="content">
                         <div class="upload-section upload-section-collective" id="uploadSectionCollective">
@@ -308,15 +316,6 @@
 
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
-    
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-    
-    <!-- Main JavaScript -->
-    <script src="generatedeliblist.js"></script>
-    <script src="app.js"></script>
-
-    
 </body>
 </html>
+```
