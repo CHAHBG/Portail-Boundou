@@ -1029,6 +1029,43 @@ select.form-control {
   to { transform: translateX(0); opacity: 1; }
 }
 
+.error-details {
+    margin-top: 15px;
+    padding: 10px;
+    background: #fff3f3;
+    border: 1px solid #ffcccc;
+    border-radius: 4px;
+}
+
+.error-details h4 {
+    margin: 0 0 5px;
+    color: #d32f2f;
+}
+
+.error-details ul {
+    margin: 10px;
+    padding-left: 15px;
+    list-style-type: disc;
+}
+
+.error-details li {
+    margin-bottom: 5px;
+    color: #555;
+}
+
+[data-color-scheme="dark"] .error-details {
+    background: #3c2c2c;
+    border-color: #5c2c2c;
+}
+
+[data-color-scheme="dark"] .error-details h4 {
+    color: #ff6b6b;
+}
+
+[data-color-scheme="dark"] .error-details li {
+    color: #ccc;
+}
+
 /* === Utility Classes === */
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
