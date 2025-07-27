@@ -11,9 +11,11 @@ let currentCharts = {};
 let fontScale = 1;
 let filteredParcellesData = [];
 let lastSelectedCommune = null;
-window.BoundouDashboard.processedDeliberationData = [];
+window.BoundouDashboard.processedIndividualData = [];
+window.BoundouDashboard.processedCollectiveData = [];
 window.BoundouDashboard.isProcessingFile = false;
-window.BoundouDashboard.originalData = null;
+window.BoundouDashboard.originalIndividualData = null;
+window.BoundouDashboard.originalCollectiveData = null;
 
 // Configuration des communes avec statut d'opération
 const communesConfig = {
@@ -594,8 +596,13 @@ function initializeEventHandlers() {
     const exportData = document.getElementById('export-data');
     if (exportData) exportData.addEventListener('click', exportDataHandler);
 
-    const downloadBtn = document.getElementById('downloadBtn');
-    if (downloadBtn) downloadBtn.addEventListener('click', generateDeliberationList);
+    const generateIndividualBtn = document.getElementById('generate-individual');
+    const generateCollectiveBtn = document.getElementById('generate-collective');
+    if (generateIndividualBtn) generateIndividualBtn.addEventListener('click', () => processFile('individual'));
+    if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => processFile('collective'));
+
+    const resetBtn = document.getElementById('reset-deliberation');
+    if (resetBtn) resetBtn.addEventListener('click', resetDeliberationData);
 
     if (window.DeliberationListGenerator) {
         window.DeliberationListGenerator.initializeDeliberationHandlers();
@@ -943,15 +950,19 @@ function slideDown(element, duration = 300) {
 }
 
 // === Deliberation Processing Functions ===
-async function loadExcelFile(file) {
+async function loadExcelFile(file, type) {
     try {
         window.BoundouDashboard.isProcessingFile = true;
         window.BoundouDashboard.showToast('Chargement du fichier...', 'info');
         const data = await readExcelFile(file);
-        window.BoundouDashboard.originalData = data;
-        window.DeliberationListGenerator.displayFileInfo(data);
+        if (type === 'individual') {
+            window.BoundouDashboard.originalIndividualData = data;
+        } else {
+            window.BoundouDashboard.originalCollectiveData = data;
+        }
+        window.DeliberationListGenerator.displayFileInfo(data, type);
         window.BoundouDashboard.showToast('Fichier chargé avec succès', 'success');
-        document.getElementById('processBtn').disabled = false;
+        document.getElementById(`generate-${type}`).disabled = false;
     } catch (error) {
         console.error('Erreur lors du chargement du fichier:', error);
         window.BoundouDashboard.showToast('Erreur lors du chargement du fichier Excel', 'error');
@@ -1092,7 +1103,7 @@ function formatParcelData(row, headers) {
                 sexes.push(info.sexe || '-');
                 pieces.push(info.numero_piece || '-');
                 telephones.push(info.telephone || '-');
-                datesNaissance.push(info.dateNaissance || '-');
+                datesNaissance.push(info.date_naissance || '-');
                 residences.push(info.residence || '-');
             }
         }
@@ -1121,15 +1132,61 @@ function formatParcelData(row, headers) {
     };
 }
 
-function generateDeliberationList() {
-    if (window.BoundouDashboard.isProcessingFile || !window.BoundouDashboard.processedDeliberationData.length) {
-        showToast('Aucune donnée à traiter ou traitement en cours', 'error');
+function processFile(type) {
+    const originalData = type === 'individual' ? window.BoundouDashboard.originalIndividualData : window.BoundouDashboard.originalCollectiveData;
+    if (!originalData || originalData.length === 0) {
+        showToast('Aucun fichier chargé', 'error');
         return;
     }
 
-    const data = window.BoundouDashboard.processedDeliberationData;
-    const columns = window.DeliberationListGenerator.getOrderedColumns(data);
+    const processBtn = document.getElementById(`generate-${type}`);
+    const processText = document.getElementById(`processText${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    processText.innerHTML = '<span class="loading"></span>Traitement en cours...';
+    processBtn.disabled = true;
 
+    setTimeout(() => {
+        try {
+            const headers = originalData[0];
+            const dataRows = originalData.slice(1);
+            const results = type === 'individual' ? processIndividualData(originalData) : processCollectiveData(originalData);
+            if (type === 'individual') {
+                window.BoundouDashboard.processedIndividualData = results;
+            } else {
+                window.BoundouDashboard.processedCollectiveData = results;
+            }
+
+            const totalRows = dataRows.length;
+            const validCount = results.length;
+            const errorCount = totalRows - validCount;
+
+            window.DeliberationListGenerator.displayFileInfo(originalData, type);
+            window.DeliberationListGenerator.displayResults(totalRows, validCount, errorCount, type);
+            generateDeliberationList(type);
+            processBtn.disabled = false;
+            processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
+            showToast(`Traitement terminé : ${validCount} parcelles valides`, 'success');
+        } catch (error) {
+            console.error('Erreur lors du traitement:', error);
+            showToast('Erreur lors du traitement du fichier', 'error');
+            processBtn.disabled = false;
+            processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
+        }
+    }, 100);
+}
+
+function generateDeliberationList(type) {
+    if (window.BoundouDashboard.isProcessingFile) {
+        showToast('Traitement en cours, veuillez patienter', 'error');
+        return;
+    }
+
+    const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
+    if (!data || data.length === 0) {
+        showToast('Aucune donnée à traiter', 'error');
+        return;
+    }
+
+    const columns = window.DeliberationListGenerator.getOrderedColumns(data);
     const orderedData = data.map(row => {
         const orderedRow = {};
         columns.forEach(col => {
@@ -1150,11 +1207,11 @@ function generateDeliberationList() {
     ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'LISTE_COLLECTIVES');
+    XLSX.utils.book_append_sheet(wb, ws, type === 'individual' ? 'LISTE_INDIVIDUELLES' : 'LISTE_COLLECTIVES');
 
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    const fileName = `LISTE_COLLECTIVES_${dateStr}.xlsx`;
+    const fileName = type === 'individual' ? `LISTE_INDIVIDUELLES_${dateStr}.xlsx` : `LISTE_COLLECTIVES_${dateStr}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     const confirmationHtml = `
@@ -1168,23 +1225,29 @@ function generateDeliberationList() {
             </div>
         </div>
     `;
-    const resultsDiv = document.getElementById('results');
+    const resultsDiv = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (resultsDiv) {
         resultsDiv.innerHTML += confirmationHtml;
     }
 
-    showToast(`Liste collective générée : ${fileName}`, 'success');
+    showToast(`Liste ${type === 'individual' ? 'individuelle' : 'collective'} générée : ${fileName}`, 'success');
 }
 
 function resetDeliberationData() {
-    window.BoundouDashboard.processedDeliberationData = [];
-    window.BoundouDashboard.originalData = null;
-    document.getElementById('fileName').textContent = '';
-    document.getElementById('fileInfo').style.display = 'none';
-    document.getElementById('results').style.display = 'none';
-    document.getElementById('preview').style.display = 'none';
-    document.getElementById('processBtn').disabled = true;
-    document.getElementById('downloadBtn').style.display = 'none';
+    window.BoundouDashboard.processedIndividualData = [];
+    window.BoundouDashboard.processedCollectiveData = [];
+    window.BoundouDashboard.originalIndividualData = null;
+    window.BoundouDashboard.originalCollectiveData = null;
+    document.getElementById('fileNameIndividual').textContent = '';
+    document.getElementById('fileNameCollective').textContent = '';
+    document.getElementById('fileInfoIndividual').style.display = 'none';
+    document.getElementById('fileInfoCollective').style.display = 'none';
+    document.getElementById('resultsIndividual').style.display = 'none';
+    document.getElementById('resultsCollective').style.display = 'none';
+    document.getElementById('previewIndividual').style.display = 'none';
+    document.getElementById('previewCollective').style.display = 'none';
+    document.getElementById('generate-individual').disabled = true;
+    document.getElementById('generate-collective').disabled = true;
     showToast('Données de délibération réinitialisées', 'info');
 }
 
