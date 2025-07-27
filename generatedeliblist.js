@@ -9,28 +9,31 @@ const colonnesAConserver = [
 
 // Initialisation des gestionnaires d'événements
 function initializeDeliberationHandlers() {
-    const uploadSection = document.getElementById('uploadSection');
-    const fileInput = document.getElementById('fileInput');
-    const processBtn = document.getElementById('processBtn');
-    const resetBtn = document.getElementById('reset-deliberation');
+    const uploadSectionIndividual = document.getElementById('uploadSectionIndividual');
+    const uploadSectionCollective = document.getElementById('uploadSectionCollective');
+    const fileInputIndividual = document.getElementById('individual-file');
+    const fileInputCollective = document.getElementById('collective-file');
 
-    if (!uploadSection || !fileInput) {
+    if (!uploadSectionIndividual || !uploadSectionCollective || !fileInputIndividual || !fileInputCollective) {
         console.error('Éléments nécessaires pour le drag & drop non trouvés');
         window.BoundouDashboard.showToast('Erreur : conteneur de téléchargement non trouvé', 'error');
         return;
     }
 
-    // Configuration du drag & drop
+    // Configuration du drag & drop pour individuel
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, preventDefaults, false);
+        uploadSectionIndividual.addEventListener(eventName, preventDefaults, false);
+        uploadSectionCollective.addEventListener(eventName, preventDefaults, false);
     });
 
     ['dragenter', 'dragover'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, highlight, false);
+        uploadSectionIndividual.addEventListener(eventName, () => highlight('individual'), false);
+        uploadSectionCollective.addEventListener(eventName, () => highlight('collective'), false);
     });
 
     ['dragleave', 'drop'].forEach(eventName => {
-        uploadSection.addEventListener(eventName, unhighlight, false);
+        uploadSectionIndividual.addEventListener(eventName, () => unhighlight('individual'), false);
+        uploadSectionCollective.addEventListener(eventName, () => unhighlight('collective'), false);
     });
 
     function preventDefaults(e) {
@@ -38,37 +41,29 @@ function initializeDeliberationHandlers() {
         e.stopPropagation();
     }
 
-    function highlight(e) {
-        uploadSection.classList.add('dragover');
+    function highlight(type) {
+        document.getElementById(`uploadSection${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('dragover');
     }
 
-    function unhighlight(e) {
-        uploadSection.classList.remove('dragover');
+    function unhighlight(type) {
+        document.getElementById(`uploadSection${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('dragover');
     }
 
-    uploadSection.addEventListener('drop', handleDrop, false);
+    uploadSectionIndividual.addEventListener('drop', (e) => handleDrop(e, 'individual'), false);
+    uploadSectionCollective.addEventListener('drop', (e) => handleDrop(e, 'collective'), false);
 
-    function handleDrop(e) {
+    function handleDrop(e, type) {
         const dt = e.dataTransfer;
         const files = dt.files;
-        handleFiles(files);
+        handleFiles(files, type);
     }
 
     // Gestion des fichiers via input
-    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-    // Bouton de traitement
-    if (processBtn) {
-        processBtn.addEventListener('click', processFile);
-    }
-
-    // Bouton de réinitialisation
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => window.BoundouDashboard.resetDeliberationData());
-    }
+    fileInputIndividual.addEventListener('change', (e) => handleFiles(e.target.files, 'individual'));
+    fileInputCollective.addEventListener('change', (e) => handleFiles(e.target.files, 'collective'));
 }
 
-function handleFiles(files) {
+function handleFiles(files, type) {
     if (files.length === 0) return;
     const file = files[0];
     if (!file.name.match(/\.(xlsx|xls)$/)) {
@@ -76,11 +71,11 @@ function handleFiles(files) {
         return;
     }
 
-    document.getElementById('fileName').textContent = `📄 ${file.name}`;
-    window.BoundouDashboard.loadExcelFile(file);
+    document.getElementById(`fileName${type.charAt(0).toUpperCase() + type.slice(1)}`).textContent = `📄 ${file.name}`;
+    window.BoundouDashboard.loadExcelFile(file, type);
 }
 
-function displayFileInfo(data) {
+function displayFileInfo(data, type) {
     if (!data || data.length === 0) {
         window.BoundouDashboard.showToast('Aucune donnée valide trouvée dans le fichier', 'error');
         return;
@@ -88,7 +83,7 @@ function displayFileInfo(data) {
 
     const headers = data[0];
     const dataRows = data.slice(1);
-    const validCount = window.BoundouDashboard.processedDeliberationData.length;
+    const validCount = type === 'individual' ? window.BoundouDashboard.processedIndividualData.length : window.BoundouDashboard.processedCollectiveData.length;
 
     const infoHtml = `
         <div class="info-section">
@@ -113,14 +108,14 @@ function displayFileInfo(data) {
             </div>
         </div>
     `;
-    const fileInfo = document.getElementById('fileInfo');
+    const fileInfo = document.getElementById(`fileInfo${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (fileInfo) {
         fileInfo.innerHTML = infoHtml;
         fileInfo.style.cssText = 'display: block !important;';
     }
 }
 
-function displayResults(totalRows, validCount, errorCount) {
+function displayResults(totalRows, validCount, errorCount, type) {
     const resultsHtml = `
         <div class="results-section">
             <h3>✅ Traitement terminé</h3>
@@ -140,17 +135,16 @@ function displayResults(totalRows, validCount, errorCount) {
             </div>
         </div>
     `;
-    const results = document.getElementById('results');
+    const results = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (results) {
         results.innerHTML = resultsHtml;
         results.style.cssText = 'display: block !important;';
-        document.getElementById('downloadBtn').style.display = 'inline-block';
     }
-    displayPreview();
+    displayPreview(type);
 }
 
-function displayPreview() {
-    const data = window.BoundouDashboard.processedDeliberationData;
+function displayPreview(type) {
+    const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
     if (!data || data.length === 0) {
         console.warn('Aucune donnée pour l\'aperçu');
         window.BoundouDashboard.showToast('Aucune donnée à afficher dans l\'aperçu', 'warning');
@@ -194,7 +188,7 @@ function displayPreview() {
             </div>
         </div>
     `;
-    const preview = document.getElementById('preview');
+    const preview = document.getElementById(`preview${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (preview) {
         preview.innerHTML = tableHtml;
         preview.style.cssText = 'display: block !important;';
@@ -215,49 +209,13 @@ function getOrderedColumns(data) {
     return availableColumns;
 }
 
-function processFile() {
-    if (!window.BoundouDashboard.originalData || window.BoundouDashboard.originalData.length === 0) {
-        window.BoundouDashboard.showToast('Aucun fichier chargé', 'error');
-        return;
-    }
-
-    const processBtn = document.getElementById('processBtn');
-    const processText = document.getElementById('processText');
-    processText.innerHTML = '<span class="loading"></span>Traitement en cours...';
-    processBtn.disabled = true;
-
-    setTimeout(() => {
-        try {
-            const headers = window.BoundouDashboard.originalData[0];
-            const dataRows = window.BoundouDashboard.originalData.slice(1);
-            const results = window.BoundouDashboard.processCollectiveData(window.BoundouDashboard.originalData);
-            window.BoundouDashboard.processedDeliberationData = results;
-
-            const totalRows = dataRows.length;
-            const validCount = results.length;
-            const errorCount = totalRows - validCount;
-
-            displayFileInfo(window.BoundouDashboard.originalData);
-            displayResults(totalRows, validCount, errorCount);
-            processBtn.disabled = false;
-            processText.innerHTML = 'Traiter le fichier';
-            window.BoundouDashboard.showToast(`Traitement terminé : ${validCount} parcelles valides`, 'success');
-        } catch (error) {
-            console.error('Erreur lors du traitement:', error);
-            window.BoundouDashboard.showToast('Erreur lors du traitement du fichier', 'error');
-            processBtn.disabled = false;
-            processText.innerHTML = 'Traiter le fichier';
-        }
-    }, 100);
-}
-
 // Export du module
 window.DeliberationListGenerator = {
     initializeDeliberationHandlers,
     handleFiles,
     displayFileInfo,
+    displayResults,
     displayPreview,
     colonnesAConserver,
-    getOrderedColumns,
-    processFile
+    getOrderedColumns
 };
