@@ -278,7 +278,7 @@ function loadCommunesLayer() {
                     <p><strong>Département:</strong> ${feature.properties.DEPT || 'N/A'}</p>
                     <p><strong>Statut:</strong> <span class="status-${config?.status || 'none'}">${statusText}</span></p>
                     <p><strong>Parcelles levées:</strong> ${communeStats.totalParcelles}</p>
-                    <p><strong>Superficie totale:</strong> ${communeStats.superficieTotale.toFixed(1)} ha</p>
+                    <p><strong>Superficie totale:</strong> ${communeStats.superficieTotale.toFixed(1)} m²</p>
                     ${buttonHtml}
                 </div>
             `;
