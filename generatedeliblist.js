@@ -13,6 +13,15 @@ const colonnesAConserver = [
   'superficie', 'Num_piece', 'Telephone', 'Vocation', 'type_usag', 'Sexe'
 ];
 
+function checkXLSXAvailability() {
+  if (typeof XLSX === 'undefined') {
+    console.error('XLSX library not loaded');
+    window.BoundouDashboard.showToast('Erreur : bibliothèque XLSX non chargée', 'error');
+    return false;
+  }
+  return true;
+}
+
 // Initialisation du drag & drop et des gestionnaires d'événements
 function initializeDeliberationHandlers() {
   const uploadSectionIndividual = document.getElementById('uploadSectionIndividual');
@@ -123,11 +132,15 @@ async function handleFiles(files, type) {
 
 function displayFileInfo(file, type) {
   const data = window.BoundouDashboard.processedDeliberationData;
-  if (!data || data.length === 0) return;
+  if (!data || data.length === 0) {
+    console.warn('Aucune donnée processée disponible');
+    return;
+  }
 
   const headers = Object.keys(data[0] || {});
   const validCount = data.length;
-  const errorCount = originalData ? (originalData.slice(1).length - validCount) : 0;
+  const errorCount = window.BoundouDashboard.originalData ? 
+    (window.BoundouDashboard.originalData.slice(1).length - validCount) : 0;
 
   const infoHtml = `
     <div class="info-section">
@@ -152,12 +165,17 @@ function displayFileInfo(file, type) {
       </div>
     </div>
   `;
+  
   const fileInfo = document.getElementById(`fileInfo${type === 'individual' ? 'Individual' : 'Collective'}`);
   if (fileInfo) {
     fileInfo.innerHTML = infoHtml;
     fileInfo.style.display = 'block';
   }
-  displayPreview(data, type);
+  
+  // S'assurer que le preview s'affiche
+  setTimeout(() => {
+    displayPreview(data, type);
+  }, 100);
 }
 
 function displayPreview(data, type) {
