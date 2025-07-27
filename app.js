@@ -953,12 +953,18 @@ function slideDown(element, duration = 300) {
 
 // === Deliberation Processing Functions ===
 async function processIndividualFile(file) {
+  if (!checkXLSXAvailability()) return [];
+  
   try {
     const data = await readExcelFile(file);
-    window.BoundouDashboard.originalData = data; // Store raw data for error counting
+    window.BoundouDashboard.originalData = data;
     const processed = processIndividualData(data);
     window.BoundouDashboard.processedDeliberationData = processed;
-    document.getElementById('generate-individual').disabled = processed.length === 0;
+    
+    // Activer le bouton seulement si on a des données
+    const btn = document.getElementById('generate-individual');
+    if (btn) btn.disabled = processed.length === 0;
+    
     showToast(`Fichier individuel chargé : ${processed.length} parcelles valides`, 'success');
     return processed;
   } catch (error) {
@@ -967,12 +973,18 @@ async function processIndividualFile(file) {
 }
 
 async function processCollectiveFile(file) {
+  if (!checkXLSXAvailability()) return [];
+  
   try {
     const data = await readExcelFile(file);
-    window.BoundouDashboard.originalData = data; // Store raw data for error counting
+    window.BoundouDashboard.originalData = data;
     const processed = processCollectiveData(data);
     window.BoundouDashboard.processedDeliberationData = processed;
-    document.getElementById('generate-collective').disabled = processed.length === 0;
+    
+    // Activer le bouton seulement si on a des données
+    const btn = document.getElementById('generate-collective');
+    if (btn) btn.disabled = processed.length === 0;
+    
     showToast(`Fichier collectif chargé : ${processed.length} parcelles valides`, 'success');
     return processed;
   } catch (error) {
@@ -1110,14 +1122,31 @@ function generateDeliberationList(type) {
 function resetDeliberationData() {
   window.BoundouDashboard.processedDeliberationData = [];
   window.BoundouDashboard.originalData = null;
-  document.getElementById('fileNameIndividual').textContent = '';
-  document.getElementById('fileNameCollective').textContent = '';
-  document.getElementById('fileInfoIndividual').style.display = 'none';
-  document.getElementById('fileInfoCollective').style.display = 'none';
-  document.getElementById('previewIndividual').style.display = 'none';
-  document.getElementById('previewCollective').style.display = 'none';
-  document.getElementById('generate-individual').disabled = true;
-  document.getElementById('generate-collective').disabled = true;
+  
+  // Reset des noms de fichiers
+  const fileNameIndividual = document.getElementById('fileNameIndividual');
+  const fileNameCollective = document.getElementById('fileNameCollective');
+  if (fileNameIndividual) fileNameIndividual.textContent = '';
+  if (fileNameCollective) fileNameCollective.textContent = '';
+  
+  // Reset des infos de fichiers
+  const fileInfoIndividual = document.getElementById('fileInfoIndividual');
+  const fileInfoCollective = document.getElementById('fileInfoCollective');
+  if (fileInfoIndividual) fileInfoIndividual.style.display = 'none';
+  if (fileInfoCollective) fileInfoCollective.style.display = 'none';
+  
+  // Reset des previews
+  const previewIndividual = document.getElementById('previewIndividual');
+  const previewCollective = document.getElementById('previewCollective');
+  if (previewIndividual) previewIndividual.style.display = 'none';
+  if (previewCollective) previewCollective.style.display = 'none';
+  
+  // Désactiver les boutons
+  const btnIndividual = document.getElementById('generate-individual');
+  const btnCollective = document.getElementById('generate-collective');
+  if (btnIndividual) btnIndividual.disabled = true;
+  if (btnCollective) btnCollective.disabled = true;
+  
   showToast('Données de délibération réinitialisées', 'info');
 }
 
