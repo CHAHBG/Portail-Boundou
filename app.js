@@ -162,6 +162,7 @@ async function loadExternalData() {
         parcellesData = getSampleParcelles();
         filteredParcellesData = [...parcellesData];
         debugData();
+        initializeMap(); // Reinitialize map with sample data
         return false;
     }
 }
@@ -680,9 +681,16 @@ function switchSection(sectionName) {
     else if (sectionName === 'map') {
         setTimeout(() => map?.invalidateSize(), 100);
         updateMapLegend();
-        if (lastSelectedCommune) {
+        if (lastSelectedCommune && communesLayer) {
             const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
             if (layer) zoomToCommune(lastSelectedCommune, layer);
+            else {
+                console.warn('No layer found for commune:', lastSelectedCommune);
+                showToast(`Commune ${lastSelectedCommune} non trouvée`, 'warning');
+            }
+        } else if (lastSelectedCommune) {
+            console.warn('Communes layer not initialized');
+            showToast('La carte n\'est pas encore chargée', 'warning');
         }
     }
 }
@@ -1357,7 +1365,8 @@ async function initializeApp() {
         initializePerformanceMonitoring();
         initializeTheme();
         await retryDataLoad();
-        initializeMap();
+        initializeMap(); // Ensure map is initialized
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure map rendering
         initializeEventHandlers();
         initializeSubTabs();
         initializeFilters();
@@ -1367,6 +1376,7 @@ async function initializeApp() {
         updateGlobalStats();
         window.addEventListener('resize', handleResize);
         registerServiceWorker();
+        loadUserPreferences(); // Move this after map initialization
         showToast('Application initialisée avec succès!', 'success');
         console.log('Application Boundou Dashboard initialized');
     } catch (error) {
@@ -1387,26 +1397,29 @@ function saveUserPreferences() {
 }
 
 function loadUserPreferences() {
-    const saved = localStorage.getItem('userPreferences');
-    if (!saved) return;
-    try {
-        const preferences = JSON.parse(saved);
-        if (preferences.theme) document.documentElement.dataset.colorScheme = preferences.theme;
-        if (preferences.fontScale) {
-            fontScale = preferences.fontScale;
-            document.documentElement.style.setProperty('--font-scale', fontScale);
-        }
-        if (preferences.lastActiveSection) setTimeout(() => switchSection(preferences.lastActiveSection), 100);
-        if (preferences.lastSelectedCommune) {
-            lastSelectedCommune = preferences.lastSelectedCommune;
-            setTimeout(() => {
+    setTimeout(() => {
+        const saved = localStorage.getItem('userPreferences');
+        if (!saved) return;
+        try {
+            const preferences = JSON.parse(saved);
+            if (preferences.theme) document.documentElement.dataset.colorScheme = preferences.theme;
+            if (preferences.fontScale) {
+                fontScale = preferences.fontScale;
+                document.documentElement.style.setProperty('--font-scale', fontScale);
+            }
+            if (preferences.lastActiveSection) {
+                switchSection(preferences.lastActiveSection);
+            }
+            if (preferences.lastSelectedCommune && communesLayer) {
+                lastSelectedCommune = preferences.lastSelectedCommune;
                 const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
                 if (layer) zoomToCommune(lastSelectedCommune, layer);
-            }, 100);
+                else console.warn('No layer found for commune:', lastSelectedCommune);
+            }
+        } catch (error) {
+            console.warn('Erreur lors du chargement des préférences:', error);
         }
-    } catch (error) {
-        console.warn('Erreur lors du chargement des préférences:', error);
-    }
+    }, 500); // Delay to ensure map initialization
 }
 
 window.addEventListener('beforeunload', saveUserPreferences);
