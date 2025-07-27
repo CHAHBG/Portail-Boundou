@@ -312,41 +312,11 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Main JavaScript -->
     <script src="generatedeliblist.js"></script>
     <script src="app.js"></script>
 
-    <!-- Sub-tabs functionality -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const subTabButtons = document.querySelectorAll('.sub-tab-button');
-            const subContentSections = document.querySelectorAll('.sub-content-section');
-
-            subTabButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const subsection = this.dataset.subsection;
-                    
-                    // Remove active class from all sub-tabs and sub-sections
-                    subTabButtons.forEach(btn => btn.classList.remove('active'));
-                    subContentSections.forEach(section => section.classList.remove('active'));
-                    
-                    // Add active class to clicked tab and corresponding section
-                    this.classList.add('active');
-                    document.getElementById(`${subsection}-subsection`).classList.add('active');
-
-                    // Update file info and preview based on active subsection
-                    if (subsection === 'individual') {
-                        window.DeliberationListGenerator.displayFileInfo(null, 'individual');
-                        window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedDeliberationData, 'individual');
-                    } else {
-                        window.DeliberationListGenerator.displayFileInfo(null, 'collective');
-                        window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedDeliberationData, 'collective');
-                    }
-                });
-            });
-        });
-    </script>
+    
 </body>
 </html>
