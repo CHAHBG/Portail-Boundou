@@ -1056,12 +1056,55 @@ function generateDeliberationList(type) {
     showToast('Aucune donnée à traiter ou traitement en cours', 'error');
     return;
   }
+  
   const data = window.BoundouDashboard.processedDeliberationData;
   const columns = window.DeliberationListGenerator.getOrderedColumns(data, type);
-  const csv = convertToCSV(data, columns);
-  const filename = `deliberation_${type}_${new Date().toISOString().slice(0, 10)}.csv`;
-  downloadCSV(csv, filename);
-  showToast(`Liste de délibération ${type} générée`, 'success');
+  
+  // Créer un nouveau workbook XLSX
+  const wb = XLSX.utils.book_new();
+  
+  // Préparer les données avec les colonnes dans l'ordre correct
+  const worksheetData = [columns]; // Headers en première ligne
+  
+  data.forEach(row => {
+    const orderedRow = columns.map(col => {
+      const value = row[col] || '';
+      // Pour les données collectives, garder les retours à la ligne
+      return value;
+    });
+    worksheetData.push(orderedRow);
+  });
+  
+  // Créer la feuille de calcul
+  const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+  
+  // Ajuster la largeur des colonnes
+  const colWidths = columns.map(col => {
+    let maxLength = col.length;
+    data.forEach(row => {
+      const cellValue = String(row[col] || '');
+      // Pour les cellules avec \n, prendre la ligne la plus longue
+      const lines = cellValue.split('\n');
+      const maxLineLength = Math.max(...lines.map(line => line.length));
+      maxLength = Math.max(maxLength, maxLineLength);
+    });
+    return { wch: Math.min(maxLength + 2, 50) }; // Limiter à 50 caractères max
+  });
+  
+  ws['!cols'] = colWidths;
+  
+  // Ajouter la feuille au workbook
+  const sheetName = type === 'individual' ? 'Deliberation_Individuelle' : 'Deliberation_Collective';
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  
+  // Générer le nom du fichier
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const filename = `deliberation_${type}_${timestamp}.xlsx`;
+  
+  // Télécharger le fichier
+  XLSX.writeFile(wb, filename);
+  
+  showToast(`Liste de délibération ${type} générée en XLSX`, 'success');
 }
 
 function resetDeliberationData() {
