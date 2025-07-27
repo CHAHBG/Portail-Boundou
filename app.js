@@ -9,6 +9,7 @@ let parcellesData = [];
 let communesData = null;
 let currentCharts = {};
 let fontScale = 1;
+let collectiveParcelErrors = [];
 let filteredParcellesData = [];
 let lastSelectedCommune = null;
 window.BoundouDashboard.processedIndividualData = [];
@@ -957,6 +958,40 @@ function fadeIn(element, duration = 300) {
     requestAnimationFrame(animate);
 }
 
+function validateFileType(data, expectedType) {
+    if (!data || data.length === 0) return { valid: false, message: 'Aucune donnée dans le fichier' };
+    
+    const headers = data[0];
+    const collectiveColumns = ['Prenom_1', 'Nom_1', 'Prenom_M', 'Nom_M'];
+    const individualColumns = ['Prenom', 'Nom'];
+
+    if (expectedType === 'collective') {
+        // Un fichier collectif doit avoir au moins une colonne spécifique aux affectataires multiples
+        const hasCollectiveColumns = collectiveColumns.some(col => headers.includes(col));
+        if (!hasCollectiveColumns) {
+            return { valid: false, message: 'Ce fichier ne contient pas de données collectives (manque de colonnes comme Prenom_1, Nom_1, Prenom_M, etc.)' };
+        }
+        // Vérifier qu'il n'a pas uniquement des colonnes individuelles
+        const hasOnlyIndividualColumns = individualColumns.every(col => headers.includes(col)) && !collectiveColumns.some(col => headers.includes(col));
+        if (hasOnlyIndividualColumns) {
+            return { valid: false, message: 'Ce fichier semble être un fichier individuel, non collectif' };
+        }
+        return { valid: true, message: 'Fichier collectif valide' };
+    } else if (expectedType === 'individual') {
+        // Un fichier individuel doit avoir les colonnes Prenom et Nom, mais pas de colonnes comme Prenom_1, Nom_1
+        const hasIndividualColumns = individualColumns.every(col => headers.includes(col));
+        const hasCollectiveColumns = collectiveColumns.some(col => headers.includes(col));
+        if (!hasIndividualColumns) {
+            return { valid: false, message: 'Ce fichier ne contient pas de données individuelles (manque de colonnes Prenom ou Nom)' };
+        }
+        if (hasCollectiveColumns) {
+            return { valid: false, message: 'Ce fichier semble être un fichier collectif, non individuel' };
+        }
+        return { valid: true, message: 'Fichier individuel valide' };
+    }
+    return { valid: false, message: 'Type de fichier inconnu' };
+}
+
 function slideDown(element, duration = 300) {
     if (!element) return;
     element.style.height = '0';
@@ -980,9 +1015,19 @@ function slideDown(element, duration = 300) {
 // === Deliberation Processing Functions ===
 async function loadExcelFile(file, type) {
     try {
+        if (!['individual', 'collective'].includes(type)) {
+            throw new Error('Type de fichier invalide');
+        }
         window.BoundouDashboard.isProcessingFile = true;
         window.BoundouDashboard.showToast('Chargement du fichier...', 'info');
         const data = await readExcelFile(file);
+        
+        // Valider le type de fichier
+        const validation = validateFileType(data, type);
+        if (!validation.valid) {
+            throw new Error(validation.message);
+        }
+
         if (type === 'individual') {
             window.BoundouDashboard.originalIndividualData = data;
         } else {
@@ -993,7 +1038,9 @@ async function loadExcelFile(file, type) {
         document.getElementById(`generate-${type}`).disabled = false;
     } catch (error) {
         console.error('Erreur lors du chargement du fichier:', error);
-        window.BoundouDashboard.showToast('Erreur lors du chargement du fichier Excel', 'error');
+        window.BoundouDashboard.showToast(`Erreur : ${error.message}`, 'error');
+        document.getElementById(`fileName${type.charAt(0).toUpperCase() + type.slice(1)}`).textContent = '';
+        document.getElementById(`generate-${type}`).disabled = true;
     } finally {
         window.BoundouDashboard.isProcessingFile = false;
     }
@@ -1026,12 +1073,14 @@ function processIndividualData(data) {
 
 function processCollectiveData(data) {
     if (!data || data.length <= 1) return [];
+    collectiveParcelErrors = []; // Réinitialiser les erreurs
     const headers = data[0];
     const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
 
     const results = rows.map(row => formatParcelData(row, headers)).filter(row => row !== null);
     return results;
 }
+
 
 function formatParcelData(row, headers) {
     function getValue(columnName) {
@@ -1139,7 +1188,8 @@ function formatParcelData(row, headers) {
 
     if (prenoms.length < 2) {
         const nicad = getValue('nicad') || getValue('Num_parcel_2') || 'inconnue';
-        console.log(`ATTENTION - Parcelle ${nicad}: Seulement ${prenoms.length} individu(s) trouvé(s)!`);
+        collectiveParcelErrors.push(`Parcelle ${nicad}: Seulement ${prenoms.length} individu(s) trouvé(s)`);
+        window.BoundouDashboard.showToast(`Parcelle ${nicad} exclue : moins de 2 individus`, 'warning');
         return null;
     }
 
@@ -1188,7 +1238,7 @@ function processFile(type) {
             const errorCount = totalRows - validCount;
 
             window.DeliberationListGenerator.displayFileInfo(originalData, type);
-            window.DeliberationListGenerator.displayResults(totalRows, validCount, errorCount, type);
+            window.DeliberationListGenerator.displayResults(totalRows, validCount, errorCount, collectiveParcelErrors, type);
             generateDeliberationList(type);
             processBtn.disabled = false;
             processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
