@@ -612,6 +612,34 @@ function initializeEventHandlers() {
     }
 }
 
+function initializeSubTabs() {
+    const subTabButtons = document.querySelectorAll('.sub-tab-button');
+    const subContentSections = document.querySelectorAll('.sub-content-section');
+
+    subTabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const subsection = this.dataset.subsection;
+            
+            // Remove active class from all sub-tabs and sub-sections
+            subTabButtons.forEach(btn => btn.classList.remove('active'));
+            subContentSections.forEach(section => section.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding section
+            this.classList.add('active');
+            document.getElementById(`${subsection}-subsection`).classList.add('active');
+
+            // Update file info and preview based on active subsection
+            if (subsection === 'individual') {
+                window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalIndividualData, 'individual');
+                window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedIndividualData, 'individual');
+            } else {
+                window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalCollectiveData, 'collective');
+                window.DeliberationListGenerator.displayPreview(window.BoundouDashboard.processedCollectiveData, 'collective');
+            }
+        });
+    });
+}
+
 function switchSection(sectionName) {
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
@@ -1258,6 +1286,7 @@ async function initializeApp() {
         await retryDataLoad();
         initializeMap();
         initializeEventHandlers();
+        initializeSubTabs();
         initializeFilters();
         initializeSearch();
         initializePrint();
