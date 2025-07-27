@@ -162,8 +162,10 @@ function displayFileInfo(file, type) {
 
 function displayPreview(data, type) {
   if (!data || data.length === 0) return;
+  
   const previewData = data.slice(0, 3);
   const columns = getOrderedColumns(data, type);
+  
   let tableHtml = `
     <div class="info-section">
       <h3>👀 Aperçu des données (3 premières lignes)</h3>
@@ -177,16 +179,27 @@ function displayPreview(data, type) {
           </thead>
           <tbody>
   `;
+  
   previewData.forEach(row => {
     tableHtml += '<tr>';
     columns.forEach(col => {
       const value = row[col] || '-';
-      console.log(`Column: ${col}, Value: ${value}, Type: ${typeof value}`);
-      const displayValue = typeof value === 'string' && value.includes('\n') ? value.split('\n')[0] + '...' : String(value); // Modified
-      tableHtml += `<td title="${String(value).replace(/\n/g, ', ')}">${displayValue}</td>`; // Modified
+      // Correction : gérer correctement les valeurs avec \n
+      let displayValue;
+      if (typeof value === 'string' && value.includes('\n')) {
+        const lines = value.split('\n');
+        displayValue = lines.length > 2 ? lines.slice(0, 2).join(', ') + '...' : lines.join(', ');
+      } else {
+        displayValue = String(value);
+      }
+      
+      // Correction : échapper les guillemets dans le title
+      const titleValue = String(value).replace(/"/g, '&quot;').replace(/\n/g, ', ');
+      tableHtml += `<td title="${titleValue}">${displayValue}</td>`;
     });
     tableHtml += '</tr>';
   });
+  
   tableHtml += `
           </tbody>
         </table>
@@ -199,6 +212,7 @@ function displayPreview(data, type) {
       </div>
     </div>
   `;
+  
   const preview = document.getElementById(`preview${type === 'individual' ? 'Individual' : 'Collective'}`);
   if (preview) {
     preview.innerHTML = tableHtml;
