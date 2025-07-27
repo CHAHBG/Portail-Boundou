@@ -76,6 +76,12 @@ function handleFiles(files, type) {
 }
 
 function displayFileInfo(data, type) {
+    if (!['individual', 'collective'].includes(type)) {
+        console.error('Type de fichier invalide:', type);
+        window.BoundouDashboard.showToast('Erreur : type de fichier invalide', 'error');
+        return;
+    }
+
     if (!data || data.length === 0) {
         window.BoundouDashboard.showToast('Aucune donnée valide trouvée dans le fichier', 'error');
         return;
@@ -115,7 +121,25 @@ function displayFileInfo(data, type) {
     }
 }
 
-function displayResults(totalRows, validCount, errorCount, type) {
+function displayResults(totalRows, validCount, errorCount, collectiveErrors = [], type) {
+    if (!['individual', 'collective'].includes(type)) {
+        console.error('Type de fichier invalide:', type);
+        window.BoundouDashboard.showToast('Erreur : type de fichier invalide', 'error');
+        return;
+    }
+
+    let errorsHtml = '';
+    if (type === 'collective' && collectiveErrors.length > 0) {
+        errorsHtml = `
+            <div class="error-details">
+                <h4>⚠️ Parcelles exclues (moins de 2 individus) :</h4>
+                <ul>
+                    ${collectiveErrors.map(error => `<li>${error}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
     const resultsHtml = `
         <div class="results-section">
             <h3>✅ Traitement terminé</h3>
@@ -133,6 +157,7 @@ function displayResults(totalRows, validCount, errorCount, type) {
                     <p>Parcelles avec erreurs</p>
                 </div>
             </div>
+            ${errorsHtml}
         </div>
     `;
     const results = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
@@ -144,6 +169,12 @@ function displayResults(totalRows, validCount, errorCount, type) {
 }
 
 function displayPreview(type) {
+    if (!['individual', 'collective'].includes(type)) {
+        console.error('Type de fichier invalide:', type);
+        window.BoundouDashboard.showToast('Erreur : type de fichier invalide', 'error');
+        return;
+    }
+
     const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
     if (!data || data.length === 0) {
         console.warn('Aucune donnée pour l\'aperçu');
@@ -171,8 +202,8 @@ function displayPreview(type) {
         tableHtml += '<tr>';
         columns.forEach(col => {
             const value = row[col] || '-';
-            const displayValue = value.includes('\n') ? value.split('\n')[0] + '...' : value;
-            tableHtml += `<td title="${value.replace(/\n/g, ', ')}">${displayValue}</td>`;
+            const displayValue = value.includes('\n');
+            tableHtml += `<td title="${value.replace(/\n/g, ', ')}>${displayValue}</td>`;
         });
         tableHtml += '</tr>';
     });
@@ -188,10 +219,10 @@ function displayPreview(type) {
             </div>
         </div>
     `;
-    const preview = document.getElementById(`preview${type.charAt(0).toUpperCase() + type.slice(1)}`);
-    if (preview) {
-        preview.innerHTML = tableHtml;
-        preview.style.cssText = 'display: block !important;';
+    const previewDiv = document.getElementById(`preview${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    if (previewDiv) {
+        previewDiv.innerHTML = tableHtml;
+        previewDiv.style.cssText = 'display: block !important;';
     } else {
         console.error('Element preview non trouvé');
         window.BoundouDashboard.showToast('Erreur : conteneur d\'aperçu non trouvé', 'error');
@@ -217,5 +248,5 @@ window.DeliberationListGenerator = {
     displayResults,
     displayPreview,
     colonnesAConserver,
-    getOrderedColumns
+    getSortedColumns
 };
