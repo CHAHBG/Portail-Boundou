@@ -224,7 +224,8 @@ window.DeliberationListGenerator = {
   initializeDeliberationHandlers,
   handleFiles,
   displayFileInfo,
-  displayPreview
+  displayPreview,
+  colonnesAConserver
 };
 
 // Initialisation automatique
