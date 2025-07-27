@@ -11,6 +11,7 @@ let currentCharts = {};
 let fontScale = 1;
 let filteredParcellesData = [];
 let lastSelectedCommune = null; // Track the last selected commune
+let isMapInitialized = false; // Track map initialization status
 window.BoundouDashboard.processedDeliberationData = [];
 window.BoundouDashboard.isProcessingFile = false;
 window.BoundouDashboard.originalData = null; // Added for deliberation data
@@ -219,12 +220,13 @@ function initializeMap() {
     maxZoom: 18
   }).addTo(map);
 
+  isMapInitialized = true; // Mark map as initialized
   loadCommunesLayer();
   updateMapLegend();
 }
 
 function loadCommunesLayer() {
-  if (!map || !communesData) return;
+  if (!map || !communesData || !isMapInitialized) return;
   if (communesLayer) map.removeLayer(communesLayer);
 
   communesLayer = L.geoJSON(communesData, {
@@ -369,8 +371,11 @@ function showCommuneDetails(communeName) {
     createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
   }, 600);
 
-  const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
-  if (layer) zoomToCommune(communeName, layer);
+  // Safe layer access with null checks
+  if (communesLayer && typeof communesLayer.getLayers === 'function') {
+    const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
+    if (layer) zoomToCommune(communeName, layer);
+  }
 
   showToast(`Détails chargés pour ${communeName}`, 'success');
 }
@@ -564,7 +569,9 @@ function initializeEventHandlers() {
   if (closeStats) closeStats.addEventListener('click', () => {
     document.getElementById('stats-panel')?.classList.add('hidden');
     lastSelectedCommune = null; // Reset last selected commune
-    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    if (communesData.features?.length > 0 && communesLayer) {
+      map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    }
   });
 
   const themeToggle = document.getElementById('theme-toggle');
@@ -604,7 +611,7 @@ function switchSection(sectionName) {
     setTimeout(() => map?.invalidateSize(), 100);
     updateMapLegend();
     // Maintain zoom on last selected commune if applicable
-    if (lastSelectedCommune) {
+    if (lastSelectedCommune && communesLayer && typeof communesLayer.getLayers === 'function') {
       const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
       if (layer) zoomToCommune(lastSelectedCommune, layer);
     }
@@ -668,14 +675,18 @@ function applyFilters() {
 
   if (communeValue) {
     lastSelectedCommune = communeValue; // Update the last selected commune
-    const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
-    if (layer) {
-      zoomToCommune(communeValue, layer);
-      showCommuneDetails(communeValue); // Show details for the selected commune
+    if (communesLayer && typeof communesLayer.getLayers === 'function') {
+      const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
+      if (layer) {
+        zoomToCommune(communeValue, layer);
+        showCommuneDetails(communeValue); // Show details for the selected commune
+      }
     }
   } else {
     lastSelectedCommune = null; // Reset if no commune is selected
-    if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    if (communesData.features?.length > 0 && communesLayer) {
+      map.fitBounds(communesLayer.getBounds()); // Reset to full view
+    }
   }
 
   showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
@@ -951,6 +962,15 @@ function slideDown(element, duration = 300) {
   requestAnimationFrame(animate);
 }
 
+// === Utility function to check XLSX availability ===
+function checkXLSXAvailability() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Erreur : Bibliothèque XLSX non disponible', 'error');
+    return false;
+  }
+  return true;
+}
+
 // === Deliberation Processing Functions ===
 async function processIndividualFile(file) {
   if (!checkXLSXAvailability()) return [];
@@ -1004,10 +1024,14 @@ function processIndividualData(data) {
   if (!data || data.length <= 1) return []; // Skip if no data or only headers
   const headers = data[0];
   const rows = data.slice(1).filter(row => row.some(cell => cell !== '')); // Remove empty rows
+  
+  // Check if DeliberationListGenerator is available
+  const columnsToKeep = window.DeliberationListGenerator?.colonnesAConserver || [];
+  
   const validRows = rows.map(row => {
     const rowData = {};
     headers.forEach((header, i) => {
-      if (window.DeliberationListGenerator.colonnesAConserver.includes(header)) {
+      if (columnsToKeep.length === 0 || columnsToKeep.includes(header)) {
         rowData[header] = row[i] || '';
       }
     });
@@ -1069,8 +1093,18 @@ function generateDeliberationList(type) {
     return;
   }
   
+  if (!checkXLSXAvailability()) return;
+  
   const data = window.BoundouDashboard.processedDeliberationData;
-  const columns = window.DeliberationListGenerator.getOrderedColumns(data, type);
+  let columns;
+  
+  // Get columns based on availability of DeliberationListGenerator
+  if (window.DeliberationListGenerator && typeof window.DeliberationListGenerator.getOrderedColumns === 'function') {
+    columns = window.DeliberationListGenerator.getOrderedColumns(data, type);
+  } else {
+    // Fallback: use all available columns
+    columns = data.length > 0 ? Object.keys(data[0]) : [];
+  }
   
   // Créer un nouveau workbook XLSX
   const wb = XLSX.utils.book_new();
@@ -1170,7 +1204,8 @@ async function initializeApp() {
     console.error('Erreur lors de l\'initialisation:', error);
     showToast('Erreur lors du chargement de l\'application', 'error');
   } finally {
-    document.getElementById('loading-screen')?.classList.add('hidden');
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) loadingScreen.classList.add('hidden');
   }
 }
 
@@ -1196,16 +1231,20 @@ function loadUserPreferences() {
     if (preferences.lastActiveSection) setTimeout(() => switchSection(preferences.lastActiveSection), 100);
     if (preferences.lastSelectedCommune) {
       lastSelectedCommune = preferences.lastSelectedCommune;
+      // Delay the zoom operation until after map initialization
       setTimeout(() => {
-        const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
-        if (layer) zoomToCommune(lastSelectedCommune, layer);
-      }, 100);
+        if (communesLayer && typeof communesLayer.getLayers === 'function') {
+          const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
+          if (layer) zoomToCommune(lastSelectedCommune, layer);
+        }
+      }, 1000); // Increased delay to ensure map is fully loaded
     }
   } catch (error) {
     console.warn('Erreur lors du chargement des préférences:', error);
   }
 }
 
+// Safe error handling
 window.addEventListener('beforeunload', saveUserPreferences);
 document.addEventListener('DOMContentLoaded', () => {
   loadUserPreferences();
