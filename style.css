@@ -512,6 +512,20 @@ select.form-control {
   padding: var(--space-24) var(--space-16);
 }
 
+/* === Update Date === */
+.update-date {
+  font-size: var(--font-size-sm);
+  color: var(--color-white);
+  opacity: 0.9;
+  margin-left: var(--space-12);
+  line-height: 1.5;
+  align-self: center;
+}
+
+[data-color-scheme="dark"] .update-date {
+  color: var(--color-text);
+}
+
 /* === Section Tabs === */
 .section-tabs {
   display: flex;
