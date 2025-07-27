@@ -20,7 +20,7 @@ function initializeDeliberationHandlers() {
         return;
     }
 
-    // Configuration du drag & drop pour individuel
+    // Configuration du drag & drop pour individuel et collectif
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadSectionIndividual.addEventListener(eventName, preventDefaults, false);
         uploadSectionCollective.addEventListener(eventName, preventDefaults, false);
@@ -202,8 +202,8 @@ function displayPreview(type) {
         tableHtml += '<tr>';
         columns.forEach(col => {
             const value = row[col] || '-';
-            const displayValue = value.includes('\n');
-            tableHtml += `<td title="${value.replace(/\n/g, ', ')}>${displayValue}</td>`;
+            const displayValue = value.includes('\n') ? value.split('\n')[0] + '...' : value;
+            tableHtml += `<td title="${value.replace(/\n/g, ', ')}">${displayValue}</td>`;
         });
         tableHtml += '</tr>';
     });
@@ -248,5 +248,5 @@ window.DeliberationListGenerator = {
     displayResults,
     displayPreview,
     colonnesAConserver,
-    getOrderedColumns
+    getOrderedColumns // Corrigé de getSortedColumns à getOrderedColumns
 };
