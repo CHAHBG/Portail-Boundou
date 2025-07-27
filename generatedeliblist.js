@@ -162,14 +162,12 @@ function displayFileInfo(file, type) {
 
 function displayPreview(data, type) {
   if (!data || data.length === 0) return;
-
-  const previewData = data.slice(0, 3); // Afficher les 3 premières lignes
+  const previewData = data.slice(0, 3);
   const columns = getOrderedColumns(data, type);
-
   let tableHtml = `
     <div class="info-section">
       <h3>👀 Aperçu des données (3 premières lignes)</h3>
-      <p><strong>Format de sortie :</strong> ${type === 'individual' ? 'Une ligne par parcelle' : 'Une ligne par parcelle avec affectataires regroupés'}</p>
+      <p><strong>Format de sortie :</strong> ${type === 'individual' ? 'Une ligne par parcelle' : 'Tous les affectataires regroupés'}</p>
       <div class="preview-scroll">
         <table class="preview-table">
           <thead>
@@ -179,17 +177,16 @@ function displayPreview(data, type) {
           </thead>
           <tbody>
   `;
-
   previewData.forEach(row => {
     tableHtml += '<tr>';
     columns.forEach(col => {
       const value = row[col] || '-';
-      const displayValue = value.includes('\n') ? value.split('\n')[0] + '...' : value;
-      tableHtml += `<td title="${value.replace(/\n/g, ', ')}">${displayValue}</td>`;
+      console.log(`Column: ${col}, Value: ${value}, Type: ${typeof value}`);
+      const displayValue = typeof value === 'string' && value.includes('\n') ? value.split('\n')[0] + '...' : String(value); // Modified
+      tableHtml += `<td title="${String(value).replace(/\n/g, ', ')}">${displayValue}</td>`; // Modified
     });
     tableHtml += '</tr>';
   });
-
   tableHtml += `
           </tbody>
         </table>
@@ -202,7 +199,6 @@ function displayPreview(data, type) {
       </div>
     </div>
   `;
-
   const preview = document.getElementById(`preview${type === 'individual' ? 'Individual' : 'Collective'}`);
   if (preview) {
     preview.innerHTML = tableHtml;
@@ -225,7 +221,8 @@ window.DeliberationListGenerator = {
   handleFiles,
   displayFileInfo,
   displayPreview,
-  colonnesAConserver
+  colonnesAConserver,
+  getOrderedColumns
 };
 
 // Initialisation automatique
