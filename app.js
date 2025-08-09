@@ -36,7 +36,7 @@ const communesConfig = {
     'KOAR': { status: 'active', hasOperations: true },
     'SABODALA': { status: 'pending', hasOperations: false },
     'MEDINA BAFFE': { status: 'pending', hasOperations: false },
-    'SINTHIOU MALEME': { status: 'pending', hasOperations: false }
+    'SINTHIOU MALEME': { status: 'active', hasOperations: false }
 };
 
 // Colors palette
