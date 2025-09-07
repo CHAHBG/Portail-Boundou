@@ -137,9 +137,10 @@ function debugData() {
 async function loadExternalData() {
     try {
         showToast('Chargement des données...', 'info');
+        const cacheBuster = `cb=${Date.now()}`;
         const [communesResponse, parcellesResponse] = await Promise.all([
-            fetch('data/communes_boundou.geojson'),
-            fetch('data/parcelles.json')
+            fetch(`data/communes_boundou.geojson?${cacheBuster}`),
+            fetch(`data/parcelles.json?${cacheBuster}`)
         ]);
 
         if (!communesResponse.ok) throw new Error(`Erreur GeoJSON: ${communesResponse.status}`);
@@ -156,7 +157,7 @@ async function loadExternalData() {
             const dates = [lastMod1, lastMod2].filter(Boolean).map(d => new Date(d));
             const recent = dates.length ? new Date(Math.max(...dates)) : new Date();
             updateLastUpdatedLabel(recent);
-        } catch (e) { console.warn('Impossible de déterminer la date de mise à jour', e); }
+        } catch (e) { console.warn('Impossible de déterminer la date de mise à jour', e); updateLastUpdatedLabel(new Date()); }
 
         const validationErrors = validateData(communesData, parcellesData);
         if (validationErrors.length > 0) throw new Error(`Erreurs de validation: ${validationErrors.join(', ')}`);
@@ -170,6 +171,7 @@ async function loadExternalData() {
         communesData = getSampleGeoJSON();
         parcellesData = getSampleParcelles();
         filteredParcellesData = [...parcellesData];
+    updateLastUpdatedLabel(new Date());
         debugData();
         initializeMap(); // Reinitialize map with sample data
         return false;
