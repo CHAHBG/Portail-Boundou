@@ -1425,6 +1425,31 @@ function loadUserPreferences() {
 window.addEventListener('beforeunload', saveUserPreferences);
 document.addEventListener('DOMContentLoaded', () => {
     loadUserPreferences();
+
+    // Fix: initial dashboard iframe spinner never hides on first visit because
+    // switchDashboard() (which assigns onload) isn't called yet. Attach a load
+    // listener here so the first embedded dashboard hides the spinner once loaded.
+    const iframe = document.getElementById('dashboard-frame');
+    const loading = document.querySelector('.dashboard-loading');
+    if (iframe && loading) {
+        // Ensure spinner visible while loading initial iframe content
+        loading.style.display = 'block';
+        iframe.addEventListener('load', () => {
+            loading.style.display = 'none';
+            // Provide feedback only the very first time
+            if (!iframe.dataset.initialLoadNotified) {
+                iframe.dataset.initialLoadNotified = 'true';
+                try { showToast('Dashboard principal chargé', 'success'); } catch (_) {}
+            }
+        }, { once: true });
+        // Safety timeout in case onload never fires (network/CSP issues)
+        setTimeout(() => {
+            if (loading.style.display !== 'none') {
+                loading.style.display = 'none';
+            }
+        }, 15000);
+    }
+
     initializeApp();
 });
 
