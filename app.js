@@ -149,6 +149,15 @@ async function loadExternalData() {
         parcellesData = await parcellesResponse.json();
         filteredParcellesData = [...parcellesData];
 
+        // Mettre à jour la date de dernière mise à jour (en-tête Last-Modified sinon date du jour)
+        try {
+            const lastMod1 = communesResponse.headers.get('Last-Modified');
+            const lastMod2 = parcellesResponse.headers.get('Last-Modified');
+            const dates = [lastMod1, lastMod2].filter(Boolean).map(d => new Date(d));
+            const recent = dates.length ? new Date(Math.max(...dates)) : new Date();
+            updateLastUpdatedLabel(recent);
+        } catch (e) { console.warn('Impossible de déterminer la date de mise à jour', e); }
+
         const validationErrors = validateData(communesData, parcellesData);
         if (validationErrors.length > 0) throw new Error(`Erreurs de validation: ${validationErrors.join(', ')}`);
 
@@ -837,6 +846,16 @@ function initializeTheme() {
     if (themeIcon) themeIcon.textContent = savedTheme === 'light' ? '🌙' : '☀️';
 }
 
+function updateLastUpdatedLabel(dateObj) {
+    const label = document.getElementById('last-updated-label');
+    if (!label || !dateObj) return;
+    const mois = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const jour = String(dateObj.getDate()).padStart(2,'0');
+    const moisTxt = mois[dateObj.getMonth()];
+    const annee = dateObj.getFullYear();
+    label.innerHTML = `<span class="update-icon">📅</span> Données mises à jour le ${jour} ${moisTxt} ${annee}`;
+}
+
 function handleResize() {
     if (map) setTimeout(() => map.invalidateSize(), 100);
     Object.values(currentCharts).forEach(chart => chart?.resize?.());
@@ -896,6 +915,19 @@ function registerServiceWorker() {
         navigator.serviceWorker.register('/sw.js')
             .then(reg => console.log('Service Worker registered:', reg))
             .catch(err => console.warn('Service Worker registration failed:', err));
+
+        // Nouvelle session : effacer caches service worker afin d'éviter les données périmées
+        try {
+            if (!sessionStorage.getItem('boundouSessionStarted')) {
+                sessionStorage.setItem('boundouSessionStarted', '1');
+                navigator.serviceWorker.ready.then(swReg => {
+                    if (swReg.active) {
+                        swReg.active.postMessage('CLEAR_CACHES_FOR_NEW_SESSION');
+                        console.log('Demande de purge des caches envoyée (nouvelle session).');
+                    }
+                });
+            }
+        } catch (e) { console.warn('Session storage non disponible', e); }
     }
 }
 
