@@ -716,7 +716,7 @@ function switchDashboard(dashboardName) {
 
     const urls = {
         'boundou': 'https://boundoudash.netlify.app/',
-        'edl': 'https://suivioperation.netlify.app/'
+    'edl': 'https://suivioperation.netlify.app/'
     };
 
     if (loading) loading.style.display = 'block';
@@ -724,7 +724,8 @@ function switchDashboard(dashboardName) {
 
     iframe.onload = () => {
         if (loading) loading.style.display = 'none';
-        showToast(`Dashboard ${dashboardName} chargé`, 'success');
+        const name = dashboardName === 'edl' ? 'Suivi Opération' : 'Dashboard Principal';
+        showToast(`${name} chargé`, 'success');
     };
 }
 
