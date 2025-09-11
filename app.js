@@ -490,7 +490,7 @@ function createCommunesChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } },
+            scales: { y: { beginAtZero: true, ticks: { autoSkip: true, maxTicksLimit: 10 } }, x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true } } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -712,6 +712,7 @@ function switchDashboard(dashboardName) {
 
     const iframe = document.getElementById('dashboard-frame');
     const loading = document.querySelector('.dashboard-loading');
+    const blocked = document.getElementById('dashboard-blocked');
     if (!iframe) return;
 
     const urls = {
@@ -720,13 +721,29 @@ function switchDashboard(dashboardName) {
     };
 
     if (loading) loading.style.display = 'block';
-    iframe.src = urls[dashboardName] || '';
+    if (blocked) blocked.style.display = 'none';
+    const targetUrl = urls[dashboardName] || '';
+    iframe.src = targetUrl;
 
+    // Enable "Open in new tab" link in case of block
+    const openLink = document.getElementById('dashboard-open-link');
+    if (openLink) openLink.href = targetUrl;
+
+    let loaded = false;
     iframe.onload = () => {
+        loaded = true;
         if (loading) loading.style.display = 'none';
         const name = dashboardName === 'edl' ? 'Suivi Opération' : 'Dashboard Principal';
         showToast(`${name} chargé`, 'success');
     };
+
+    // After a short delay, if not loaded, likely blocked by X-Frame-Options
+    setTimeout(() => {
+        if (!loaded) {
+            if (loading) loading.style.display = 'none';
+            if (blocked) blocked.style.display = 'flex';
+        }
+    }, 2000);
 }
 
 function toggleTheme() {

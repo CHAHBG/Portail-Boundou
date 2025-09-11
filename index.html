@@ -27,6 +27,8 @@
     
     <!-- Preload key resources -->
     <link rel="preconnect" href="https://unpkg.com">
+    <!-- Favicon (inline to avoid 404) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%231B3B59'/%3E%3Ctext x='50' y='58' font-size='58' text-anchor='middle' fill='white'%3E🗺️%3C/text%3E%3C/svg%3E">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -179,6 +181,13 @@
                 <div class="dashboard-loading">
                     <div class="loading-spinner"></div>
                     <p>Chargement du tableau de bord...</p>
+                </div>
+                <div class="dashboard-blocked" id="dashboard-blocked" style="display:none;">
+                    <div class="blocked-inner">
+                        <div class="blocked-icon">🚫</div>
+                        <p>Ce site ne permet pas l'intégration dans un iframe.</p>
+                        <a id="dashboard-open-link" class="btn btn--primary" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>
+                    </div>
                 </div>
                 <iframe 
                     id="dashboard-frame" 
