@@ -716,7 +716,7 @@ function switchDashboard(dashboardName) {
 
     const urls = {
         'boundou': 'https://boundoudash.netlify.app/',
-        'edl': 'https://edlinventairesboundou.netlify.app/'
+        'edl': 'https://suivioperation.netlify.app/'
     };
 
     if (loading) loading.style.display = 'block';
