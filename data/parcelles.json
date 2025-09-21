@@ -3362,9 +3362,9 @@
     "numero_cadastral": 522030301500013.0,
     "superficie": "31152.52",
     "type_usag": "Agriculture_pluviale",
-    "deliberee": "Non",
+    "deliberee": "Oui",
     "autorite_delib": "Non spécifié",
-    "ctasf": "Non"
+    "ctasf": "Oui"
   },
   {
     "id_parcelle": "0522030301407",
