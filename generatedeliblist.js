@@ -169,6 +169,9 @@ function displayResults(totalRows, validCount, errorCount, collectiveErrors = []
 }
 
 function displayPreview(type) {
+    console.log('=== DEBUG displayPreview ===');
+    console.log('Type:', type);
+    
     if (!type || !['individual', 'collective'].includes(type)) {
         console.error('Type de fichier invalide:', type);
         window.BoundouDashboard.showToast('Erreur : type de fichier invalide pour l\'aperçu', 'error');
@@ -176,6 +179,9 @@ function displayPreview(type) {
     }
 
     const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
+    console.log('Data length:', data ? data.length : 'data is null/undefined');
+    console.log('Data sample:', data && data.length > 0 ? data[0] : 'no data');
+    
     if (!data || data.length === 0) {
         console.warn('Aucune donnée pour l\'aperçu');
         window.BoundouDashboard.showToast('Aucune donnée à afficher dans l\'aperçu', 'warning');
@@ -270,7 +276,12 @@ function getOrderedColumns(data) {
         return availableColumns;
     } else {
         // For individual data, return all available columns in a logical order
-        const priorityColumns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'Num_parcel_2'];
+        const priorityColumns = [
+            'Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Telephone', 
+            'Vocation', 'type_usag', 'superficie', 'nicad', 'Num_parcel', 'Num_parcel_2',
+            'Typ_pers', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser',
+            'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse'
+        ];
         const orderedColumns = [];
         
         // Add priority columns first if they exist

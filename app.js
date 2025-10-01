@@ -1143,6 +1143,10 @@ function processIndividualData(data) {
     const headers = data[0];
     const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
     
+    console.log('=== DEBUG processIndividualData ===');
+    console.log('Headers:', headers);
+    console.log('Number of data rows:', rows.length);
+    
     // Fonction pour vérifier si une colonne doit être exclue
     function shouldExcludeColumn(header) {
         if (!header || typeof header !== 'string') return true;
@@ -1160,7 +1164,15 @@ function processIndividualData(data) {
             }
         });
         return rowData;
-    }).filter(row => row['Num_parcel_2'] && row['Village']);
+    }).filter(row => {
+        // Check for parcel identifier (flexible column names)
+        const hasParcelId = row['Num_parcel_2'] || row['Num_parcel'] || row['nicad'];
+        const hasVillage = row['Village'];
+        return hasParcelId && hasVillage;
+    });
+    
+    console.log('Valid rows after filtering:', validRows.length);
+    console.log('Sample row:', validRows[0]);
     return validRows;
 }
 
