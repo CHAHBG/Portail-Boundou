@@ -169,9 +169,6 @@ function displayResults(totalRows, validCount, errorCount, collectiveErrors = []
 }
 
 function displayPreview(type) {
-    console.log('=== DEBUG displayPreview ===');
-    console.log('Type:', type);
-    
     if (!type || !['individual', 'collective'].includes(type)) {
         console.error('Type de fichier invalide:', type);
         window.BoundouDashboard.showToast('Erreur : type de fichier invalide pour l\'aperçu', 'error');
@@ -179,8 +176,6 @@ function displayPreview(type) {
     }
 
     const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
-    console.log('Data length:', data ? data.length : 'data is null/undefined');
-    console.log('Data sample:', data && data.length > 0 ? data[0] : 'no data');
     
     if (!data || data.length === 0) {
         console.warn('Aucune donnée pour l\'aperçu');
@@ -188,7 +183,116 @@ function displayPreview(type) {
         return;
     }
 
-    const previewData = data.slice(0, 3);
+    if (type === 'individual') {
+        displayIndividualPreview(data);
+    } else {
+        displayCollectivePreview(data);
+    }
+}
+
+function displayIndividualPreview(data) {
+    // For individual files, show preview of both person types
+    const personnesPhysiques = data.filter(row => 
+        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_physique')
+    );
+    
+    const personnesMorales = data.filter(row => 
+        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale')
+    );
+
+    let previewHtml = '<div class="info-section">';
+    
+    // Preview for Personnes Physiques
+    if (personnesPhysiques.length > 0) {
+        const physiquesColumns = [
+            'Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 
+            'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'
+        ];
+        const availablePhysiquesColumns = physiquesColumns.filter(col => 
+            personnesPhysiques.some(row => row.hasOwnProperty(col) && row[col] !== undefined && row[col] !== '')
+        );
+        
+        previewHtml += `
+            <h3>👤 Aperçu Personnes Physiques (${Math.min(5, personnesPhysiques.length)} premières)</h3>
+            <div class="preview-scroll">
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            ${availablePhysiquesColumns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        personnesPhysiques.slice(0, 5).forEach(row => {
+            previewHtml += '<tr>';
+            availablePhysiquesColumns.forEach(col => {
+                const value = row[col] || '-';
+                const displayValue = typeof value === 'string' && value.length > 30 ? value.substring(0, 30) + '...' : value;
+                previewHtml += `<td title="${value}">${displayValue}</td>`;
+            });
+            previewHtml += '</tr>';
+        });
+        
+        previewHtml += '</tbody></table></div>';
+    }
+    
+    // Preview for Personnes Morales
+    if (personnesMorales.length > 0) {
+        const moralesColumns = [
+            'Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
+            'Numero', 'Mandataire', 'Telephone_001', 'Adresse'
+        ];
+        const availableMoralesColumns = moralesColumns.filter(col => 
+            personnesMorales.some(row => row.hasOwnProperty(col) && row[col] !== undefined && row[col] !== '')
+        );
+        
+        previewHtml += `
+            <h3>🏢 Aperçu Personnes Morales (${Math.min(5, personnesMorales.length)} premières)</h3>
+            <div class="preview-scroll">
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            ${availableMoralesColumns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        personnesMorales.slice(0, 5).forEach(row => {
+            previewHtml += '<tr>';
+            availableMoralesColumns.forEach(col => {
+                const value = row[col] || '-';
+                const displayValue = typeof value === 'string' && value.length > 30 ? value.substring(0, 30) + '...' : value;
+                previewHtml += `<td title="${value}">${displayValue}</td>`;
+            });
+            previewHtml += '</tr>';
+        });
+        
+        previewHtml += '</tbody></table></div>';
+    }
+    
+    previewHtml += `
+        <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
+            <strong>📋 Structure du fichier généré :</strong><br>
+            <small>• Deux feuilles Excel séparées selon le type de personne<br>
+            • Feuille 1: "Personnes physiques" (${personnesPhysiques.length} enregistrements)<br>
+            • Feuille 2: "Personne Morale" (${personnesMorales.length} enregistrements)</small>
+        </div>
+    </div>`;
+    
+    const previewDiv = document.getElementById('previewIndividual');
+    if (previewDiv) {
+        previewDiv.innerHTML = previewHtml;
+        previewDiv.style.cssText = 'display: block !important;';
+    } else {
+        console.error('Element previewIndividual non trouvé');
+        window.BoundouDashboard.showToast('Erreur : conteneur d\'aperçu non trouvé', 'error');
+    }
+}
+
+function displayCollectivePreview(data) {
+    const previewData = data.slice(0, 5);
     const columns = getOrderedColumns(data);
     
     // Check if this is collective data (has multi-line values)
@@ -198,8 +302,8 @@ function displayPreview(type) {
 
     let tableHtml = `
         <div class="info-section">
-            <h3>👀 Aperçu des données (3 premières lignes)</h3>
-            <p><strong>Format de sortie :</strong> ${isCollectiveData ? 'Chaque parcelle sur une ligne avec tous les individus en colonnes séparées' : 'Données individuelles avec toutes les colonnes disponibles'}</p>
+            <h3>👀 Aperçu des données (5 premières lignes)</h3>
+            <p><strong>Format de sortie :</strong> Chaque parcelle sur une ligne avec tous les individus en colonnes séparées</p>
             <div class="preview-scroll">
                 <table class="preview-table">
                     <thead>
@@ -209,6 +313,7 @@ function displayPreview(type) {
                     </thead>
                     <tbody>
     `;
+    
     previewData.forEach(row => {
         tableHtml += '<tr>';
         columns.forEach(col => {
@@ -227,27 +332,27 @@ function displayPreview(type) {
         });
         tableHtml += '</tr>';
     });
+    
     tableHtml += `
                     </tbody>
                 </table>
             </div>
             <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
                 <strong>📋 Structure du fichier :</strong><br>
-                <small>${isCollectiveData ? 
-                    '• Chaque ligne = une parcelle<br>• Tous les affectataires regroupés dans les mêmes colonnes, séparés par des retours à la ligne' : 
-                    '• Chaque ligne = un individu/une parcelle<br>• Toutes les colonnes disponibles (sauf celles avec _001, _002, etc.)'
-                }<br>
+                <small>• Chaque ligne = une parcelle<br>
+                • Tous les affectataires regroupés dans les mêmes colonnes, séparés par des retours à la ligne<br>
                 • Colonnes : ${columns.join(', ')}</small>
             </div>
         </div>
     `;
-    const previewDiv = document.getElementById(`preview${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    
+    const previewDiv = document.getElementById('previewCollective');
     if (previewDiv) {
         previewDiv.innerHTML = tableHtml;
         previewDiv.style.cssText = 'display: block !important;';
     } else {
-        console.error('Element preview non trouvé');
-        window.BoundouDashboard.showToast('Erreur : conteneur d\'aperçu non trouvé', 'error');
+        console.error('Element previewCollective non trouvé');
+        window.BoundouDashboard.showToast('Erreur : conteneur d\'aperçu collectif non trouvé', 'error');
     }
 }
 
@@ -310,6 +415,8 @@ window.DeliberationListGenerator = {
     displayFileInfo,
     displayResults,
     displayPreview,
+    displayIndividualPreview,
+    displayCollectivePreview,
     colonnesAConserver,
-    getOrderedColumns // Corrigé de getSortedColumns à getOrderedColumns
+    getOrderedColumns
 };
