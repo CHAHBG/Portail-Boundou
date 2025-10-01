@@ -1,7 +1,7 @@
 // === Boundou Deliberation List Generator ===
 // Module pour la gestion des fichiers Excel et la génération des listes de délibérations
 
-// Colonnes à conserver pour les fichiers individuels
+// Colonnes à conserver pour les fichiers collectifs (les fichiers individuels incluent toutes les colonnes sauf celles avec _001, _002, etc.)
 const colonnesAConserver = [
     'Village', 'nicad', 'Num_parcel_2', 'Prenom', 'Nom', 'Date_naiss',
     'superficie', 'Num_piece', 'Telephone', 'Vocation', 'type_usag', 'Sexe'
@@ -165,7 +165,7 @@ function displayResults(totalRows, validCount, errorCount, collectiveErrors = []
         results.innerHTML = resultsHtml;
         results.style.cssText = 'display: block !important;';
     }
-    displayPreview(type);
+    // Note: displayPreview is now called separately after data processing
 }
 
 function displayPreview(type) {
@@ -184,11 +184,16 @@ function displayPreview(type) {
 
     const previewData = data.slice(0, 3);
     const columns = getOrderedColumns(data);
+    
+    // Check if this is collective data (has multi-line values)
+    const isCollectiveData = data.some(row => 
+        row.Prenom && typeof row.Prenom === 'string' && row.Prenom.includes('\n')
+    );
 
     let tableHtml = `
         <div class="info-section">
             <h3>👀 Aperçu des données (3 premières lignes)</h3>
-            <p><strong>Format de sortie :</strong> Chaque parcelle sur une ligne avec tous les individus en colonnes séparées</p>
+            <p><strong>Format de sortie :</strong> ${isCollectiveData ? 'Chaque parcelle sur une ligne avec tous les individus en colonnes séparées' : 'Données individuelles avec toutes les colonnes disponibles'}</p>
             <div class="preview-scroll">
                 <table class="preview-table">
                     <thead>
@@ -202,8 +207,17 @@ function displayPreview(type) {
         tableHtml += '<tr>';
         columns.forEach(col => {
             const value = row[col] || '-';
-            const displayValue = value.includes('\n') ? value.split('\n')[0] + '...' : value;
-            tableHtml += `<td title="${value.replace(/\n/g, ', ')}">${displayValue}</td>`;
+            // Handle both individual (no newlines) and collective (with newlines) data
+            let displayValue = value;
+            if (typeof value === 'string' && value.includes('\n')) {
+                // For collective data with multiple values
+                displayValue = value.split('\n')[0] + '...';
+            } else if (typeof value === 'string' && value.length > 30) {
+                // For long individual values
+                displayValue = value.substring(0, 30) + '...';
+            }
+            const titleValue = typeof value === 'string' ? value.replace(/\n/g, ', ') : value;
+            tableHtml += `<td title="${titleValue}">${displayValue}</td>`;
         });
         tableHtml += '</tr>';
     });
@@ -213,8 +227,10 @@ function displayPreview(type) {
             </div>
             <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
                 <strong>📋 Structure du fichier :</strong><br>
-                <small>• Chaque ligne = une parcelle<br>
-                • Tous les affectataires regroupés dans les mêmes colonnes, séparés par des retours à la ligne<br>
+                <small>${isCollectiveData ? 
+                    '• Chaque ligne = une parcelle<br>• Tous les affectataires regroupés dans les mêmes colonnes, séparés par des retours à la ligne' : 
+                    '• Chaque ligne = un individu/une parcelle<br>• Toutes les colonnes disponibles (sauf celles avec _001, _002, etc.)'
+                }<br>
                 • Colonnes : ${columns.join(', ')}</small>
             </div>
         </div>
@@ -230,14 +246,50 @@ function displayPreview(type) {
 }
 
 function getOrderedColumns(data) {
-    const orderedColumns = [
+    if (!data || data.length === 0) return [];
+    
+    // Get all available columns from the first data row
+    const allColumns = Object.keys(data[0]);
+    
+    // Define preferred order for collective files
+    const collectiveOrderedColumns = [
         'Village', 'nicad', 'Num_parcel_2', 'Prenom', 'Nom', 'Sexe',
         'Numero_piece', 'Telephone', 'Date_naissance', 'Residence',
         'superficie', 'Vocation_1', 'type_usa'
     ];
-    const availableColumns = orderedColumns.filter(col => data.some(row => row.hasOwnProperty(col)));
-    console.log('Colonnes disponibles :', availableColumns);
-    return availableColumns;
+    
+    // Check if this looks like collective data (has consolidated fields like multi-line names)
+    const isCollectiveData = data.some(row => 
+        row.Prenom && typeof row.Prenom === 'string' && row.Prenom.includes('\n')
+    );
+    
+    if (isCollectiveData) {
+        // For collective data, use the predefined order
+        const availableColumns = collectiveOrderedColumns.filter(col => allColumns.includes(col));
+        console.log('Colonnes disponibles (collective):', availableColumns);
+        return availableColumns;
+    } else {
+        // For individual data, return all available columns in a logical order
+        const priorityColumns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'Num_parcel_2'];
+        const orderedColumns = [];
+        
+        // Add priority columns first if they exist
+        priorityColumns.forEach(col => {
+            if (allColumns.includes(col)) {
+                orderedColumns.push(col);
+            }
+        });
+        
+        // Add remaining columns
+        allColumns.forEach(col => {
+            if (!orderedColumns.includes(col)) {
+                orderedColumns.push(col);
+            }
+        });
+        
+        console.log('Colonnes disponibles (individual):', orderedColumns);
+        return orderedColumns;
+    }
 }
 
 // Export du module

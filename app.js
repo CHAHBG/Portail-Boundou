@@ -1142,10 +1142,20 @@ function processIndividualData(data) {
     if (!data || data.length <= 1) return [];
     const headers = data[0];
     const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
+    
+    // Fonction pour vérifier si une colonne doit être exclue
+    function shouldExcludeColumn(header) {
+        if (!header || typeof header !== 'string') return true;
+        // Exclure les colonnes qui se terminent par _001, _002, _003, etc.
+        return /_(00[1-9]|0[1-9][0-9]|[1-9][0-9]{2,})$/.test(header);
+    }
+    
     const validRows = rows.map(row => {
         const rowData = {};
         headers.forEach((header, i) => {
-            if (window.DeliberationListGenerator.colonnesAConserver.includes(header)) {
+            // Inclure toutes les colonnes sauf celles avec le pattern _001, _002, etc.
+            // Mais toujours inclure Typ_pers pour la différenciation
+            if (!shouldExcludeColumn(header) || header === 'Typ_pers') {
                 rowData[header] = cleanValue(row[i]);
             }
         });
@@ -1322,6 +1332,7 @@ function processFile(type) {
 
             window.DeliberationListGenerator.displayFileInfo(originalData, type);
             window.DeliberationListGenerator.displayResults(totalRows, validCount, errorCount, collectiveParcelErrors, type);
+            window.DeliberationListGenerator.displayPreview(type);
             generateDeliberationList(type);
             processBtn.disabled = false;
             processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
@@ -1347,6 +1358,120 @@ function generateDeliberationList(type) {
         return;
     }
 
+    if (type === 'individual') {
+        generateIndividualDeliberationList(data);
+    } else {
+        generateCollectiveDeliberationList(data);
+    }
+}
+
+function generateIndividualDeliberationList(data) {
+    // Colonnes pour Personnes Physiques
+    const personnesPhysiquesColumns = [
+        'Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 
+        'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'
+    ];
+    
+    // Colonnes pour Personnes Morales
+    const personnesMoralesColumns = [
+        'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
+        'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse'
+    ];
+
+    // Séparer les données selon Typ_pers
+    const personnesPhysiques = data.filter(row => 
+        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_physique')
+    );
+    
+    const personnesMorales = data.filter(row => 
+        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale')
+    );
+
+    // Créer le workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Créer la feuille Personnes Physiques si il y a des données
+    if (personnesPhysiques.length > 0) {
+        const personnesPhysiquesData = personnesPhysiques.map(row => {
+            const orderedRow = {};
+            personnesPhysiquesColumns.forEach(col => {
+                orderedRow[col] = row[col] || '';
+            });
+            return orderedRow;
+        });
+        
+        const wsPhysiques = XLSX.utils.json_to_sheet(personnesPhysiquesData, { header: personnesPhysiquesColumns });
+        
+        // Définir les largeurs de colonnes pour Personnes Physiques
+        const colWidthsPhysiques = personnesPhysiquesColumns.map(col => {
+            if (['Village', 'Vocation'].includes(col)) return { wch: 20 };
+            if (['nicad', 'superficie'].includes(col)) return { wch: 15 };
+            if (['Prenom', 'Nom'].includes(col)) return { wch: 15 };
+            if (['Num_piece', 'Telephone'].includes(col)) return { wch: 15 };
+            if (['Date_naiss'].includes(col)) return { wch: 12 };
+            return { wch: 10 };
+        });
+        wsPhysiques['!cols'] = colWidthsPhysiques;
+        
+        XLSX.utils.book_append_sheet(wb, wsPhysiques, 'Personnes physiques');
+    }
+    
+    // Créer la feuille Personnes Morales si il y a des données
+    if (personnesMorales.length > 0) {
+        const personnesMoralesData = personnesMorales.map(row => {
+            const orderedRow = {};
+            personnesMoralesColumns.forEach(col => {
+                orderedRow[col] = row[col] || '';
+            });
+            return orderedRow;
+        });
+        
+        const wsMorales = XLSX.utils.json_to_sheet(personnesMoralesData, { header: personnesMoralesColumns });
+        
+        // Définir les largeurs de colonnes pour Personnes Morales
+        const colWidthsMorales = personnesMoralesColumns.map(col => {
+            if (['Denominat', 'Siege', 'Adresse'].includes(col)) return { wch: 25 };
+            if (['Type_num', 'Autre_pr_ciser'].includes(col)) return { wch: 20 };
+            if (['Mandataire', 'PhotoPieMo_URL'].includes(col)) return { wch: 20 };
+            if (['Telephone_001', 'Numero'].includes(col)) return { wch: 15 };
+            if (['Creation'].includes(col)) return { wch: 12 };
+            return { wch: 10 };
+        });
+        wsMorales['!cols'] = colWidthsMorales;
+        
+        XLSX.utils.book_append_sheet(wb, wsMorales, 'Personne Morale');
+    }
+
+    // Générer le fichier
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+    const fileName = `LISTE_INDIVIDUELLES_${dateStr}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    // Afficher les statistiques
+    const confirmationHtml = `
+        <div class="results-section" style="margin-top: 20px;">
+            <h3>📥 Téléchargement terminé</h3>
+            <p><strong>Fichier généré :</strong> ${fileName}</p>
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>${personnesPhysiques.length}</h3>
+                    <p>Personnes Physiques</p>
+                </div>
+                <div class="stat-card">
+                    <h3>${personnesMorales.length}</h3>
+                    <p>Personnes Morales</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('resultsIndividual').innerHTML = confirmationHtml;
+    showToast(`Fichier généré avec ${personnesPhysiques.length} personnes physiques et ${personnesMorales.length} personnes morales`, 'success');
+}
+
+function generateCollectiveDeliberationList(data) {
+    // Pour les fichiers collectifs, garder le comportement existant
     const columns = window.DeliberationListGenerator.getOrderedColumns(data);
     const orderedData = data.map(row => {
         const orderedRow = {};
@@ -1368,11 +1493,11 @@ function generateDeliberationList(type) {
     ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, type === 'individual' ? 'LISTE_INDIVIDUELLES' : 'LISTE_COLLECTIVES');
+    XLSX.utils.book_append_sheet(wb, ws, 'LISTE_COLLECTIVES');
 
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    const fileName = type === 'individual' ? `LISTE_INDIVIDUELLES_${dateStr}.xlsx` : `LISTE_COLLECTIVES_${dateStr}.xlsx`;
+    const fileName = `LISTE_COLLECTIVES_${dateStr}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     const confirmationHtml = `
@@ -1386,12 +1511,9 @@ function generateDeliberationList(type) {
             </div>
         </div>
     `;
-    const resultsDiv = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
-    if (resultsDiv) {
-        resultsDiv.innerHTML += confirmationHtml;
-    }
-
-    showToast(`Liste ${type === 'individual' ? 'individuelle' : 'collective'} générée : ${fileName}`, 'success');
+    
+    document.getElementById('resultsCollective').innerHTML = confirmationHtml;
+    showToast(`Liste collective générée : ${fileName}`, 'success');
 }
 
 function resetDeliberationData() {
@@ -1527,6 +1649,8 @@ Object.assign(window.BoundouDashboard, {
     processIndividualData,
     processCollectiveData,
     generateDeliberationList,
+    generateIndividualDeliberationList,
+    generateCollectiveDeliberationList,
     resetDeliberationData,
     showToast,
     cleanValue,
