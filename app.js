@@ -1504,7 +1504,8 @@ function generateIndividualDeliberationList(data) {
     );
     
     const personnesMorales = data.filter(row => 
-        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale')
+        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale') &&
+        !(row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement'))
     );
 
     const groupements = data.filter(row => 
