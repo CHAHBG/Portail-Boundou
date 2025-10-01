@@ -191,13 +191,17 @@ function displayPreview(type) {
 }
 
 function displayIndividualPreview(data) {
-    // For individual files, show preview of both person types
+    // For individual files, show preview of all three types
     const personnesPhysiques = data.filter(row => 
         row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_physique')
     );
     
     const personnesMorales = data.filter(row => 
         row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale')
+    );
+
+    const groupements = data.filter(row => 
+        row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement')
     );
 
     let previewHtml = '<div class="info-section">';
@@ -272,12 +276,48 @@ function displayIndividualPreview(data) {
         previewHtml += '</tbody></table></div>';
     }
     
+    // Preview for Groupements
+    if (groupements.length > 0) {
+        const groupementColumns = [
+            'Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
+            'Numero', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad'
+        ];
+        const availableGroupementColumns = groupementColumns.filter(col => 
+            groupements.some(row => row.hasOwnProperty(col) && row[col] !== undefined && row[col] !== '')
+        );
+        
+        previewHtml += `
+            <h3>🏛️ Aperçu Groupements (${Math.min(5, groupements.length)} premières)</h3>
+            <div class="preview-scroll">
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            ${availableGroupementColumns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        groupements.slice(0, 5).forEach(row => {
+            previewHtml += '<tr>';
+            availableGroupementColumns.forEach(col => {
+                const value = row[col] || '-';
+                const displayValue = typeof value === 'string' && value.length > 30 ? value.substring(0, 30) + '...' : value;
+                previewHtml += `<td title="${value}">${displayValue}</td>`;
+            });
+            previewHtml += '</tr>';
+        });
+        
+        previewHtml += '</tbody></table></div>';
+    }
+    
     previewHtml += `
         <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
             <strong>📋 Structure du fichier généré :</strong><br>
-            <small>• Deux feuilles Excel séparées selon le type de personne<br>
+            <small>• Trois feuilles Excel séparées selon le type d'entité<br>
             • Feuille 1: "Personnes physiques" (${personnesPhysiques.length} enregistrements)<br>
-            • Feuille 2: "Personne Morale" (${personnesMorales.length} enregistrements)</small>
+            • Feuille 2: "Personne Morale" (${personnesMorales.length} enregistrements)<br>
+            • Feuille 3: "Groupement" (${groupements.length} enregistrements)</small>
         </div>
     </div>`;
     

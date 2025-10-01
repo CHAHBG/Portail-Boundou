@@ -1252,8 +1252,8 @@ function processIndividualData(data) {
         const rowData = {};
         headers.forEach((header, i) => {
             // Inclure toutes les colonnes sauf celles avec le pattern _001, _002, etc.
-            // Mais toujours inclure Typ_pers pour la différenciation
-            if (!shouldExcludeColumn(header) || header === 'Typ_pers') {
+            // Mais toujours inclure Typ_pers et Typ_pers_m pour la différenciation
+            if (!shouldExcludeColumn(header) || ['Typ_pers', 'Typ_pers_m'].includes(header)) {
                 rowData[header] = cleanValue(row[i]);
             }
         });
@@ -1482,13 +1482,24 @@ function generateIndividualDeliberationList(data) {
         'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse'
     ];
 
-    // Séparer les données selon Typ_pers
+    // Colonnes pour Groupements
+    const groupementColumns = [
+        'Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
+        'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse',
+        'superficie', 'nicad', 'Vocation', 'type_usag'
+    ];
+
+    // Séparer les données selon Typ_pers et Typ_pers_m
     const personnesPhysiques = data.filter(row => 
         row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_physique')
     );
     
     const personnesMorales = data.filter(row => 
         row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale')
+    );
+
+    const groupements = data.filter(row => 
+        row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement')
     );
 
     // Créer le workbook
@@ -1545,6 +1556,32 @@ function generateIndividualDeliberationList(data) {
         
         XLSX.utils.book_append_sheet(wb, wsMorales, 'Personne Morale');
     }
+    
+    // Créer la feuille Groupements si il y a des données
+    if (groupements.length > 0) {
+        const groupementsData = groupements.map(row => {
+            const orderedRow = {};
+            groupementColumns.forEach(col => {
+                orderedRow[col] = row[col] || '';
+            });
+            return orderedRow;
+        });
+        
+        const wsGroupements = XLSX.utils.json_to_sheet(groupementsData, { header: groupementColumns });
+        
+        // Définir les largeurs de colonnes pour Groupements
+        const colWidthsGroupements = groupementColumns.map(col => {
+            if (['Denominat', 'Siege', 'Adresse'].includes(col)) return { wch: 25 };
+            if (['Type_num', 'Autre_pr_ciser', 'Village'].includes(col)) return { wch: 20 };
+            if (['Mandataire', 'PhotoPieMo_URL', 'Vocation'].includes(col)) return { wch: 20 };
+            if (['Telephone_001', 'Numero', 'nicad', 'superficie'].includes(col)) return { wch: 15 };
+            if (['Creation', 'type_usag'].includes(col)) return { wch: 12 };
+            return { wch: 10 };
+        });
+        wsGroupements['!cols'] = colWidthsGroupements;
+        
+        XLSX.utils.book_append_sheet(wb, wsGroupements, 'Groupement');
+    }
 
     // Générer le fichier
     const today = new Date();
@@ -1566,12 +1603,16 @@ function generateIndividualDeliberationList(data) {
                     <h3>${personnesMorales.length}</h3>
                     <p>Personnes Morales</p>
                 </div>
+                <div class="stat-card">
+                    <h3>${groupements.length}</h3>
+                    <p>Groupements</p>
+                </div>
             </div>
         </div>
     `;
     
     document.getElementById('resultsIndividual').innerHTML = confirmationHtml;
-    showToast(`Fichier généré avec ${personnesPhysiques.length} personnes physiques et ${personnesMorales.length} personnes morales`, 'success');
+    showToast(`Fichier généré avec ${personnesPhysiques.length} personnes physiques, ${personnesMorales.length} personnes morales et ${groupements.length} groupements`, 'success');
 }
 
 function generateCollectiveDeliberationList(data) {
