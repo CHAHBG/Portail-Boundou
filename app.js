@@ -2,6 +2,24 @@
 // Initialize BoundouDashboard
 window.BoundouDashboard = window.BoundouDashboard || {};
 
+// Global variables - declare first to avoid hoisting issues
+let map;
+let communesLayer;
+let parcellesData = [];
+let communesData = null;
+let currentCharts = {};
+let fontScale = 1;
+let collectiveParcelErrors = [];
+let filteredParcellesData = [];
+let lastSelectedCommune = null;
+
+// Initialize BoundouDashboard state
+window.BoundouDashboard.processedIndividualData = [];
+window.BoundouDashboard.processedCollectiveData = [];
+window.BoundouDashboard.isProcessingFile = false;
+window.BoundouDashboard.originalIndividualData = null;
+window.BoundouDashboard.originalCollectiveData = null;
+
 // Function to reset all application state on page load
 function resetApplicationState() {
     // Reset global variables
@@ -70,16 +88,7 @@ function resetUIElements() {
 // Call state reset immediately
 resetApplicationState();
 
-// Global variables
-let map;
-let communesLayer;
-let parcellesData = [];
-let communesData = null;
-let currentCharts = {};
-let fontScale = 1;
-let collectiveParcelErrors = [];
-let filteredParcellesData = [];
-let lastSelectedCommune = null;
+// Initialize BoundouDashboard state values that need to be set after reset
 window.BoundouDashboard.processedIndividualData = [];
 window.BoundouDashboard.processedCollectiveData = [];
 window.BoundouDashboard.isProcessingFile = false;
