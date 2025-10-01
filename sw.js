@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'boundou-static-v2';
+const STATIC_CACHE = 'boundou-static-v3-non-persistent';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   './',
@@ -21,10 +21,16 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Session-based cache purge: clear all caches when page signals new browser session
+// Page load cache purge: clear all caches on every page load to ensure non-persistent cache
 self.addEventListener('message', event => {
-  if (event.data === 'CLEAR_CACHES_FOR_NEW_SESSION') {
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  if (event.data === 'CLEAR_CACHES_FOR_NEW_PAGE_LOAD') {
+    console.log('Clearing all caches for fresh page load...');
+    caches.keys().then(keys => {
+      keys.forEach(k => {
+        caches.delete(k);
+        console.log(`Cache deleted: ${k}`);
+      });
+    });
   }
 });
 

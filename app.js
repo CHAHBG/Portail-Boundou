@@ -2,6 +2,74 @@
 // Initialize BoundouDashboard
 window.BoundouDashboard = window.BoundouDashboard || {};
 
+// Function to reset all application state on page load
+function resetApplicationState() {
+    // Reset global variables
+    parcellesData = [];
+    communesData = null;
+    currentCharts = {};
+    collectiveParcelErrors = [];
+    filteredParcellesData = [];
+    lastSelectedCommune = null;
+    
+    // Reset BoundouDashboard state
+    window.BoundouDashboard.processedIndividualData = [];
+    window.BoundouDashboard.processedCollectiveData = [];
+    window.BoundouDashboard.isProcessingFile = false;
+    window.BoundouDashboard.originalIndividualData = null;
+    window.BoundouDashboard.originalCollectiveData = null;
+    
+    // Reset UI elements when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', resetUIElements);
+    } else {
+        resetUIElements();
+    }
+    
+    console.log('Application state reset for fresh page load');
+}
+
+function resetUIElements() {
+    try {
+        // Reset file upload displays
+        const fileNameIndividual = document.getElementById('fileNameIndividual');
+        const fileNameCollective = document.getElementById('fileNameCollective');
+        if (fileNameIndividual) fileNameIndividual.textContent = '';
+        if (fileNameCollective) fileNameCollective.textContent = '';
+        
+        // Reset info displays
+        const fileInfoIndividual = document.getElementById('fileInfoIndividual');
+        const fileInfoCollective = document.getElementById('fileInfoCollective');
+        if (fileInfoIndividual) fileInfoIndividual.style.display = 'none';
+        if (fileInfoCollective) fileInfoCollective.style.display = 'none';
+        
+        // Reset results displays
+        const resultsIndividual = document.getElementById('resultsIndividual');
+        const resultsCollective = document.getElementById('resultsCollective');
+        if (resultsIndividual) resultsIndividual.style.display = 'none';
+        if (resultsCollective) resultsCollective.style.display = 'none';
+        
+        // Reset preview displays
+        const previewIndividual = document.getElementById('previewIndividual');
+        const previewCollective = document.getElementById('previewCollective');
+        if (previewIndividual) previewIndividual.style.display = 'none';
+        if (previewCollective) previewCollective.style.display = 'none';
+        
+        // Reset buttons
+        const generateIndividual = document.getElementById('generate-individual');
+        const generateCollective = document.getElementById('generate-collective');
+        if (generateIndividual) generateIndividual.disabled = true;
+        if (generateCollective) generateCollective.disabled = true;
+        
+        console.log('UI elements reset for fresh page load');
+    } catch (e) {
+        console.warn('Could not reset all UI elements:', e);
+    }
+}
+
+// Call state reset immediately
+resetApplicationState();
+
 // Global variables
 let map;
 let communesLayer;
@@ -930,24 +998,54 @@ function initializePerformanceMonitoring() {
     }
 }
 
+function clearBrowserCaches() {
+    try {
+        // Clear application data (excluding theme preference and other user settings we want to keep)
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            // Keep theme and essential user preferences, remove data caches
+            if (key && !['theme', 'userPreferences'].includes(key)) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Clear all session storage except what we need
+        const sessionKeysToKeep = ['theme'];
+        const sessionKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && !sessionKeysToKeep.includes(key)) {
+                sessionKeysToRemove.push(key);
+            }
+        }
+        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        
+        console.log('Browser caches cleared for fresh page load');
+    } catch (e) {
+        console.warn('Could not clear browser caches:', e);
+    }
+}
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
             .then(reg => console.log('Service Worker registered:', reg))
             .catch(err => console.warn('Service Worker registration failed:', err));
 
-        // Nouvelle session : effacer caches service worker afin d'éviter les données périmées
+        // Clear caches on every page load to ensure non-persistent cache
         try {
-            if (!sessionStorage.getItem('boundouSessionStarted')) {
-                sessionStorage.setItem('boundouSessionStarted', '1');
-                navigator.serviceWorker.ready.then(swReg => {
-                    if (swReg.active) {
-                        swReg.active.postMessage('CLEAR_CACHES_FOR_NEW_SESSION');
-                        console.log('Demande de purge des caches envoyée (nouvelle session).');
-                    }
-                });
-            }
-        } catch (e) { console.warn('Session storage non disponible', e); }
+            navigator.serviceWorker.ready.then(swReg => {
+                if (swReg.active) {
+                    swReg.active.postMessage('CLEAR_CACHES_FOR_NEW_PAGE_LOAD');
+                    console.log('Demande de purge des caches envoyée (nouveau chargement de page).');
+                }
+            });
+            
+            // Also clear browser caches on every page load
+            clearBrowserCaches();
+        } catch (e) { console.warn('Service worker message non disponible', e); }
     }
 }
 
@@ -1555,7 +1653,6 @@ async function initializeApp() {
         initializeAccessibility();
         updateGlobalStats();
         window.addEventListener('resize', handleResize);
-        registerServiceWorker();
         loadUserPreferences(); // Move this after map initialization
         showToast('Application initialisée avec succès!', 'success');
         console.log('Application Boundou Dashboard initialized');
@@ -1604,6 +1701,10 @@ function loadUserPreferences() {
 
 window.addEventListener('beforeunload', saveUserPreferences);
 document.addEventListener('DOMContentLoaded', () => {
+    // Clear all caches first to ensure non-persistent cache behavior
+    clearBrowserCaches();
+    registerServiceWorker();
+    
     loadUserPreferences();
 
     // Fix: initial dashboard iframe spinner never hides on first visit because
