@@ -560,54 +560,60 @@
             const columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
 
             // Separate by usage type based on entity type
-            let habitatData, agricoleData;
-            
             if (entityType === 'personne_physique') {
                 // Use type_usag for individual data
-                habitatData = entityData.filter(row => 
+                const habitatData = entityData.filter(row => 
                     (row.type_usag || '').toLowerCase() === 'habitat'
                 );
-                agricoleData = entityData.filter(row => 
+                const agricoleData = entityData.filter(row => 
                     (row.type_usag || '').toLowerCase() !== 'habitat'
                 );
             } else if (entityType === 'groupement') {
                 // Use type_usa for collective data (groupement)
-                habitatData = entityData.filter(row => 
+                const habitatData = entityData.filter(row => 
                     (row.type_usa || '').toLowerCase() === 'habitat'
                 );
-                agricoleData = entityData.filter(row => 
+                const agricoleData = entityData.filter(row => 
                     (row.type_usa || '').toLowerCase() !== 'habitat'
                 );
             } else {
                 // For personne_morale, don't separate by usage
-                habitatData = [];
-                agricoleData = [];
+                const habitatData = [];
+                const agricoleData = [];
             }
 
             // Only process if we have usage-based separation
             if (entityType === 'personne_physique' || entityType === 'groupement') {
+                // Re-define habitatData and agricoleData based on entity type
+                let habitatData, agricoleData;
+                
+                if (entityType === 'personne_physique') {
+                    // Use type_usag for individual data
+                    habitatData = entityData.filter(row => 
+                        (row.type_usag || '').toLowerCase() === 'habitat'
+                    );
+                    agricoleData = entityData.filter(row => 
+                        (row.type_usag || '').toLowerCase() !== 'habitat'
+                    );
+                } else if (entityType === 'groupement') {
+                    // Use type_usa for collective data (groupement)
+                    habitatData = entityData.filter(row => 
+                        (row.type_usa || '').toLowerCase() === 'habitat'
+                    );
+                    agricoleData = entityData.filter(row => 
+                        (row.type_usa || '').toLowerCase() !== 'habitat'
+                    );
+                }
+
                 // Generate Habitat sheets
                 if (habitatData.length > 0) {
-                    let habitatSheets;
-                    if (entityType === 'personne_physique') {
-                        // Use individual processing for individual data
-                        habitatSheets = await generateIndividualEntitySheets(
-                            habitatData, 
-                            entityType, 
-                            'Habitat', 
-                            columns, 
-                            options
-                        );
-                    } else {
-                        // Use collective processing for collective data (groupement)
-                        habitatSheets = await generateEntitySheets(
-                            habitatData, 
-                            entityType, 
-                            'Habitat', 
-                            columns, 
-                            options
-                        );
-                    }
+                    const habitatSheets = await generateEntitySheets(
+                        habitatData, 
+                        entityType, 
+                        'Habitat', 
+                        columns, 
+                        options
+                    );
                     habitatSheets.forEach(sheet => {
                         XLSX.utils.book_append_sheet(wb, sheet.worksheet, sheet.name);
                         totalExported += sheet.count;
@@ -616,26 +622,13 @@
 
                 // Generate Agricole sheets
                 if (agricoleData.length > 0) {
-                    let agricoleSheets;
-                    if (entityType === 'personne_physique') {
-                        // Use individual processing for individual data
-                        agricoleSheets = await generateIndividualEntitySheets(
-                            agricoleData, 
-                            entityType, 
-                            'Agricole', 
-                            columns, 
-                            options
-                        );
-                    } else {
-                        // Use collective processing for collective data (groupement)
-                        agricoleSheets = await generateEntitySheets(
-                            agricoleData, 
-                            entityType, 
-                            'Agricole', 
-                            columns, 
-                            options
-                        );
-                    }
+                    const agricoleSheets = await generateEntitySheets(
+                        agricoleData, 
+                        entityType, 
+                        'Agricole', 
+                        columns, 
+                        options
+                    );
                     agricoleSheets.forEach(sheet => {
                         XLSX.utils.book_append_sheet(wb, sheet.worksheet, sheet.name);
                         totalExported += sheet.count;
@@ -694,27 +687,14 @@
             const selectedColumns = window.BoundouDashboard.selectedColumns;
             const columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
 
-            // Generate sheets with mandataire separation - use appropriate function for data type
-            let entitySheets;
-            if (entityType === 'personne_physique') {
-                // Use individual processing for individual data
-                entitySheets = await generateIndividualEntitySheets(
-                    entityData, 
-                    entityType, 
-                    'Standard', // Use "Standard" instead of usage type
-                    columns, 
-                    options
-                );
-            } else {
-                // Use collective processing for collective data (personne_morale, groupement)
-                entitySheets = await generateEntitySheets(
-                    entityData, 
-                    entityType, 
-                    'Standard', // Use "Standard" instead of usage type
-                    columns, 
-                    options
-                );
-            }
+            // Generate sheets with mandataire separation
+            const entitySheets = await generateEntitySheets(
+                entityData, 
+                entityType, 
+                'Standard', // Use "Standard" instead of usage type
+                columns, 
+                options
+            );
             
             entitySheets.forEach(sheet => {
                 XLSX.utils.book_append_sheet(wb, sheet.worksheet, sheet.name);
@@ -985,269 +965,7 @@
         return true;
     };
 
-    // Generate sheets specifically for individual data (personne_physique)
-    const generateIndividualEntitySheets = async (data, entityType, usageType, columns, options) => {
-        const sheets = [];
-        
-        // Check if mandataire separation is enabled
-        if (options.enableMandataireSeparation) {
-            const ageThreshold = options.ageThreshold || 15;
-            
-            console.log(`🔍 Individual Mandataire separation enabled for ${entityType} with age threshold: ${ageThreshold}`);
-            console.log(`📊 Processing ${data.length} individual records for separation`);
-            
-            // Debug: Show sample individual data fields
-            if (data.length > 0) {
-                const sampleRecord = data[0];
-                console.log(`🔍 Sample individual record fields:`, Object.keys(sampleRecord));
-                console.log(`🔍 Sample Type_piece:`, sampleRecord.Type_piece);
-                console.log(`🔍 Sample Date_naiss:`, sampleRecord.Date_naiss);
-                console.log(`🔍 Sample Age:`, sampleRecord.Age);
-                
-                // Show all unique document types in the individual data
-                const allDocTypes = data.map(row => row.Type_piece).filter(Boolean);
-                const uniqueDocTypes = [...new Set(allDocTypes)];
-                console.log(`🔍 All unique individual document types found:`, uniqueDocTypes);
-            }
-            
-            // Helper function to check if individual record has extrait document
-            const hasExtraitDocumentIndividual = (row) => {
-                const docField = row.Type_piece;  // Only use individual field
-                
-                if (!docField) return false;
-                
-                const fieldStr = String(docField).toLowerCase().trim();
-                // More flexible matching for extrait de naissance
-                const hasExtrait = fieldStr === 'extrait_de_naissance' || 
-                                  fieldStr === 'extrait de naissance' ||
-                                  fieldStr.includes('extrait') && fieldStr.includes('naissance');
-                
-                if (hasExtrait) {
-                    console.log(`🎯 Found individual extrait document: "${docField}"`);
-                }
-                
-                return hasExtrait;
-            };
-            
-            // Helper function to check if individual record has CNI or other standard ID documents
-            const hasStandardDocumentIndividual = (row) => {
-                const docField = row.Type_piece;  // Only use individual field
-                
-                if (!docField) return false;
-                
-                const fieldStr = String(docField).toLowerCase().trim();
-                // Standard documents: CNI, passeport, etc. - but NOT extrait de naissance
-                const isStandard = (fieldStr === 'cni' || 
-                                   fieldStr === 'passeport' ||
-                                   fieldStr === 'passport' ||
-                                   fieldStr === 'carte_nationale_identite' ||
-                                   fieldStr === 'carte d\'identité' ||
-                                   fieldStr === 'carte d\'identite') &&
-                                   !hasExtraitDocumentIndividual(row);
-                
-                return isStandard;
-            };
-            
-            // Helper function to get individual record age
-            const getIndividualRecordAge = (row) => {
-                // Use Date_naiss for individual data (not Date_nai)
-                const dateField = row.Date_naiss;
-                
-                if (!dateField) {
-                    console.log(`⚠️ Individual record missing Date_naiss field:`, row);
-                    return null;
-                }
-                
-                const age = calculateAge(dateField);
-                if (age === null) {
-                    console.log(`⚠️ Could not calculate age for individual record with Date_naiss: "${dateField}"`);
-                }
-                
-                return age;
-            };
-            
-            // Separate records based on age and document type
-            const majorExtraitRecords = [];
-            const minorExtraitRecords = [];
-            const majorStandardRecords = [];
-            const minorStandardRecords = [];
-            
-            // Process each individual record
-            data.forEach(row => {
-                const age = getIndividualRecordAge(row);
-                
-                if (age === null) {
-                    console.log(`⚠️ Skipping individual record due to age calculation failure:`, row);
-                    return;
-                }
-                
-                const isMajor = age >= ageThreshold;
-                const hasExtrait = hasExtraitDocumentIndividual(row);
-                const hasStandard = hasStandardDocumentIndividual(row);
-                
-                if (hasExtrait) {
-                    if (isMajor) {
-                        majorExtraitRecords.push(row);
-                        console.log(`📋 Added individual to major extrait: age ${age}, doc: ${row.Type_piece}`);
-                    } else {
-                        minorExtraitRecords.push(row);
-                        console.log(`📋 Added individual to minor extrait: age ${age}, doc: ${row.Type_piece}`);
-                    }
-                } else if (hasStandard) {
-                    if (isMajor) {
-                        majorStandardRecords.push(row);
-                        console.log(`📋 Added individual to major standard: age ${age}, doc: ${row.Type_piece}`);
-                    } else {
-                        minorStandardRecords.push(row);
-                        console.log(`📋 Added individual to minor standard: age ${age}, doc: ${row.Type_piece}`);
-                    }
-                } else {
-                    console.log(`❓ Individual record with unknown document type: ${row.Type_piece}, age: ${age}`);
-                }
-            });
-            
-            console.log(`📊 Individual separation results:`);
-            console.log(`   - Major extrait: ${majorExtraitRecords.length}`);
-            console.log(`   - Minor extrait: ${minorExtraitRecords.length}`);
-            console.log(`   - Major standard: ${majorStandardRecords.length}`);
-            console.log(`   - Minor standard: ${minorStandardRecords.length}`);
-            
-            // Create separate sheets for each category
-            if (majorExtraitRecords.length > 0) {
-                const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_Extrait`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${majorExtraitRecords.length} records`);
-                
-                const worksheet = XLSX.utils.json_to_sheet(majorExtraitRecords.map(row => {
-                    const filteredRow = {};
-                    columns.forEach(col => {
-                        if (row.hasOwnProperty(col)) {
-                            // Apply date formatting to Date_naiss field for individual data
-                            if (col === 'Date_naiss') {
-                                filteredRow[col] = formatDateToDDMMYYYY(row[col]) || '';
-                            } else {
-                                filteredRow[col] = row[col];
-                            }
-                        }
-                    });
-                    return filteredRow;
-                }));
-                
-                sheets.push({
-                    name: sheetName,
-                    worksheet: worksheet,
-                    count: majorExtraitRecords.length
-                });
-            }
-            
-            if (minorExtraitRecords.length > 0) {
-                const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_Extrait`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${minorExtraitRecords.length} records`);
-                
-                const worksheet = XLSX.utils.json_to_sheet(minorExtraitRecords.map(row => {
-                    const filteredRow = {};
-                    columns.forEach(col => {
-                        if (row.hasOwnProperty(col)) {
-                            // Apply date formatting to Date_naiss field for individual data
-                            if (col === 'Date_naiss') {
-                                filteredRow[col] = formatDateToDDMMYYYY(row[col]) || '';
-                            } else {
-                                filteredRow[col] = row[col];
-                            }
-                        }
-                    });
-                    return filteredRow;
-                }));
-                
-                sheets.push({
-                    name: sheetName,
-                    worksheet: worksheet,
-                    count: minorExtraitRecords.length
-                });
-            }
-            
-            if (majorStandardRecords.length > 0) {
-                const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_CNI`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${majorStandardRecords.length} records`);
-                
-                const worksheet = XLSX.utils.json_to_sheet(majorStandardRecords.map(row => {
-                    const filteredRow = {};
-                    columns.forEach(col => {
-                        if (row.hasOwnProperty(col)) {
-                            // Apply date formatting to Date_naiss field for individual data
-                            if (col === 'Date_naiss') {
-                                filteredRow[col] = formatDateToDDMMYYYY(row[col]) || '';
-                            } else {
-                                filteredRow[col] = row[col];
-                            }
-                        }
-                    });
-                    return filteredRow;
-                }));
-                
-                sheets.push({
-                    name: sheetName,
-                    worksheet: worksheet,
-                    count: majorStandardRecords.length
-                });
-            }
-            
-            if (minorStandardRecords.length > 0) {
-                const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_CNI`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${minorStandardRecords.length} records`);
-                
-                const worksheet = XLSX.utils.json_to_sheet(minorStandardRecords.map(row => {
-                    const filteredRow = {};
-                    columns.forEach(col => {
-                        if (row.hasOwnProperty(col)) {
-                            // Apply date formatting to Date_naiss field for individual data
-                            if (col === 'Date_naiss') {
-                                filteredRow[col] = formatDateToDDMMYYYY(row[col]) || '';
-                            } else {
-                                filteredRow[col] = row[col];
-                            }
-                        }
-                    });
-                    return filteredRow;
-                }));
-                
-                sheets.push({
-                    name: sheetName,
-                    worksheet: worksheet,
-                    count: minorStandardRecords.length
-                });
-            }
-            
-        } else {
-            // No mandataire separation - create single sheet for individual data
-            const sheetName = truncateSheetName(`${entityType}_${usageType}`);
-            console.log(`📄 Creating individual sheet without separation: ${sheetName} with ${data.length} records`);
-            
-            const worksheet = XLSX.utils.json_to_sheet(data.map(row => {
-                const filteredRow = {};
-                columns.forEach(col => {
-                    if (row.hasOwnProperty(col)) {
-                        // Apply date formatting to Date_naiss field for individual data
-                        if (col === 'Date_naiss') {
-                            filteredRow[col] = formatDateToDDMMYYYY(row[col]) || '';
-                        } else {
-                            filteredRow[col] = row[col];
-                        }
-                    }
-                });
-                return filteredRow;
-            }));
-            
-            sheets.push({
-                name: sheetName,
-                worksheet: worksheet,
-                count: data.length
-            });
-        }
-        
-        return sheets;
-    };
-
-    // Generate sheets for a specific entity type and usage category (collective data)
+    // Generate sheets for a specific entity type and usage category
     const generateEntitySheets = async (data, entityType, usageType, columns, options) => {
         const sheets = [];
         
@@ -1268,15 +986,15 @@
                 console.log(`ðŸ“ Sample Age:`, sampleRecord.Age);
                 
                 // Show all unique document types in the data
-                const allDocTypes = data.map(row => row.Type_piec).filter(Boolean);
+                const allDocTypes = data.map(row => row.Type_piece || row.Type_piec).filter(Boolean);
                 const uniqueDocTypes = [...new Set(allDocTypes)];
                 console.log(`ðŸ“ All unique document types found:`, uniqueDocTypes);
             }
             
-            // Helper function to check if collective record has extrait document
+            // Helper function to check if record has extrait document
             const hasExtraitDocument = (row) => {
-                // Check only collective field
-                const docField = row.Type_piec;  // Collective data only
+                // Check the appropriate field based on data type
+                const docField = row.Type_piece || row.Type_piec;  // Individual vs Collective
                 
                 if (!docField) return false;
                 
@@ -1287,39 +1005,57 @@
                                   fieldStr.includes('extrait') && fieldStr.includes('naissance');
                 
                 if (hasExtrait) {
-                    console.log(`ðŸŽ¯ Found collective extrait document: "${docField}"`);
+                    console.log(`ðŸŽ¯ Found extrait document: "${docField}"`);
                 }
                 
                 return hasExtrait;
             };
             
-            // Helper function to check if collective record has CNI or other standard ID documents
+            // Helper function to check if record has CNI or other standard ID documents
             const hasStandardDocument = (row) => {
-                const docField = row.Type_piec;  // Collective data only
+                const docField = row.Type_piece || row.Type_piec;  // Individual vs Collective
                 
                 if (!docField) return false;
                 
                 const fieldStr = String(docField).toLowerCase().trim();
                 
-                // For collective files (Type_piec) - exact matching based on provided values
-                const isStandard = fieldStr === 'cni' || 
-                                  fieldStr === 'passeport' ||
-                                  fieldStr === 'passport' ||
-                                  fieldStr === 'carte_nationale_identite' ||
-                                  fieldStr === 'carte d\'identité' ||
-                                  fieldStr === 'carte d\'identite';
+                // For individual files (Type_piece) - more flexible matching
+                if (row.Type_piece) {
+                    const isStandard = fieldStr === 'attestation_cni_1' || 
+                           fieldStr === 'cni' || 
+                           fieldStr === 'carte residence' || 
+                           fieldStr === 'passeport' ||
+                           fieldStr.includes('cni') ||
+                           fieldStr.includes('carte') ||
+                           fieldStr.includes('passeport');
+                    
+                    if (isStandard) {
+                        console.log(`ðŸŽ¯ Found standard individual document: "${docField}"`);
+                    }
+                    return isStandard;
+                }
                 
-                if (isStandard && !hasExtraitDocument(row)) {
-                    console.log(`ðŸŽ¯ Found collective standard document: "${docField}"`);
-                    return true;
+                // For collective files (Type_piec) - exact matching based on provided values
+                if (row.Type_piec) {
+                    const isStandard = fieldStr === 'cni' || 
+                           fieldStr === 'passeport' || 
+                           fieldStr === 'recepisse_cni' ||
+                           fieldStr.includes('cni') ||
+                           fieldStr.includes('passeport') ||
+                           fieldStr.includes('recepisse');
+                    
+                    if (isStandard) {
+                        console.log(`ðŸŽ¯ Found standard collective document: "${docField}"`);
+                    }
+                    return isStandard;
                 }
                 
                 return false;
             };
             
-            // Helper function to check if collective record has "Autres" or unknown documents
+            // Helper function to check if record has "Autres" or unknown documents
             const hasOtherDocument = (row) => {
-                const docField = row.Type_piec;  // Collective data only
+                const docField = row.Type_piece || row.Type_piec;
                 
                 if (!docField) return false;
                 
@@ -1350,12 +1086,14 @@
             const getRecordAge = (row) => {
                 console.log(`ðŸ” Getting age for record with fields:`, Object.keys(row));
                 
-                // For collective data, use Date_nai field (not Date_naiss which is for individual data)
-                const collectiveDateField = row.Date_nai;
+                // For mandataire age calculation, ONLY use Date_nai field
+                // Date_nai is the mandataire's birth date
+                // Other fields like Date_nais1, Date_nais2, Date_naissance are for affectataires
+                const mandataireDateField = row.Date_nai;
                 
-                if (collectiveDateField) {
-                    console.log(`   ðŸŽ¯ Using collective birth date (Date_nai): ${collectiveDateField}`);
-                    const calculatedAge = calculateAge(collectiveDateField);
+                if (mandataireDateField) {
+                    console.log(`   ðŸŽ¯ Using mandataire birth date (Date_nai): ${mandataireDateField}`);
+                    const calculatedAge = calculateAge(mandataireDateField);
                     if (calculatedAge !== null) {
                         console.log(`   âœ… Calculated mandataire age: ${calculatedAge}`);
                         return calculatedAge;
@@ -1470,7 +1208,7 @@
                 const ws = createEntityWorksheet(underageMandataires, columns, entityType);
                 sheets.push({
                     worksheet: ws,
-                    name: truncateSheetName(`${usageType}_Extrait_MIN_Mandataire`),
+                    name: truncateSheetName(`${usageType}_${entityType}_Mineurs`),
                     count: underageMandataires.length
                 });
                 console.log(`âœ… Created sheet for underage mandataires: ${underageMandataires.length} records`);
@@ -1480,7 +1218,7 @@
                 const ws = createEntityWorksheet(majorMandataires, columns, entityType);
                 sheets.push({
                     worksheet: ws,
-                    name: truncateSheetName(`${usageType}_Extrait_MAJ_Mandataire`),
+                    name: truncateSheetName(`${usageType}_${entityType}_Majeurs`),
                     count: majorMandataires.length
                 });
                 console.log(`âœ… Created sheet for major mandataires: ${majorMandataires.length} records`);
@@ -1490,7 +1228,7 @@
                 const ws = createEntityWorksheet(standardDocuments, columns, entityType);
                 sheets.push({
                     worksheet: ws,
-                    name: truncateSheetName(`${usageType}_Standard_Mandataire`),
+                    name: truncateSheetName(`${usageType}_${entityType}_CNI`),
                     count: standardDocuments.length
                 });
                 console.log(`âœ… Created sheet for standard documents (CNI, passeport): ${standardDocuments.length} records`);
@@ -1500,7 +1238,7 @@
                 const ws = createEntityWorksheet(otherDocuments, columns, entityType);
                 sheets.push({
                     worksheet: ws,
-                    name: truncateSheetName(`${usageType}_Autres_Mandataire`),
+                    name: truncateSheetName(`${usageType}_${entityType}_Autres`),
                     count: otherDocuments.length
                 });
                 console.log(`âœ… Created sheet for other documents (Autres/option_7): ${otherDocuments.length} records`);
@@ -1510,7 +1248,7 @@
                 const ws = createEntityWorksheet(unknownDocuments, columns, entityType);
                 sheets.push({
                     worksheet: ws,
-                    name: truncateSheetName(`${usageType}_Inconnus_Mandataire`),
+                    name: truncateSheetName(`${usageType}_${entityType}_Inconnus`),
                     count: unknownDocuments.length
                 });
                 console.log(`âœ… Created sheet for unknown documents: ${unknownDocuments.length} records`);
@@ -1756,133 +1494,3 @@
     };
 
     // Generate comprehensive statistics Excel file with enhanced categorization
-    // Generate comprehensive statistics Excel file with enhanced categorization
-    const generateStatisticsExcel = (stats) => {
-        const wb = XLSX.utils.book_new();
-        
-        // 1. EXECUTIVE SUMMARY SHEET
-        const summaryData = [
-            ['RAPPORT DE STATISTIQUES PORTAIL BOUNDOU'],
-            ['Date de gÃ©nÃ©ration:', stats.summary.processingDate],
-            [''],
-            ['=== RÃ‰SUMÃ‰ EXÃ‰CUTIF ==='],
-            ['Total parcelles individuelles:', stats.summary.totalIndividualParcels],
-            ['Total parcelles collectives:', stats.summary.totalCollectiveParcels],
-            ['TOTAL GÃ‰NÃ‰RAL:', stats.summary.totalRecords],
-            [''],
-            ['=== RÃ‰PARTITION PAR SOURCE ==='],
-            ['DonnÃ©es individuelles:', stats.summary.totalIndividualParcels, `${((stats.summary.totalIndividualParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`],
-            ['DonnÃ©es collectives:', stats.summary.totalCollectiveParcels, `${((stats.summary.totalCollectiveParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`]
-        ];
-
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, wsSummary, 'RÃ©sumÃ© ExÃ©cutif');
-
-        // 2. INDIVIDUAL DATA STATISTICS SHEET
-        if (stats.individual && Object.keys(stats.individual).length > 0) {
-            const individualData = [
-                ['STATISTIQUES DONNÃ‰ES INDIVIDUELLES'],
-                [''],
-                ['=== RÃ‰PARTITION PAR TYPE DE PERSONNE (Typ_pers) ==='],
-                ['Type de Personne', 'Nombre', 'Pourcentage']
-            ];
-
-            // Add entity type statistics
-            const individualTotal = stats.individual.totalParcels || 0;
-            Object.entries(stats.individual.byEntityType || {}).forEach(([type, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([type, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÃ‰PARTITION PAR USAGE (type_usag) ==='], ['Type d\'Usage', 'Nombre', 'Pourcentage']);
-            
-            // Add usage type statistics
-            Object.entries(stats.individual.byUsageType || {}).forEach(([usage, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([usage, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TRANCHE D\'Ã‚GE ==='], ['Tranche d\'Ã‚ge', 'Nombre', 'Pourcentage']);
-            
-            // Add age group statistics
-            Object.entries(stats.individual.byAgeGroup || {}).forEach(([age, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([age, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE DOCUMENT (Type_piece) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
-            
-            // Add document type statistics
-            Object.entries(stats.individual.byDocumentType || {}).forEach(([doc, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([doc, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE PERSONNE MORALE (Typ_pers_m) ==='], ['Type Personne Morale', 'Nombre', 'Pourcentage']);
-            
-            // Add morale person type statistics
-            Object.entries(stats.individual.byMoraleType || {}).forEach(([moraleType, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([moraleType, count, `${percentage}%`]);
-            });
-
-            const wsIndividual = XLSX.utils.aoa_to_sheet(individualData);
-            XLSX.utils.book_append_sheet(wb, wsIndividual, 'Stats Individuelles');
-        }
-
-        // 3. COLLECTIVE DATA STATISTICS SHEET
-        if (stats.collective && Object.keys(stats.collective).length > 0) {
-            const collectiveData = [
-                ['STATISTIQUES DONNÃ‰ES COLLECTIVES'],
-                [''],
-                ['Total parcelles collectives:', stats.collective.totalParcels],
-                ['Total affectataires:', stats.collective.totalAffectataires],
-                [''],
-                ['=== RÃ‰PARTITION PAR USAGE (type_usa/type_usag) ==='],
-                ['Type d\'Usage', 'Nombre', 'Pourcentage']
-            ];
-
-            // Add usage type statistics
-            const collectiveTotal = stats.collective.totalParcels || 0;
-            Object.entries(stats.collective.byUsageType || {}).forEach(([usage, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([usage, count, `${percentage}%`]);
-            });
-
-            collectiveData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE DOCUMENT (Type_piec) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
-            
-            // Add document type statistics
-            Object.entries(stats.collective.byDocumentType || {}).forEach(([doc, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([doc, count, `${percentage}%`]);
-            });
-
-            collectiveData.push([''], ['=== RÃ‰PARTITION PAR TRANCHE D\'Ã‚GE ==='], ['Tranche d\'Ã‚ge', 'Nombre', 'Pourcentage']);
-            
-            // Add age group statistics
-            Object.entries(stats.collective.byAgeGroup || {}).forEach(([age, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([age, count, `${percentage}%`]);
-            });
-
-            const wsCollective = XLSX.utils.aoa_to_sheet(collectiveData);
-            XLSX.utils.book_append_sheet(wb, wsCollective, 'Stats Collectives');
-        }
-
-        // Download the file
-        const fileName = `Statistiques_Boundou_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        
-        return wb;
-    };
-
-    // Export public methods
-    return {
-        generateIndividualDeliberationList,
-        generateEnhancedIndividualDeliberationList,
-        generateCollectiveDeliberationList,
-        generateStatisticsExcel,
-        exportPreviewData,
-        testDocumentDetection  // For debugging purposes
-    };
-})();

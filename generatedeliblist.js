@@ -316,6 +316,20 @@ function processCollectiveFile(file) {
             // Enable the generate button
             document.getElementById('generate-collective').disabled = false;
             
+            // Show collective statistics section  
+            const collectiveStatsSection = document.getElementById('statisticsCollectiveSection');
+            if (collectiveStatsSection) {
+                collectiveStatsSection.style.display = 'block';
+                console.log('Collective statistics section displayed');
+            }
+            
+            // Enable collective statistics button
+            const collectiveStatsButton = document.getElementById('generateCollectiveStats');
+            if (collectiveStatsButton) {
+                collectiveStatsButton.disabled = false;
+                console.log('Collective statistics button enabled');
+            }
+            
             displayCollectivePreview();
             
             const totalParcels = processedData.length;
@@ -759,17 +773,36 @@ function displayColumnSelection() {
             return;
         }
         
-        // Update entity counts
+        // Update entity counts and manage tab visibility
         const countElements = {
             'personne_physique': document.getElementById('count-personne_physique'),
             'personne_morale': document.getElementById('count-personne_morale'),
             'groupement': document.getElementById('count-groupement')
         };
         
+        let firstEntityWithData = null;
+        
         Object.keys(countElements).forEach(entityType => {
             const element = countElements[entityType];
+            const count = data[entityType]?.length || 0;
+            
             if (element) {
-                element.textContent = data[entityType]?.length || 0;
+                element.textContent = count;
+            }
+            
+            // Show/hide tab buttons based on data availability
+            const tabButton = document.querySelector(`[data-entity="${entityType}"]`);
+            if (tabButton) {
+                if (count > 0) {
+                    tabButton.style.display = 'inline-block';
+                    tabButton.disabled = false;
+                    if (!firstEntityWithData) {
+                        firstEntityWithData = entityType;
+                    }
+                } else {
+                    tabButton.style.display = 'none';
+                    tabButton.disabled = true;
+                }
             }
         });
         
@@ -781,26 +814,40 @@ function displayColumnSelection() {
             if (entityData.length > 0) {
                 const headers = Object.keys(entityData[0]).filter(h => h !== 'Typ_pers' && h !== 'Typ_pers_m');
                 console.log(`DEBUG: Generating checkboxes for ${entityType}:`, headers.length, 'columns');
-                generateColumnCheckboxes(entityType, headers);
+                
+                // Only generate if the grid element exists
+                const gridElement = document.getElementById(`grid-${entityType}`);
+                if (gridElement) {
+                    generateColumnCheckboxes(entityType, headers);
+                } else {
+                    console.warn(`Grid element not found for ${entityType}, skipping checkbox generation`);
+                }
+            } else {
+                console.log(`DEBUG: No data found for ${entityType}, skipping`);
             }
         });
         
         // Show the column selection section
         columnSection.style.display = 'block';
         
-        // Make sure we show the first tab by default
-        const firstTab = columnSection.querySelector('.entity-tab-button[data-entity="personne_physique"]');
-        const firstColumnList = columnSection.querySelector('#columns-personne_physique');
+        // Make sure we show the first tab that has data by default
+        const firstTab = columnSection.querySelector(`.entity-tab-button[data-entity="${firstEntityWithData}"]`);
+        const firstColumnList = columnSection.querySelector(`#columns-${firstEntityWithData}`);
         
-        if (firstTab && firstColumnList) {
+        if (firstTab && firstColumnList && firstEntityWithData) {
             firstTab.classList.add('active');
             firstColumnList.style.display = 'block';
+            console.log(`DEBUG: Activated first tab with data: ${firstEntityWithData}`);
+        } else {
+            console.warn('No entity data found to display tabs');
         }
         
         // Setup tab switching with delay to ensure DOM is ready
         setTimeout(() => {
             setupEntityTabs();
             setupColumnValidation();
+            displayAdvancedOptions();
+            setupAdvancedOptionsHandlers();
         }, 100);
         
         // Scroll to the section
@@ -817,7 +864,7 @@ function generateColumnCheckboxes(entityType, headers) {
     try {
         const grid = document.getElementById(`grid-${entityType}`);
         if (!grid) {
-            console.error(`Grid not found for ${entityType}`);
+            console.warn(`Grid not found for ${entityType} - this is expected if no data exists for this entity type`);
             return;
         }
         
@@ -1023,6 +1070,398 @@ function deselectAllColumns(entityType) {
     BoundouUtils.showSuccess(`Toutes les colonnes désélectionnées pour ${entityType}.`);
 }
 
+// Display advanced processing options
+function displayAdvancedOptions() {
+    const advancedSection = document.getElementById('advancedOptionsIndividual');
+    const statsSection = document.getElementById('statisticsSection');
+    
+    if (advancedSection) {
+        advancedSection.style.display = 'block';
+        console.log('Advanced options section displayed');
+    }
+    
+    if (statsSection) {
+        statsSection.style.display = 'block';
+        console.log('Statistics section displayed');
+    }
+    
+    // Enable statistics button
+    const statsButton = document.getElementById('generateStats');
+    if (statsButton) {
+        statsButton.disabled = false;
+        console.log('Statistics button enabled');
+    }
+}
+
+// Setup event handlers for advanced options
+function setupAdvancedOptionsHandlers() {
+    // Toggle dual lists option
+    const dualListsCheckbox = document.getElementById('enableDualLists');
+    if (dualListsCheckbox) {
+        dualListsCheckbox.addEventListener('change', function() {
+            const isEnabled = this.checked;
+            console.log('Dual lists generation:', isEnabled ? 'enabled' : 'disabled');
+            
+            // Store setting in global state
+            if (!window.BoundouDashboard.advancedOptions) {
+                window.BoundouDashboard.advancedOptions = {};
+            }
+            window.BoundouDashboard.advancedOptions.enableDualLists = isEnabled;
+            
+            // Update UI feedback
+            if (isEnabled) {
+                console.log('✅ Advanced Option: Génération de listes séparées Habitat/Agricole activée');
+            }
+        });
+    }
+
+    // Toggle mandataire separation option
+    const mandataireCheckbox = document.getElementById('enableMandataireSeparation');
+    if (mandataireCheckbox) {
+        mandataireCheckbox.addEventListener('change', function() {
+            const isEnabled = this.checked;
+            console.log('Mandataire separation:', isEnabled ? 'enabled' : 'disabled');
+            
+            // Store setting in global state
+            if (!window.BoundouDashboard.advancedOptions) {
+                window.BoundouDashboard.advancedOptions = {};
+            }
+            window.BoundouDashboard.advancedOptions.enableMandataireSeparation = isEnabled;
+            
+            // Enable/disable age threshold input
+            const ageInput = document.getElementById('ageThreshold');
+            if (ageInput) {
+                ageInput.disabled = !isEnabled;
+            }
+            
+            if (isEnabled) {
+                console.log('✅ Advanced Option: Séparation des mandataires par âge activée');
+            }
+        });
+    }
+
+    // Handle age threshold changes
+    const ageThresholdInput = document.getElementById('ageThreshold');
+    if (ageThresholdInput) {
+        ageThresholdInput.addEventListener('change', function() {
+            const threshold = parseInt(this.value);
+            if (threshold && threshold > 0) {
+                if (!window.BoundouDashboard.advancedOptions) {
+                    window.BoundouDashboard.advancedOptions = {};
+                }
+                window.BoundouDashboard.advancedOptions.ageThreshold = threshold;
+                console.log('Age threshold set to:', threshold);
+            }
+        });
+    }
+
+    // Date normalization toggle
+    const dateNormalizationCheckbox = document.getElementById('enableDateNormalization');
+    if (dateNormalizationCheckbox) {
+        dateNormalizationCheckbox.addEventListener('change', function() {
+            const isEnabled = this.checked;
+            if (!window.BoundouDashboard.advancedOptions) {
+                window.BoundouDashboard.advancedOptions = {};
+            }
+            window.BoundouDashboard.advancedOptions.enableDateNormalization = isEnabled;
+            console.log('Date normalization:', isEnabled ? 'enabled' : 'disabled');
+        });
+    }
+
+    // Statistics generation button (Individual)
+    const statsButton = document.getElementById('generateStats');
+    if (statsButton) {
+        statsButton.addEventListener('click', function() {
+            if (!this.disabled) {
+                generateStatisticsReport();
+            }
+        });
+    }
+
+    // Statistics generation button (Collective)
+    const collectiveStatsButton = document.getElementById('generateCollectiveStats');
+    if (collectiveStatsButton) {
+        collectiveStatsButton.addEventListener('click', function() {
+            if (!this.disabled) {
+                generateCollectiveStatisticsReport();
+            }
+        });
+    }
+
+    console.log('Advanced options handlers setup complete');
+}
+
+// Generate comprehensive statistics report
+function generateStatisticsReport() {
+    try {
+        BoundouUtils.showLoading('loadingIndicator', 'Génération des statistiques...');
+        
+        const data = window.BoundouDashboard.processedIndividualData;
+        const collectiveData = window.BoundouDashboard.processedCollectiveData;
+        
+        if (!data && !collectiveData) {
+            throw new Error('Aucune donnée à analyser');
+        }
+
+        // Calculate statistics
+        const stats = calculateComprehensiveStats(data, collectiveData);
+        
+        // Generate and download statistics Excel file
+        const statsExcel = BoundouExcelGenerator.generateStatisticsExcel(stats);
+        
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showSuccess('Rapport de statistiques généré avec succès!');
+        
+        console.log('Statistics report generated:', stats);
+        
+    } catch (error) {
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showError(`Erreur génération statistiques: ${error.message}`);
+        console.error('Statistics generation error:', error);
+    }
+}
+
+// Generate collective-only statistics report
+function generateCollectiveStatisticsReport() {
+    try {
+        BoundouUtils.showLoading('loadingIndicator', 'Génération des statistiques collectives...');
+        
+        const collectiveData = window.BoundouDashboard.processedCollectiveData;
+        
+        if (!collectiveData || collectiveData.length === 0) {
+            throw new Error('Aucune donnée collective à analyser');
+        }
+
+        // Calculate collective-only statistics
+        const stats = {
+            summary: {
+                totalIndividualParcels: 0,
+                totalCollectiveParcels: collectiveData.length,
+                totalRecords: collectiveData.length,
+                processingDate: new Date().toLocaleString('fr-FR')
+            },
+            individual: {},
+            collective: calculateCollectiveStats(collectiveData),
+            combined: {}
+        };
+        
+        // Generate and download statistics Excel file
+        const statsExcel = BoundouExcelGenerator.generateStatisticsExcel(stats);
+        
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showSuccess('Rapport de statistiques collectives généré avec succès!');
+        
+        console.log('Collective statistics report generated:', stats);
+        
+    } catch (error) {
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showError(`Erreur génération statistiques collectives: ${error.message}`);
+        console.error('Collective statistics generation error:', error);
+    }
+}
+
+// Calculate comprehensive statistics from processed data
+function calculateComprehensiveStats(individualData, collectiveData) {
+    const stats = {
+        summary: {
+            totalIndividualParcels: 0,
+            totalCollectiveParcels: 0,
+            totalRecords: 0,
+            processingDate: new Date().toLocaleString('fr-FR')
+        },
+        individual: {},
+        collective: {},
+        combined: {}
+    };
+
+    // Calculate individual data statistics
+    if (individualData) {
+        stats.individual = calculateIndividualStats(individualData);
+        stats.summary.totalIndividualParcels = 
+            (individualData.personne_physique?.length || 0) +
+            (individualData.personne_morale?.length || 0) +
+            (individualData.groupement?.length || 0);
+    }
+
+    // Calculate collective data statistics
+    if (collectiveData) {
+        stats.collective = calculateCollectiveStats(collectiveData);
+        stats.summary.totalCollectiveParcels = collectiveData.length || 0;
+    }
+
+    stats.summary.totalRecords = stats.summary.totalIndividualParcels + stats.summary.totalCollectiveParcels;
+
+    return stats;
+}
+
+// Calculate statistics for individual data
+function calculateIndividualStats(data) {
+    const stats = {
+        totalParcels: 0,
+        byEntityType: {},
+        byUsageType: {},
+        byDocumentType: {},
+        byAgeGroup: {},
+        byMoraleType: {}
+    };
+
+    // Process each entity type
+    ['personne_physique', 'personne_morale', 'groupement'].forEach(entityType => {
+        const entities = data[entityType] || [];
+        stats.byEntityType[entityType] = entities.length;
+        stats.totalParcels += entities.length;
+
+        // Group by usage type
+        entities.forEach(entity => {
+            const usageType = entity.type_usag || 'Non spécifié';
+            
+            if (!stats.byUsageType[usageType]) {
+                stats.byUsageType[usageType] = 0;
+            }
+            stats.byUsageType[usageType]++;
+
+            // Group by document type (for person entities)
+            if (entityType === 'personne_physique') {
+                const docType = entity.Type_piece || 'Non spécifié';
+                
+                if (!stats.byDocumentType[docType]) {
+                    stats.byDocumentType[docType] = 0;
+                }
+                stats.byDocumentType[docType]++;
+
+                // Calculate age if birth date is available
+                const birthDate = entity.Date_naiss;
+                if (birthDate) {
+                    const age = calculateAge(birthDate);
+                    if (age !== null) {
+                        const ageThreshold = window.BoundouDashboard.advancedOptions?.ageThreshold || 15;
+                        const ageCategory = age <= ageThreshold ? 'Mineur' : 'Majeur';
+                        
+                        if (!stats.byAgeGroup[ageCategory]) {
+                            stats.byAgeGroup[ageCategory] = 0;
+                        }
+                        stats.byAgeGroup[ageCategory]++;
+                    }
+                }
+            }
+
+            // Group by morale person type (for personne_morale entities)
+            if (entityType === 'personne_morale') {
+                const moraleType = entity.Typ_pers_m || 'Non spécifié';
+                
+                if (!stats.byMoraleType[moraleType]) {
+                    stats.byMoraleType[moraleType] = 0;
+                }
+                stats.byMoraleType[moraleType]++;
+            }
+        });
+    });
+
+    return stats;
+}
+
+// Calculate statistics for collective data
+function calculateCollectiveStats(data) {
+    const stats = {
+        totalParcels: data.length,
+        byUsageType: {},
+        byDocumentType: {},
+        byAgeGroup: {},
+        totalAffectataires: 0
+    };
+
+    data.forEach(parcel => {
+        // Count usage types (both type_usa and type_usag fields)
+        const usageType = parcel.type_usa || parcel.type_usag || 'Non spécifié';
+        
+        if (!stats.byUsageType[usageType]) {
+            stats.byUsageType[usageType] = 0;
+        }
+        stats.byUsageType[usageType]++;
+
+        // Count document types (field: Type_piec)
+        const docType = parcel.Type_piec || 'Non spécifié';
+        
+        if (!stats.byDocumentType[docType]) {
+            stats.byDocumentType[docType] = 0;
+        }
+        stats.byDocumentType[docType]++;
+
+        // Calculate age of mandataire (using Date_nai field)
+        const mandataireBirthDate = parcel.Date_nai;
+        if (mandataireBirthDate) {
+            const age = calculateAge(mandataireBirthDate);
+            if (age !== null) {
+                const ageThreshold = window.BoundouDashboard.advancedOptions?.ageThreshold || 15;
+                const ageCategory = age <= ageThreshold ? 'Mineur' : 'Majeur';
+                
+                if (!stats.byAgeGroup[ageCategory]) {
+                    stats.byAgeGroup[ageCategory] = 0;
+                }
+                stats.byAgeGroup[ageCategory]++;
+            }
+        }
+
+        // Count affectataires (count newlines in multi-person fields)
+        const prenoms = parcel.Prenom || '';
+        const affectataireCount = prenoms.split('\n').filter(p => p.trim()).length;
+        stats.totalAffectataires += affectataireCount;
+    });
+
+    return stats;
+}
+
+// Calculate age from birth date
+function calculateAge(birthDate) {
+    if (!birthDate) return null;
+    
+    let date;
+    
+    // Handle different date formats
+    if (typeof birthDate === 'string') {
+        // Try to parse formatted date (DD/MM/YYYY)
+        if (birthDate.includes('/')) {
+            const parts = birthDate.split('/');
+            if (parts.length === 3) {
+                date = new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+        } else {
+            date = new Date(birthDate);
+        }
+    } else {
+        date = new Date(birthDate);
+    }
+    
+    if (!date || isNaN(date)) return null;
+    
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+        age--;
+    }
+    
+    return Math.max(0, age);
+}
+
+// Enable statistics button after successful processing
+function enableStatisticsGeneration() {
+    const statsButton = document.getElementById('generateStats');
+    const statsSection = document.getElementById('statisticsSection');
+    
+    if (statsButton) {
+        statsButton.disabled = false;
+        statsButton.style.opacity = '1';
+    }
+    
+    if (statsSection) {
+        statsSection.style.display = 'block';
+    }
+    
+    console.log('✅ Statistics generation enabled and section displayed');
+}
+
 // Export functions for external use
 window.DeliberationListUI = {
     initializeDeliberationHandlers,
@@ -1031,6 +1470,10 @@ window.DeliberationListUI = {
     togglePreviewExpansion,
     exportEntityPreview,
     displayColumnSelection,
+    displayAdvancedOptions,
+    setupAdvancedOptionsHandlers,
+    generateStatisticsReport,
+    enableStatisticsGeneration,
     selectAllColumns,
     deselectAllColumns,
     validateColumnSelection,

@@ -67,9 +67,9 @@ window.BoundouDataProcessor = (() => {
 
             // Define field mappings for each entity type
             const entityFieldMappings = {
-                personne_physique: ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'],
-                personne_morale: ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse'],
-                groupement: ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usag']
+                personne_physique: ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'],
+                personne_morale: ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'Typ_pers_m'],
+                groupement: ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m']
             };
 
             // Categorize data by entity type
@@ -349,7 +349,9 @@ window.BoundouDataProcessor = (() => {
             'Residence': residences.join('\n'),
             'superficie': cleanValue(getValue('superficie')),
             'Vocation_1': cleanValue(getValue('Vocation_1')),
-            'type_usa': cleanValue(getValue('type_usa'))
+            'type_usa': cleanValue(getValue('type_usa')),
+            'Type_piec': cleanValue(getValue('Type_piec')),
+            'Date_nai': cleanValue(getValue('Date_nai'))
         };
     };
 
@@ -357,7 +359,7 @@ window.BoundouDataProcessor = (() => {
     const getCollectiveOrderedColumns = () => {
         return [
             'Village', 'nicad', 'Num_parcel_2', 'Prenom', 'Nom', 'Sexe',
-            'Numero_piece', 'Telephone', 'Date_naissance', 'Residence',
+            'Numero_piece', 'Type_piec', 'Telephone', 'Date_naissance', 'Date_nai', 'Residence',
             'superficie', 'Vocation_1', 'type_usa'
         ];
     };

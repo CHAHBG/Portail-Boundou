@@ -1335,6 +1335,21 @@ select.form-control {
   border-bottom-color: var(--color-primary) !important;
 }
 
+/* Collective info styling */
+.collective-info {
+  text-align: center;
+  margin-top: var(--space-12);
+}
+
+.collective-info small {
+  color: var(--color-text-subtle);
+  font-style: italic;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-border);
+}
+
 #columnSelectionIndividual .entity-tab-button.active {
   background: #007bff !important;
   color: white !important;
@@ -1906,4 +1921,179 @@ body #columnSelectionIndividual .entity-tab-button.active:hover,
 .entity-tab-button.active[data-entity]:hover {
   background-color: #0056b3 !important;
   border-color: #0056b3 !important;
+}
+
+/* Advanced Options Styling */
+.advanced-options-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+}
+
+.advanced-options-header h3 {
+  margin-bottom: 8px;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.advanced-options-header p {
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.option-group {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-1);
+  transition: all 0.2s ease;
+}
+
+.option-group:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+
+.option-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.option-checkbox {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.option-label {
+  flex: 1;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.option-description {
+  margin-left: 30px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.option-description ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.option-description li {
+  margin: 4px 0;
+}
+
+.age-threshold-input {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-subtle);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.age-threshold-input label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.age-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.age-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+}
+
+/* Statistics Section Styling */
+.statistics-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-1);
+  text-align: center;
+}
+
+.statistics-header h3 {
+  margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.statistics-header p {
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.statistics-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-large {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stats-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Responsive Design for Advanced Options */
+@media (max-width: 768px) {
+  .advanced-options-section {
+    padding: 16px;
+  }
+  
+  .option-group {
+    padding: 12px;
+  }
+  
+  .option-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .option-description {
+    margin-left: 0;
+  }
+  
+  .age-threshold-input {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }

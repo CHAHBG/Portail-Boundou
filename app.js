@@ -694,7 +694,10 @@ function initializeEventHandlers() {
     if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => generateDeliberationList('collective'));
 
     const resetBtn = document.getElementById('reset-deliberation');
-    if (resetBtn) resetBtn.addEventListener('click', resetDeliberationData);
+    if (resetBtn) resetBtn.addEventListener('click', () => resetDeliberationData('individual'));
+
+    const resetCollectiveBtn = document.getElementById('reset-collective');
+    if (resetCollectiveBtn) resetCollectiveBtn.addEventListener('click', () => resetDeliberationData('collective'));
 
     if (window.DeliberationListUI) {
         window.DeliberationListUI.initializeDeliberationHandlers();
@@ -1425,8 +1428,12 @@ function processFile(type) {
             const results = type === 'individual' ? processIndividualData(originalData) : processCollectiveData(originalData);
             if (type === 'individual') {
                 window.BoundouDashboard.processedIndividualData = results;
+                // Emit event for individual data processing completion
+                window.dispatchEvent(new CustomEvent('individualDataProcessed'));
             } else {
                 window.BoundouDashboard.processedCollectiveData = results;
+                // Emit event for collective data processing completion
+                window.dispatchEvent(new CustomEvent('collectiveDataProcessed'));
             }
 
             const totalRows = dataRows.length;
@@ -1475,7 +1482,29 @@ function generateDeliberationList(type) {
 function generateIndividualDeliberationList() {
     // Use the enhanced Excel generator for better performance and features
     try {
-        return BoundouExcelGenerator.generateIndividualDeliberationList();
+        // Check if advanced options are enabled
+        const advancedOptions = window.BoundouDashboard.advancedOptions;
+        console.log('🔍 Advanced options check:', advancedOptions);
+        
+        const hasAdvancedOptions = advancedOptions && (
+            advancedOptions.enableDualLists || 
+            advancedOptions.enableMandataireSeparation ||
+            advancedOptions.enableDateNormalization
+        );
+        
+        console.log('🔍 Has advanced options:', hasAdvancedOptions);
+        console.log('  - Dual Lists:', advancedOptions?.enableDualLists);
+        console.log('  - Mandataire Separation:', advancedOptions?.enableMandataireSeparation);
+        console.log('  - Date Normalization:', advancedOptions?.enableDateNormalization);
+
+        // Use enhanced generation if advanced options are enabled
+        if (hasAdvancedOptions) {
+            console.log('🚀 Using enhanced generation with advanced options');
+            return BoundouExcelGenerator.generateEnhancedIndividualDeliberationList();
+        } else {
+            console.log('📋 Using basic generation (no advanced options)');
+            return BoundouExcelGenerator.generateIndividualDeliberationList();
+        }
     } catch (error) {
         console.error('Erreur dans generateIndividualDeliberationList:', error);
         BoundouUtils.showError(`Erreur de génération: ${error.message}`);
@@ -1483,67 +1512,86 @@ function generateIndividualDeliberationList() {
 }
 
 function generateCollectiveDeliberationList(data) {
-    // Pour les fichiers collectifs, garder le comportement existant
-    const columns = BoundouUtils.getOrderedColumns(data);
-    const orderedData = data.map(row => {
-        const orderedRow = {};
-        columns.forEach(col => {
-            orderedRow[col] = row[col] || '';
-        });
-        return orderedRow;
-    });
-
-    const ws = XLSX.utils.json_to_sheet(orderedData, { header: columns });
-    const colWidths = columns.map(col => {
-        if (['Village', 'Residence'].includes(col)) return { wch: 20 };
-        if (['nicad', 'Num_parcel_2'].includes(col)) return { wch: 15 };
-        if (['Prenom', 'Nom'].includes(col)) return { wch: 15 };
-        if (['Numero_piece', 'Telephone'].includes(col)) return { wch: 15 };
-        if (['Date_naissance'].includes(col)) return { wch: 12 };
-        return { wch: 10 };
-    });
-    ws['!cols'] = colWidths;
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'LISTE_COLLECTIVES');
-
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    const fileName = `LISTE_COLLECTIVES_${dateStr}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-
-    const confirmationHtml = `
-        <div class="results-section" style="margin-top: 20px;">
-            <h3>📥 Téléchargement terminé</h3>
-            <p><strong>Fichier généré :</strong> ${fileName}</p>
-            <p><strong>Nombre de parcelles :</strong> ${data.length}</p>
-            <p><strong>Colonnes incluses :</strong> ${columns.length}</p>
-            <div style="margin-top: 10px; padding: 10px; background: #e8f5e8; border-radius: 5px;">
-                <small><strong>💡 Format :</strong> Chaque ligne représente une parcelle avec tous les affectataires regroupés dans les mêmes colonnes (séparés par des retours à la ligne)</small>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('resultsCollective').innerHTML = confirmationHtml;
-    showToast(`Liste collective générée : ${fileName}`, 'success');
+    // Use the Excel generator for collective data generation
+    try {
+        return BoundouExcelGenerator.generateCollectiveDeliberationList();
+    } catch (error) {
+        console.error('Erreur dans generateCollectiveDeliberationList:', error);
+        BoundouUtils.showError(`Erreur de génération: ${error.message}`);
+    }
 }
 
-function resetDeliberationData() {
-    window.BoundouDashboard.processedIndividualData = [];
-    window.BoundouDashboard.processedCollectiveData = [];
-    window.BoundouDashboard.originalIndividualData = null;
-    window.BoundouDashboard.originalCollectiveData = null;
-    document.getElementById('fileNameIndividual').textContent = '';
-    document.getElementById('fileNameCollective').textContent = '';
-    document.getElementById('fileInfoIndividual').style.display = 'none';
-    document.getElementById('fileInfoCollective').style.display = 'none';
-    document.getElementById('resultsIndividual').style.display = 'none';
-    document.getElementById('resultsCollective').style.display = 'none';
-    document.getElementById('previewIndividual').style.display = 'none';
-    document.getElementById('previewCollective').style.display = 'none';
-    document.getElementById('generate-individual').disabled = true;
-    document.getElementById('generate-collective').disabled = true;
-    showToast('Données de délibération réinitialisées', 'info');
+function resetDeliberationData(type = 'both') {
+    // Clear file input elements
+    const individualFileInput = document.getElementById('fileInput');
+    const collectiveFileInput = document.getElementById('fileInputCollective');
+    
+    if (type === 'individual' || type === 'both') {
+        // Reset individual data
+        window.BoundouDashboard.processedIndividualData = [];
+        window.BoundouDashboard.originalIndividualData = null;
+        
+        // Clear file input
+        if (individualFileInput) {
+            individualFileInput.value = '';
+        }
+        
+        // Reset individual UI elements
+        document.getElementById('fileNameIndividual').textContent = '';
+        document.getElementById('fileInfoIndividual').style.display = 'none';
+        document.getElementById('resultsIndividual').style.display = 'none';
+        document.getElementById('previewIndividual').style.display = 'none';
+        document.getElementById('generate-individual').disabled = true;
+        
+        // Reset individual step navigation - go back to file upload step
+        const nextStepBtn = document.getElementById('nextStep');
+        if (nextStepBtn) {
+            nextStepBtn.style.display = 'none';
+        }
+        
+        // Show file upload section again
+        const uploadSection = document.querySelector('#individual-subsection .upload-section');
+        if (uploadSection) {
+            uploadSection.style.display = 'block';
+        }
+    }
+    
+    if (type === 'collective' || type === 'both') {
+        // Reset collective data
+        window.BoundouDashboard.processedCollectiveData = [];
+        window.BoundouDashboard.originalCollectiveData = null;
+        
+        // Clear file input
+        if (collectiveFileInput) {
+            collectiveFileInput.value = '';
+        }
+        
+        // Reset collective UI elements
+        document.getElementById('fileNameCollective').textContent = '';
+        document.getElementById('fileInfoCollective').style.display = 'none';
+        document.getElementById('resultsCollective').style.display = 'none';
+        document.getElementById('previewCollective').style.display = 'none';
+        document.getElementById('generate-collective').disabled = true;
+        
+        // Reset collective step navigation - go back to file upload step
+        const nextStepCollectiveBtn = document.getElementById('nextStepCollective');
+        if (nextStepCollectiveBtn) {
+            nextStepCollectiveBtn.style.display = 'none';
+        }
+        
+        // Show file upload section again
+        const uploadSectionCollective = document.querySelector('#collective-subsection .upload-section');
+        if (uploadSectionCollective) {
+            uploadSectionCollective.style.display = 'block';
+        }
+    }
+    
+    // Show appropriate success message
+    const message = type === 'individual' ? 'Données individuelles réinitialisées' : 
+                   type === 'collective' ? 'Données collectives réinitialisées' : 
+                   'Toutes les données de délibération réinitialisées';
+    
+    showToast(message, 'info');
 }
 
 async function initializeApp() {

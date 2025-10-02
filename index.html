@@ -9,6 +9,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="workflow-styles.css">
+    
     <!-- Chart.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
@@ -28,6 +31,7 @@
     <script defer src="excel-generator.js"></script>
     
     <!-- Custom JavaScript -->
+    <script defer src="workflow.js"></script>
     <script defer src="generatedeliblist.js"></script>
     <script defer src="app.js"></script>
     
@@ -275,83 +279,247 @@
                         <h3>Parcelles Individuelles</h3>
                         <p><strong>Instructions :</strong> Téléchargez un fichier Excel contenant des données individuelles avec des colonnes comme <code>Prenom</code>, <code>Nom</code>, <code>Sexe</code>, <code>superficie</code>, etc. Les fichiers collectifs (avec <code>Prenom_1</code>, <code>Nom_1</code>, etc.) ne sont pas acceptés ici.</p>
                     </div>
-                    <div class="content">
-                        <div class="upload-section upload-section-individual" id="uploadSectionIndividual">
-                            <h3>📁 Sélectionner le fichier Excel</h3>
-                            <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
-                            <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls">
-                            <button class="upload-btn btn btn--primary" onclick="document.getElementById('individual-file').click()">
-                                Choisir un fichier
-                            </button>
-                            <p id="fileNameIndividual"></p>
+                    
+                    <!-- Step-by-step workflow -->
+                    <div class="workflow-container">
+                        
+                        <!-- Step 1: File Upload -->
+                        <div class="workflow-step active" id="step1">
+                            <div class="step-header">
+                                <div class="step-number">1</div>
+                                <div class="step-info">
+                                    <h3>📁 Sélectionner le fichier Excel</h3>
+                                    <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
+                                </div>
+                            </div>
+                            <div class="upload-section upload-section-individual" id="uploadSectionIndividual">
+                                <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls">
+                                <button class="upload-btn btn btn--primary" onclick="document.getElementById('individual-file').click()">
+                                    Choisir un fichier
+                                </button>
+                                <p id="fileNameIndividual"></p>
+                            </div>
+                            <div id="fileInfoIndividual" class="info-section" style="display: none;"></div>
                         </div>
 
-                        <div id="fileInfoIndividual" class="info-section" style="display: none;"></div>
-
-                        <!-- Column Selection Section -->
-                        <div id="columnSelectionIndividual" class="column-selection-section" style="display: none;">
-                            <div class="column-selection-header">
-                                <h3>📋 Sélection des Colonnes</h3>
-                                <p>Choisissez les colonnes à inclure dans chaque type d'entité :</p>
+                        <!-- Step 2: Configure Options -->
+                        <div class="workflow-step" id="step2" style="display: none;">
+                            <div class="step-header">
+                                <div class="step-number">2</div>
+                                <div class="step-info">
+                                    <h3>⚙️ Configurer les Options de Traitement</h3>
+                                    <p>Choisissez comment traiter vos données</p>
+                                </div>
                             </div>
                             
-                            <div class="entity-tabs">
-                                <button class="entity-tab-button active" data-entity="personne_physique">
-                                    👤 Personnes physiques (<span id="count-personne_physique">0</span>)
-                                </button>
-                                <button class="entity-tab-button" data-entity="personne_morale">
-                                    🏢 Personnes morales (<span id="count-personne_morale">0</span>)
-                                </button>
-                                <button class="entity-tab-button" data-entity="groupement">
-                                    👥 Groupements (<span id="count-groupement">0</span>)
+                            <div class="options-quick-config">
+                                <div class="quick-option-card" data-config="basic">
+                                    <div class="card-icon">📋</div>
+                                    <h4>Traitement Simple</h4>
+                                    <p>Génération standard par type d'entité</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Personnes physiques</span>
+                                        <span class="feature">✓ Personnes morales</span>
+                                        <span class="feature">✓ Groupements</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="habitat-agricole">
+                                    <div class="card-icon">🏠🌾</div>
+                                    <h4>Listes Habitat & Agricole</h4>
+                                    <p>Séparation par type d'usage</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Listes séparées</span>
+                                        <span class="feature">✓ Habitat / Agricole</span>
+                                        <span class="feature">✓ Par type d'entité</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="mandataire">
+                                    <div class="card-icon">👶👨</div>
+                                    <h4>Séparation Mandataires</h4>
+                                    <p>Par âge et type de document</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Mineurs / Majeurs</span>
+                                        <span class="feature">✓ Par document</span>
+                                        <span class="feature">✓ Seuil d'âge configurable</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="complete">
+                                    <div class="card-icon">🔧</div>
+                                    <h4>Traitement Complet</h4>
+                                    <p>Toutes les options avancées</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Listes séparées</span>
+                                        <span class="feature">✓ Mandataires</span>
+                                        <span class="feature">✓ Statistiques</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Advanced Options (collapsed by default) -->
+                            <div class="advanced-options-toggle">
+                                <button id="toggleAdvancedOptions" class="btn btn--secondary">
+                                    🔧 Options Avancées
                                 </button>
                             </div>
+                            
+                            <div id="advancedOptionsIndividual" class="advanced-options-section" style="display: none;">
+                                <div class="options-grid">
+                                    <!-- Dual List Generation Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableDualLists" class="option-checkbox">
+                                            <label for="enableDualLists" class="option-label">
+                                                <strong>🏠🌾 Générer des listes séparées Habitat et Agricole</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Créer deux feuilles distinctes :</p>
+                                            <ul>
+                                                <li><strong>Habitat :</strong> type_usag = 'Habitat'</li>
+                                                <li><strong>Agricole :</strong> type_usag ≠ 'Habitat'</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                            <div id="column-lists">
-                                <div class="column-list" id="columns-personne_physique">
-                                    <div class="column-actions">
-                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_physique')">Tout sélectionner</button>
-                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_physique')">Tout désélectionner</button>
+                                    <!-- Mandataire Separation Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableMandataireSeparation" class="option-checkbox">
+                                            <label for="enableMandataireSeparation" class="option-label">
+                                                <strong>👶👨 Séparer les mandataires par âge</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Séparer les mandataires selon l'âge et le type de document :</p>
+                                            <div class="age-threshold-input">
+                                                <label for="ageThreshold">Seuil d'âge (années) :</label>
+                                                <input type="number" id="ageThreshold" min="1" max="30" value="15" class="age-input">
+                                            </div>
+                                            <ul>
+                                                <li><strong>Mandataires mineurs :</strong> Type_piece = 'extrait_de_naissance' ET âge ≤ seuil</li>
+                                                <li><strong>Mandataires majeurs :</strong> Tous les autres mandataires</li>
+                                            </ul>
+                                        </div>
                                     </div>
-                                    <div class="columns-grid" id="grid-personne_physique"></div>
-                                </div>
-                                <div class="column-list" id="columns-personne_morale" style="display: none;">
-                                    <div class="column-actions">
-                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_morale')">Tout sélectionner</button>
-                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_morale')">Tout désélectionner</button>
-                                    </div>
-                                    <div class="columns-grid" id="grid-personne_morale"></div>
-                                </div>
-                                <div class="column-list" id="columns-groupement" style="display: none;">
-                                    <div class="column-actions">
-                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('groupement')">Tout sélectionner</button>
-                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('groupement')">Tout désélectionner</button>
-                                    </div>
-                                    <div class="columns-grid" id="grid-groupement"></div>
-                                </div>
-                            </div>
 
-                            <div class="column-actions-footer">
-                                <button id="validateColumns" class="btn btn--primary">
-                                    ✓ Valider la sélection et prévisualiser
-                                </button>
-                                <button id="resetColumns" class="btn btn--secondary">
-                                    🔄 Réinitialiser
-                                </button>
+                                    <!-- Date Normalization Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableDateNormalization" checked class="option-checkbox">
+                                            <label for="enableDateNormalization" class="option-label">
+                                                <strong>📅 Normalisation automatique des dates</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Standardiser automatiquement toutes les dates au format DD/MM/YYYY</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div style="text-align: center;">
-                            <button id="generate-individual" class="process-btn btn btn--success" disabled>
-                                <span id="processTextIndividual">Traiter et Générer Liste Individuelle</span>
+                        <!-- Step 3: Column Selection -->
+                        <div class="workflow-step" id="step3" style="display: none;">
+                            <div class="step-header">
+                                <div class="step-number">3</div>
+                                <div class="step-info">
+                                    <h3>📋 Sélectionner les Colonnes</h3>
+                                    <p>Choisissez les colonnes à inclure dans chaque type d'entité</p>
+                                </div>
+                            </div>
+                            
+                            <div id="columnSelectionIndividual" class="column-selection-section">
+                                <div class="entity-tabs">
+                                    <button class="entity-tab-button active" data-entity="personne_physique">
+                                        👤 Personnes physiques (<span id="count-personne_physique">0</span>)
+                                    </button>
+                                    <button class="entity-tab-button" data-entity="personne_morale">
+                                        🏢 Personnes morales (<span id="count-personne_morale">0</span>)
+                                    </button>
+                                    <button class="entity-tab-button" data-entity="groupement">
+                                        👥 Groupements (<span id="count-groupement">0</span>)
+                                    </button>
+                                </div>
+
+                                <div id="column-lists">
+                                    <div class="column-list" id="columns-personne_physique">
+                                        <div class="column-actions">
+                                            <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_physique')">Tout sélectionner</button>
+                                            <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_physique')">Tout désélectionner</button>
+                                        </div>
+                                        <div class="columns-grid" id="grid-personne_physique"></div>
+                                    </div>
+                                    <div class="column-list" id="columns-personne_morale" style="display: none;">
+                                        <div class="column-actions">
+                                            <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_morale')">Tout sélectionner</button>
+                                            <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_morale')">Tout désélectionner</button>
+                                        </div>
+                                        <div class="columns-grid" id="grid-personne_morale"></div>
+                                    </div>
+                                    <div class="column-list" id="columns-groupement" style="display: none;">
+                                        <div class="column-actions">
+                                            <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('groupement')">Tout sélectionner</button>
+                                            <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('groupement')">Tout désélectionner</button>
+                                        </div>
+                                        <div class="columns-grid" id="grid-groupement"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Generation & Results -->
+                        <div class="workflow-step" id="step4" style="display: none;">
+                            <div class="step-header">
+                                <div class="step-number">4</div>
+                                <div class="step-info">
+                                    <h3>🚀 Génération et Résultats</h3>
+                                    <p>Générer les listes et consulter les statistiques</p>
+                                </div>
+                            </div>
+                            
+                            <div class="generation-section">
+                                <div class="generation-actions">
+                                    <button id="validateColumns" class="btn btn--primary btn-large">
+                                        👁️ Prévisualiser les données
+                                    </button>
+                                    <button id="generate-individual" class="btn btn--success btn-large" disabled>
+                                        <span id="processTextIndividual">🚀 Générer les Listes</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Statistics Generation Section -->
+                                <div id="statisticsSection" class="statistics-section" style="display: none;">
+                                    <div class="statistics-header">
+                                        <h4>📊 Statistiques Détaillées</h4>
+                                        <p>Générer un rapport complet des données traitées</p>
+                                    </div>
+                                    <div class="statistics-actions">
+                                        <button id="generateStats" class="btn btn--secondary" disabled>
+                                            📈 Générer les Statistiques
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="resultsIndividual" style="display: none;"></div>
+                            <div id="previewIndividual" style="display: none;"></div>
+                        </div>
+
+                        <!-- Navigation Controls -->
+                        <div class="workflow-navigation">
+                            <button id="prevStep" class="btn btn--secondary" style="display: none;">
+                                ← Étape précédente
                             </button>
-                            <button id="reset-deliberation" class="download-btn btn btn--secondary">
+                            <button id="nextStep" class="btn btn--primary" style="display: none;">
+                                Étape suivante →
+                            </button>
+                            <button id="reset-deliberation" class="btn btn--secondary">
                                 🔄 Réinitialiser
                             </button>
                         </div>
-
-                        <div id="resultsIndividual" style="display: none;"></div>
-                        <div id="previewIndividual" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -363,27 +531,195 @@
                         <h3>Parcelles Collectives</h3>
                         <p><strong>Instructions :</strong> Téléchargez un fichier Excel contenant des données collectives avec des colonnes comme <code>Prenom_M</code>, <code>Nom_M</code>, <code>Prenom_1</code>, <code>Nom_1</code>, etc. Les fichiers individuels (sans colonnes comme <code>Prenom_1</code>) ne sont pas acceptés ici.</p>
                     </div>
-                    <div class="content">
-                        <div class="upload-section upload-section-collective" id="uploadSectionCollective">
-                            <h3>📁 Sélectionner le fichier Excel</h3>
-                            <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
-                            <input type="file" id="collective-file" class="file-input" accept=".xlsx,.xls">
-                            <button class="upload-btn btn btn--primary" onclick="document.getElementById('collective-file').click()">
-                                Choisir un fichier
-                            </button>
-                            <p id="fileNameCollective"></p>
+                    
+                    <!-- Step-by-step workflow for collective -->
+                    <div class="workflow-container">
+                        
+                        <!-- Step 1: File Upload -->
+                        <div class="workflow-step active" id="collective-step1">
+                            <div class="step-header">
+                                <div class="step-number">1</div>
+                                <div class="step-info">
+                                    <h3>📁 Sélectionner le fichier Excel</h3>
+                                    <p>Glissez-déposez votre fichier ou cliquez pour le sélectionner</p>
+                                </div>
+                            </div>
+                            <div class="upload-section upload-section-collective" id="uploadSectionCollective">
+                                <input type="file" id="collective-file" class="file-input" accept=".xlsx,.xls">
+                                <button class="upload-btn btn btn--primary" onclick="document.getElementById('collective-file').click()">
+                                    Choisir un fichier
+                                </button>
+                                <p id="fileNameCollective"></p>
+                            </div>
+                            <div id="fileInfoCollective" class="info-section" style="display: none;"></div>
                         </div>
 
-                        <div id="fileInfoCollective" class="info-section" style="display: none;"></div>
+                        <!-- Step 2: Configure Options -->
+                        <div class="workflow-step" id="collective-step2" style="display: none;">
+                            <div class="step-header">
+                                <div class="step-number">2</div>
+                                <div class="step-info">
+                                    <h3>⚙️ Configurer les Options de Traitement</h3>
+                                    <p>Choisissez comment traiter vos données collectives</p>
+                                </div>
+                            </div>
+                            
+                            <div class="options-quick-config">
+                                <div class="quick-option-card" data-config="basic" data-type="collective">
+                                    <div class="card-icon">📋</div>
+                                    <h4>Traitement Simple</h4>
+                                    <p>Génération standard par type d'entité</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Données collectives</span>
+                                        <span class="feature">✓ Parcelles groupées</span>
+                                        <span class="feature">✓ Format standardisé</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="habitat-agricole" data-type="collective">
+                                    <div class="card-icon">🏠🌾</div>
+                                    <h4>Listes Habitat & Agricole</h4>
+                                    <p>Séparation par type d'usage</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Listes séparées</span>
+                                        <span class="feature">✓ Habitat / Agricole</span>
+                                        <span class="feature">✓ Données collectives</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="mandataire" data-type="collective">
+                                    <div class="card-icon">👶👨</div>
+                                    <h4>Séparation Mandataires</h4>
+                                    <p>Par âge et type de document</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Mineurs / Majeurs</span>
+                                        <span class="feature">✓ Par document</span>
+                                        <span class="feature">✓ Seuil d'âge configurable</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="quick-option-card" data-config="complete" data-type="collective">
+                                    <div class="card-icon">🔧</div>
+                                    <h4>Traitement Complet</h4>
+                                    <p>Toutes les options avancées</p>
+                                    <div class="card-features">
+                                        <span class="feature">✓ Listes séparées</span>
+                                        <span class="feature">✓ Mandataires</span>
+                                        <span class="feature">✓ Statistiques</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Advanced Options (collapsed by default) -->
+                            <div class="advanced-options-toggle">
+                                <button id="toggleAdvancedOptionsCollective" class="btn btn--secondary">
+                                    🔧 Options Avancées
+                                </button>
+                            </div>
+                            
+                            <div id="advancedOptionsCollective" class="advanced-options-section" style="display: none;">
+                                <div class="options-grid">
+                                    <!-- Dual List Generation Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableDualListsCollective" class="option-checkbox">
+                                            <label for="enableDualListsCollective" class="option-label">
+                                                <strong>🏠🌾 Générer des listes séparées Habitat et Agricole</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Créer deux feuilles distinctes :</p>
+                                            <ul>
+                                                <li><strong>Habitat :</strong> type_usa = 'Habitat'</li>
+                                                <li><strong>Agricole :</strong> type_usa ≠ 'Habitat'</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                        <div style="text-align: center;">
-                            <button id="generate-collective" class="process-btn btn btn--success" disabled>
-                                <span id="processTextCollective">Traiter et Générer Liste Collective</span>
-                            </button>
+                                    <!-- Mandataire Separation Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableMandataireSeparationCollective" class="option-checkbox">
+                                            <label for="enableMandataireSeparationCollective" class="option-label">
+                                                <strong>👶👨 Séparer les mandataires par âge</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Séparer les mandataires selon l'âge et le type de document :</p>
+                                            <div class="age-threshold-input">
+                                                <label for="ageThresholdCollective">Seuil d'âge (années) :</label>
+                                                <input type="number" id="ageThresholdCollective" min="1" max="30" value="15" class="age-input">
+                                            </div>
+                                            <ul>
+                                                <li><strong>Mandataires mineurs :</strong> Type_piec = 'extrait_de_naissance' ET âge ≤ seuil</li>
+                                                <li><strong>Mandataires majeurs :</strong> Tous les autres mandataires</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Date Normalization Option -->
+                                    <div class="option-group">
+                                        <div class="option-header">
+                                            <input type="checkbox" id="enableDateNormalizationCollective" checked class="option-checkbox">
+                                            <label for="enableDateNormalizationCollective" class="option-label">
+                                                <strong>📅 Normalisation automatique des dates</strong>
+                                            </label>
+                                        </div>
+                                        <div class="option-description">
+                                            <p>Standardiser automatiquement toutes les dates au format DD/MM/YYYY</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div id="resultsCollective" style="display: none;"></div>
-                        <div id="previewCollective" style="display: none;"></div>
+                        <!-- Step 3: Generation & Results -->
+                        <div class="workflow-step" id="collective-step3" style="display: none;">
+                            <div class="step-header">
+                                <div class="step-number">3</div>
+                                <div class="step-info">
+                                    <h3>🚀 Génération et Résultats</h3>
+                                    <p>Générer les listes collectives</p>
+                                </div>
+                            </div>
+                            
+                            <div class="generation-section">
+                                <div class="generation-actions">
+                                    <button id="generate-collective" class="btn btn--success btn-large" disabled>
+                                        <span id="processTextCollective">🚀 Générer les Listes Collectives</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Statistics Generation Section for Collective -->
+                                <div id="statisticsCollectiveSection" class="statistics-section" style="display: none;">
+                                    <div class="statistics-header">
+                                        <h4>📊 Statistiques Collectives</h4>
+                                        <p>Générer un rapport statistique des données collectives</p>
+                                    </div>
+                                    <div class="statistics-actions">
+                                        <button id="generateCollectiveStats" class="btn btn--secondary" disabled>
+                                            📈 Générer les Statistiques Collectives
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="resultsCollective" style="display: none;"></div>
+                            <div id="previewCollective" style="display: none;"></div>
+                        </div>
+
+                        <!-- Navigation Controls -->
+                        <div class="workflow-navigation">
+                            <button id="prevStepCollective" class="btn btn--secondary" style="display: none;">
+                                ← Étape précédente
+                            </button>
+                            <button id="nextStepCollective" class="btn btn--primary" style="display: none;">
+                                Étape suivante →
+                            </button>
+                            <button id="reset-collective" class="btn btn--secondary">
+                                🔄 Réinitialiser
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
