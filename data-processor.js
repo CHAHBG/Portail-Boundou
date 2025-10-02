@@ -2,31 +2,85 @@
 window.BoundouDataProcessor = (() => {
     'use strict';
 
+    // Case-insensitive field lookup helper with superficie variants
+    const getValue = (row, fieldName) => {
+        // First try exact match
+        if (row[fieldName] !== undefined) {
+            return row[fieldName];
+        }
+        
+        // For superficie field, try common variations
+        if (fieldName.toLowerCase() === 'superficie') {
+            const superficieVariants = [
+                'superficie', 'Superficie', 'SUPERFICIE',
+                'superficie_m2', 'Superficie_m2', 'SUPERFICIE_M2',
+                'superficie_ha', 'Superficie_ha', 'SUPERFICIE_HA',
+                'area', 'Area', 'AREA',
+                'surface', 'Surface', 'SURFACE'
+            ];
+            
+            for (const variant of superficieVariants) {
+                if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
+                    console.log(`✅ Found superficie variant "${variant}" with value:`, row[variant]);
+                    return row[variant];
+                }
+            }
+        }
+        
+        // Try case-insensitive lookup for other fields
+        const keys = Object.keys(row);
+        const matchingKey = keys.find(key => 
+            key.toLowerCase() === fieldName.toLowerCase()
+        );
+        
+        return matchingKey ? row[matchingKey] : undefined;
+    };
+
     // Filter data based on entity type
     const filterByEntityType = (data, entityType) => {
+        console.log(`🔍 Filtering data for entity type: ${entityType}`);
+        console.log(`📊 Total rows in data: ${data.length}`);
+        
+        let filtered = [];
         switch (entityType) {
             case 'personne_physique':
-                return data.filter(row => 
+                filtered = data.filter(row => 
                     row['Typ_pers'] && 
                     row['Typ_pers'].toLowerCase().includes('personne_physique')
                 );
+                break;
             
             case 'personne_morale':
-                return data.filter(row => 
+                filtered = data.filter(row => 
                     row['Typ_pers'] && 
                     row['Typ_pers'].toLowerCase().includes('personne_morale') &&
                     !(row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement'))
                 );
+                break;
             
             case 'groupement':
-                return data.filter(row => 
+                filtered = data.filter(row => 
                     row['Typ_pers_m'] && 
                     row['Typ_pers_m'].toLowerCase().includes('groupement')
                 );
+                break;
             
             default:
-                return [];
+                filtered = [];
         }
+        
+        console.log(`📋 Filtered results for ${entityType}: ${filtered.length} rows`);
+        if (filtered.length > 0) {
+            console.log(`📝 First ${entityType} row sample:`, filtered[0]);
+            console.log(`📊 Sample ${entityType} superficie values:`, filtered.slice(0, 3).map(row => {
+                const keys = Object.keys(row);
+                const superficieKeys = keys.filter(k => k.toLowerCase().includes('superficie'));
+                console.log(`  Found superficie-related keys: ${superficieKeys.join(', ')}`);
+                return superficieKeys.map(k => `${k}: ${row[k]}`).join(', ');
+            }));
+        }
+        
+        return filtered;
     };
 
     // Check if column should be excluded based on patterns
@@ -85,23 +139,45 @@ window.BoundouDataProcessor = (() => {
                     const rowTypePers = row['Typ_pers'] ? row['Typ_pers'].toLowerCase() : '';
                     const rowTypePersM = row['Typ_pers_m'] ? row['Typ_pers_m'].toLowerCase() : '';
 
-                    // Determine entity type
+                    // Determine entity type - FIXED LOGIC to match filterByEntityType
                     let entityType = null;
                     if (rowTypePers.includes('personne_physique')) {
                         entityType = 'personne_physique';
                     } else if (rowTypePersM.includes('groupement')) {
                         entityType = 'groupement';
-                    } else if (rowTypePers.includes('personne_morale')) {
+                    } else if (rowTypePers.includes('personne_morale') && !rowTypePersM.includes('groupement')) {
+                        // FIXED: Added the same exclusion condition as in filterByEntityType
                         entityType = 'personne_morale';
                     }
 
                     if (entityType && entityFieldMappings[entityType]) {
+                        console.log(`🔧 Processing ${entityType} entity:`, {
+                            rowTypePers, 
+                            rowTypePersM,
+                            hasSuperficie: !!row['superficie'],
+                            superficieValue: row['superficie'],
+                            allKeys: Object.keys(row).filter(k => k.toLowerCase().includes('superficie')),
+                            allFieldNames: Object.keys(row).slice(0, 10) // Show first 10 field names
+                        });
+                        
+                        // Special debugging for personne_morale
+                        if (entityType === 'personne_morale') {
+                            console.log(`🏢 PERSONNE_MORALE DEBUG - All available fields:`, Object.keys(row));
+                            const superficieVariants = Object.keys(row).filter(k => k.toLowerCase().includes('superficie'));
+                            console.log(`🏢 PERSONNE_MORALE - Superficie variants found:`, superficieVariants);
+                            superficieVariants.forEach(variant => {
+                                console.log(`🏢 PERSONNE_MORALE - ${variant} value:`, row[variant]);
+                            });
+                        }
+                        
                         const cleanedRow = {};
                         entityFieldMappings[entityType].forEach(field => {
                             // Use special formatting for decimal fields like superficie
                             if (field === 'superficie') {
-                                console.log(`📏 Processing individual superficie:`, row[field]);
-                                cleanedRow[field] = formatDecimalValue(row[field] || '');
+                                // Try case-insensitive lookup for superficie field
+                                const superficieValue = getValue(row, 'superficie');
+                                console.log(`📏 Processing ${entityType} superficie:`, superficieValue, 'from getValue lookup');
+                                cleanedRow[field] = formatDecimalValue(superficieValue || '');
                             } else {
                                 cleanedRow[field] = BoundouUtils.sanitizeForExcel(row[field] || '');
                             }
@@ -121,6 +197,23 @@ window.BoundouDataProcessor = (() => {
             // Store categorized data
             window.BoundouDashboard.processedIndividualData = categorizedData;
             window.BoundouDashboard.originalIndividualData = BoundouUtils.deepClone(data);
+
+            // DEBUG: Check what's actually stored for each entity type
+            console.log(`📊 STORED DATA SUMMARY:`);
+            ['personne_physique', 'personne_morale', 'groupement'].forEach(entityType => {
+                const count = categorizedData[entityType].length;
+                console.log(`${entityType}: ${count} entities`);
+                
+                if (count > 0) {
+                    const firstEntity = categorizedData[entityType][0];
+                    console.log(`${entityType} first entity superficie:`, firstEntity.superficie);
+                    console.log(`${entityType} first entity keys:`, Object.keys(firstEntity).slice(0, 15));
+                    
+                    // Sample superficie values
+                    const superficieSample = categorizedData[entityType].slice(0, 3).map(e => e.superficie);
+                    console.log(`${entityType} superficie sample:`, superficieSample);
+                }
+            });
 
             BoundouUtils.hideLoading('loadingIndicator');
             

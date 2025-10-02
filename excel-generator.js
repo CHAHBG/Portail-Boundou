@@ -221,6 +221,12 @@
                         if (col === 'Date_naiss') {
                             // Apply date formatting to Date_naiss field
                             orderedRow[col] = formatDateToDDMMYYYY(row[col]) || '';
+                        } else if (col === 'superficie') {
+                            // Apply decimal formatting to superficie field  
+                            const rawValue = getValue(row, col) || '';
+                            // Since formatDecimalValue is not available here, use direct value but with debugging
+                            orderedRow[col] = rawValue;
+                            console.log(`📏 Excel generation - personne_physique superficie:`, rawValue, 'from row:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -256,15 +262,34 @@
 
             // Sheet 2: Personnes morales (excluding groupements)
             if (data.personne_morale && data.personne_morale.length > 0) {
+                console.log(`🏢 EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
+                
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
                 const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m'];
                 
-                const moralesData = data.personne_morale.map(row => {
+                // Debug first personne_morale entity
+                if (data.personne_morale.length > 0) {
+                    const firstEntity = data.personne_morale[0];
+                    console.log(`🏢 EXCEL GEN - First personne_morale entity keys:`, Object.keys(firstEntity));
+                    console.log(`🏢 EXCEL GEN - First personne_morale superficie field variants:`, 
+                        Object.keys(firstEntity).filter(k => k.toLowerCase().includes('superficie')));
+                    console.log(`🏢 EXCEL GEN - First personne_morale superficie values:`, {
+                        direct: firstEntity.superficie,
+                        getValue: getValue(firstEntity, 'superficie')
+                    });
+                }
+                
+                const moralesData = data.personne_morale.map((row, index) => {
                     const orderedRow = {};
                     columns.forEach(col => {
                         if (col === 'Creation') {
                             // Apply date formatting to Creation field
                             orderedRow[col] = formatDateToDDMMYYYY(row[col]) || '';
+                        } else if (col === 'superficie') {
+                            // Apply decimal formatting to superficie field
+                            const rawValue = getValue(row, col) || '';
+                            orderedRow[col] = rawValue;
+                            console.log(`📏 Excel generation - personne_morale ${index + 1} superficie:`, rawValue, 'from row.superficie:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -308,6 +333,11 @@
                         if (col === 'Creation') {
                             // Apply date formatting to Creation field
                             orderedRow[col] = formatDateToDDMMYYYY(row[col]) || '';
+                        } else if (col === 'superficie') {
+                            // Apply decimal formatting to superficie field
+                            const rawValue = getValue(row, col) || '';
+                            orderedRow[col] = rawValue;
+                            console.log(`📏 Excel generation - groupement superficie:`, rawValue, 'from row:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -775,6 +805,20 @@
                 );
             } else {
                 // Use collective processing for collective data (personne_morale, groupement)
+                console.log(`🏗️ Using collective processing for ${entityType}`);
+                console.log(`🏗️ Data sample for ${entityType}:`, entityData.slice(0, 2));
+                console.log(`🏗️ Columns for ${entityType}:`, columns);
+                
+                // Debug superficie specifically
+                if (entityData.length > 0) {
+                    const superficieValues = entityData.slice(0, 3).map(row => ({
+                        direct: row.superficie,
+                        getValue: getValue(row, 'superficie'),
+                        allKeys: Object.keys(row).filter(k => k.toLowerCase().includes('superficie'))
+                    }));
+                    console.log(`🏗️ ${entityType} superficie debug before collective processing:`, superficieValues);
+                }
+                
                 entitySheets = await generateEntitySheets(
                     entityData, 
                     entityType, 
