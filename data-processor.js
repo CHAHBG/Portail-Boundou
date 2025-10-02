@@ -27,6 +27,25 @@ window.BoundouDataProcessor = (() => {
             }
         }
         
+        // For num_parcel field, try common variations
+        if (fieldName.toLowerCase() === 'num_parcel') {
+            const numParcelVariants = [
+                'num_parcel', 'Num_parcel', 'NUM_PARCEL',
+                'num_parcelle', 'Num_parcelle', 'NUM_PARCELLE',
+                'Num_parcel_2', 'num_parcel_2', 'NUM_PARCEL_2',
+                'numero_parcelle', 'Numero_parcelle', 'NUMERO_PARCELLE',
+                'parcel_number', 'Parcel_number', 'PARCEL_NUMBER',
+                'id_parcelle', 'Id_parcelle', 'ID_PARCELLE'
+            ];
+            
+            for (const variant of numParcelVariants) {
+                if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
+                    console.log(`✅ Found num_parcel variant "${variant}" with value:`, row[variant]);
+                    return row[variant];
+                }
+            }
+        }
+        
         // Try case-insensitive lookup for other fields
         const keys = Object.keys(row);
         const matchingKey = keys.find(key => 
@@ -121,9 +140,9 @@ window.BoundouDataProcessor = (() => {
 
             // Define field mappings for each entity type
             const entityFieldMappings = {
-                personne_physique: ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'],
-                personne_morale: ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m'],
-                groupement: ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m']
+                personne_physique: ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'num_parcel'],
+                personne_morale: ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m', 'num_parcel'],
+                groupement: ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'num_parcel']
             };
 
             // Categorize data by entity type
@@ -498,7 +517,7 @@ window.BoundouDataProcessor = (() => {
     // Define preferred order for collective files
     const getCollectiveOrderedColumns = () => {
         return [
-            'Village', 'nicad', 'Num_parcel_2', 'Prenom', 'Nom', 'Sexe',
+            'Village', 'nicad', 'Num_parcel_2', 'num_parcel', 'Prenom', 'Nom', 'Sexe',
             'Numero_piece', 'Type_piec', 'Telephone', 'Date_naissance', 'Date_nai', 'Residence',
             'superficie', 'Vocation_1', 'type_usa'
         ];

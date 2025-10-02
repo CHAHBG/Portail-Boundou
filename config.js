@@ -11,17 +11,17 @@ window.BoundouConfig = {
             PERSONNE_PHYSIQUE: [
                 'Village', 'Prenom', 'Nom', 'Sexe', 
                 'Date_naiss', 'Num_piece', 'Telephone', 
-                'Vocation', 'type_usag', 'superficie', 'nicad'
+                'Vocation', 'type_usag', 'superficie', 'nicad', 'num_parcel'
             ],
             PERSONNE_MORALE: [
                 'Village', 'Denomination', 'Forme_jurid', 
                 'Num_piece', 'Telephone', 'Vocation', 
-                'type_usag', 'superficie', 'nicad'
+                'type_usag', 'superficie', 'nicad', 'num_parcel'
             ],
             GROUPEMENT: [
                 'Village', 'Denomination', 'Forme_jurid', 
                 'Num_piece', 'Telephone', 'Vocation', 
-                'type_usag', 'superficie', 'nicad'
+                'type_usag', 'superficie', 'nicad', 'num_parcel'
             ]
         },
         MAX_PREVIEW_ROWS: 10,

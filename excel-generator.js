@@ -216,7 +216,7 @@
             if (data.personne_physique && data.personne_physique.length > 0) {
                 const physiquesData = data.personne_physique.map(row => {
                     const orderedRow = {};
-                    const columns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'];
+                    const columns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'num_parcel'];
                     columns.forEach(col => {
                         if (col === 'Date_naiss') {
                             // Apply date formatting to Date_naiss field
@@ -265,7 +265,7 @@
                 console.log(`🏢 EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
                 
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m'];
+                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m', 'num_parcel'];
                 
                 // Debug first personne_morale entity
                 if (data.personne_morale.length > 0) {
@@ -325,7 +325,7 @@
             // Sheet 3: Groupements
             if (data.groupement && data.groupement.length > 0) {
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m'];
+                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'num_parcel'];
                 
                 const groupementsData = data.groupement.map(row => {
                     const orderedRow = {};
