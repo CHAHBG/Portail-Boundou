@@ -98,7 +98,13 @@ window.BoundouDataProcessor = (() => {
                     if (entityType && entityFieldMappings[entityType]) {
                         const cleanedRow = {};
                         entityFieldMappings[entityType].forEach(field => {
-                            cleanedRow[field] = BoundouUtils.sanitizeForExcel(row[field] || '');
+                            // Use special formatting for decimal fields like superficie
+                            if (field === 'superficie') {
+                                console.log(`📏 Processing individual superficie:`, row[field]);
+                                cleanedRow[field] = formatDecimalValue(row[field] || '');
+                            } else {
+                                cleanedRow[field] = BoundouUtils.sanitizeForExcel(row[field] || '');
+                            }
                         });
                         // Keep original type fields for reference
                         cleanedRow['Typ_pers'] = row['Typ_pers'] || '';
@@ -203,6 +209,40 @@ window.BoundouDataProcessor = (() => {
     const cleanValue = (value) => {
         if (value === null || value === undefined) return '';
         return String(value).trim();
+    };
+
+    // Helper function to format decimal values (handles both comma and period separators)
+    const formatDecimalValue = (value) => {
+        if (value === null || value === undefined || value === '') return '';
+        
+        let stringValue = String(value).trim();
+        
+        // Handle empty or invalid values
+        if (!stringValue || stringValue === '-' || stringValue === 'N/A') return '';
+        
+        // Remove any whitespace
+        stringValue = stringValue.replace(/\s+/g, '');
+        
+        // Check if it looks like a number (with comma or period as decimal separator)
+        const numberPattern = /^-?\d+([,.]\d+)?$/;
+        
+        if (numberPattern.test(stringValue)) {
+            // Replace comma with period for standardization
+            const standardizedValue = stringValue.replace(',', '.');
+            
+            // Parse as float and return formatted with period as decimal separator
+            const numericValue = parseFloat(standardizedValue);
+            
+            if (!isNaN(numericValue)) {
+                // Return the number with period as decimal separator
+                console.log(`🔢 Decimal formatting: "${value}" -> "${numericValue.toString()}"`);
+                return numericValue.toString();
+            }
+        }
+        
+        // If not a valid number pattern, return original cleaned value
+        console.log(`⚠️ Invalid decimal format: "${value}" -> "${stringValue}" (keeping original)`);
+        return stringValue;
     };
 
     // Process collective data with proper parcel handling
@@ -350,7 +390,11 @@ window.BoundouDataProcessor = (() => {
             'Telephone': telephones.join('\n'),
             'Date_naissance': datesNaissance.join('\n'),
             'Residence': residences.join('\n'),
-            'superficie': cleanValue(getValue('superficie')),
+            'superficie': (() => {
+                const superficieValue = getValue('superficie');
+                console.log(`📏 Processing superficie for parcel:`, superficieValue);
+                return formatDecimalValue(superficieValue);
+            })(),
             'Vocation_1': cleanValue(getValue('Vocation_1')),
             'type_usa': cleanValue(getValue('type_usa')),
             'Type_piec': cleanValue(getValue('Type_piec')),
