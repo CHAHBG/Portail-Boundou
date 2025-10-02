@@ -448,12 +448,14 @@ function displayIndividualPreview() {
                             <table class="preview-table">
                                 <thead>
                                     <tr>
+                                        <th>N°</th>
                                         ${headers.map(header => `<th>${header}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${previewData.map(row => `
+                                    ${previewData.map((row, index) => `
                                         <tr>
+                                            <td>${index + 1}</td>
                                             ${headers.map(header => {
                                                 let cellValue = row[header] || '';
                                                 // Apply date formatting to specific date columns
@@ -560,12 +562,14 @@ function displayCollectivePreview() {
                 <table class="preview-table">
                     <thead>
                         <tr>
+                            <th>N°</th>
                             ${headers.map(header => `<th>${header}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
-                        ${previewData.map(row => `
+                        ${previewData.map((row, index) => `
                             <tr>
+                                <td>${index + 1}</td>
                                 ${headers.map(header => {
                                     let cellValue = row[header] || '';
                                     // Apply date formatting to specific date columns

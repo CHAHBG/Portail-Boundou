@@ -1215,6 +1215,29 @@ select.form-control {
   overflow-y: visible;
 }
 
+/* Row number column styling */
+.preview-table th:first-child,
+.preview-table td:first-child {
+  width: 50px;
+  text-align: center;
+  background: var(--color-bg-1);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.preview-table th:first-child {
+  background: var(--color-primary-hover);
+  color: var(--color-btn-primary-text);
+}
+
+[data-color-scheme="dark"] .preview-table th:first-child {
+  background: var(--color-primary);
+}
+
+[data-color-scheme="dark"] .preview-table td:first-child {
+  background: var(--color-bg-2);
+}
+
 .sort-indicator {
   margin-left: var(--space-4);
   font-size: var(--font-size-xs);

@@ -128,6 +128,34 @@
         return formatted;
     };
 
+    // Helper function for case-insensitive field lookup
+    const getValue = (row, columnName) => {
+        if (!row || !columnName) return undefined;
+        
+        // Direct match first (fastest)
+        if (row.hasOwnProperty(columnName)) {
+            return row[columnName];
+        }
+        
+        // Case-insensitive search
+        const lowerColumnName = columnName.toLowerCase();
+        const matchingKey = Object.keys(row).find(key => 
+            key.toLowerCase() === lowerColumnName
+        );
+        
+        return matchingKey ? row[matchingKey] : undefined;
+    };
+
+    // Helper function to add row numbering to data
+    const addRowNumbering = (data, startNumber = 1) => {
+        if (!Array.isArray(data)) return data;
+        
+        return data.map((row, index) => ({
+            'N°': startNumber + index,
+            ...row
+        }));
+    };
+
     // Helper function to truncate sheet names to Excel's 31 character limit
     const truncateSheetName = (name) => {
         if (!name || typeof name !== 'string') return 'Sheet1';
@@ -200,10 +228,13 @@
                     return orderedRow;
                 });
 
-                const wsPhysiques = XLSX.utils.json_to_sheet(physiquesData);
+                // Add row numbering to physiques data
+                const numberedPhysiquesData = addRowNumbering(physiquesData);
+                const wsPhysiques = XLSX.utils.json_to_sheet(numberedPhysiquesData);
                 
-                // Set column widths
+                // Set column widths (adding width for N° column)
                 const colWidthsPhysiques = [
+                    { wch: 5 },  // N°
                     { wch: 20 }, // Village
                     { wch: 15 }, // Prenom
                     { wch: 15 }, // Nom
@@ -241,10 +272,13 @@
                     return orderedRow;
                 });
 
-                const wsMorales = XLSX.utils.json_to_sheet(moralesData, { header: columns });
+                // Add row numbering to morales data
+                const numberedMoralesData = addRowNumbering(moralesData);
+                const wsMorales = XLSX.utils.json_to_sheet(numberedMoralesData);
                 
-                // Set column widths
+                // Set column widths (adding width for N° column)
                 const colWidthsMorales = [
+                    { wch: 5 },  // N°
                     { wch: 25 }, // Denominat
                     { wch: 12 }, // Creation
                     { wch: 25 }, // Siege
@@ -281,7 +315,9 @@
                     return orderedRow;
                 });
 
-                const wsGroupements = XLSX.utils.json_to_sheet(groupementsData, { header: columns });
+                // Add row numbering to groupements data
+                const numberedGroupementsData = addRowNumbering(groupementsData);
+                const wsGroupements = XLSX.utils.json_to_sheet(numberedGroupementsData);
                 
                 // Set column widths
                 const colWidthsGroupements = [
@@ -418,8 +454,11 @@
                     return processedRow;
                 });
                 
-                // Create worksheet with ordered columns
-                const ws = XLSX.utils.json_to_sheet(processedData, { header: orderedColumns });
+                // Add row numbering to collective data
+                const numberedProcessedData = addRowNumbering(processedData);
+                
+                // Create worksheet
+                const ws = XLSX.utils.json_to_sheet(numberedProcessedData);
                 
                 // Set column widths for better readability
                 const colWidths = orderedColumns.map(col => {
@@ -475,7 +514,10 @@
             }
 
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
+            
+            // Add row numbering to preview data
+            const numberedData = addRowNumbering(data);
+            const ws = XLSX.utils.json_to_sheet(numberedData);
             const sheetName = BoundouConfig.EXCEL.SHEET_NAMES[entityType.toUpperCase()] || entityType;
             
             XLSX.utils.book_append_sheet(wb, ws, truncateSheetName(sheetName));
@@ -505,7 +547,7 @@
                 Object.keys(data).forEach(entityType => {
                     const entityData = data[entityType] || [];
                     if (entityData.length > 0) {
-                        const docTypes = entityData.map(row => row.Type_piece || row.Type_piec || 'NO_DOC');
+                        const docTypes = entityData.map(row => getValue(row, 'Type_piece') || getValue(row, 'Type_piec') || 'NO_DOC');
                         const uniqueDocTypes = [...new Set(docTypes)];
                         console.log(`   ${entityType}: [${uniqueDocTypes.join(', ')}]`);
                     }
@@ -557,26 +599,39 @@
 
             // Get selected columns
             const selectedColumns = window.BoundouDashboard.selectedColumns;
-            const columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
+            let columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
+            
+            // Ensure 'superficie' is always included (case-insensitive check)
+            const hasSuperficieVariant = columns.some(col => col.toLowerCase() === 'superficie');
+            if (!hasSuperficieVariant) {
+                // Check if any case variant exists in the data
+                const dataKeys = Object.keys(entityData[0] || {});
+                const superficieKey = dataKeys.find(key => key.toLowerCase() === 'superficie');
+                if (superficieKey) {
+                    columns = [...columns, superficieKey];
+                } else {
+                    columns = [...columns, 'superficie']; // Add default name if not found
+                }
+            }
 
             // Separate by usage type based on entity type
             let habitatData, agricoleData;
             
             if (entityType === 'personne_physique') {
-                // Use type_usag for individual data
+                // Use type_usag for individual data (case-insensitive)
                 habitatData = entityData.filter(row => 
-                    (row.type_usag || '').toLowerCase() === 'habitat'
+                    (getValue(row, 'type_usag') || '').toLowerCase() === 'habitat'
                 );
                 agricoleData = entityData.filter(row => 
-                    (row.type_usag || '').toLowerCase() !== 'habitat'
+                    (getValue(row, 'type_usag') || '').toLowerCase() !== 'habitat'
                 );
             } else if (entityType === 'groupement') {
-                // Use type_usa for collective data (groupement)
+                // Use type_usa for collective data (groupement) (case-insensitive)
                 habitatData = entityData.filter(row => 
-                    (row.type_usa || '').toLowerCase() === 'habitat'
+                    (getValue(row, 'type_usa') || '').toLowerCase() === 'habitat'
                 );
                 agricoleData = entityData.filter(row => 
-                    (row.type_usa || '').toLowerCase() !== 'habitat'
+                    (getValue(row, 'type_usa') || '').toLowerCase() !== 'habitat'
                 );
             } else {
                 // For personne_morale, don't separate by usage
@@ -692,7 +747,20 @@
 
             // Get selected columns
             const selectedColumns = window.BoundouDashboard.selectedColumns;
-            const columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
+            let columns = selectedColumns?.[entityType] || Object.keys(entityData[0] || {});
+            
+            // Ensure 'superficie' is always included (case-insensitive check)
+            const hasSuperficieVariant = columns.some(col => col.toLowerCase() === 'superficie');
+            if (!hasSuperficieVariant) {
+                // Check if any case variant exists in the data
+                const dataKeys = Object.keys(entityData[0] || {});
+                const superficieKey = dataKeys.find(key => key.toLowerCase() === 'superficie');
+                if (superficieKey) {
+                    columns = [...columns, superficieKey];
+                } else {
+                    columns = [...columns, 'superficie']; // Add default name if not found
+                }
+            }
 
             // Generate sheets with mandataire separation - use appropriate function for data type
             let entitySheets;
@@ -756,13 +824,13 @@
             console.log(`ðŸ“ Sample Type_piec:`, sampleRecord.Type_piec);
             console.log(`ðŸ“ Sample Date_nai:`, sampleRecord.Date_nai);
             
-            // Show all unique usage types in the data
-            const allUsageTypes = data.map(row => row.type_usa).filter(Boolean);
+            // Show all unique usage types in the data (case-insensitive)
+            const allUsageTypes = data.map(row => getValue(row, 'type_usa')).filter(Boolean);
             const uniqueUsageTypes = [...new Set(allUsageTypes)];
             console.log(`ðŸ“ All unique usage types found:`, uniqueUsageTypes);
             
-            // Show all unique document types in the data
-            const allDocTypes = data.map(row => row.Type_piec).filter(Boolean);
+            // Show all unique document types in the data (case-insensitive)
+            const allDocTypes = data.map(row => getValue(row, 'Type_piec')).filter(Boolean);
             const uniqueDocTypes = [...new Set(allDocTypes)];
             console.log(`ðŸ“ All unique document types found:`, uniqueDocTypes);
         }
@@ -1005,14 +1073,14 @@
                 console.log(`🔍 Sample Age:`, sampleRecord.Age);
                 
                 // Show all unique document types in the individual data
-                const allDocTypes = data.map(row => row.Type_piece).filter(Boolean);
+                const allDocTypes = data.map(row => getValue(row, 'Type_piece')).filter(Boolean);
                 const uniqueDocTypes = [...new Set(allDocTypes)];
                 console.log(`🔍 All unique individual document types found:`, uniqueDocTypes);
             }
             
             // Helper function to check if individual record has extrait document
             const hasExtraitDocumentIndividual = (row) => {
-                const docField = row.Type_piece;  // Only use individual field
+                const docField = getValue(row, 'Type_piece');  // Case-insensitive lookup for individual field
                 
                 if (!docField) return false;
                 
@@ -1031,7 +1099,7 @@
             
             // Helper function to check if individual record has CNI or other standard ID documents
             const hasStandardDocumentIndividual = (row) => {
-                const docField = row.Type_piece;  // Only use individual field
+                const docField = getValue(row, 'Type_piece');  // Case-insensitive lookup for individual field
                 
                 if (!docField) return false;
                 
@@ -1050,8 +1118,8 @@
             
             // Helper function to get individual record age
             const getIndividualRecordAge = (row) => {
-                // Use Date_naiss for individual data (not Date_nai)
-                const dateField = row.Date_naiss;
+                // Use Date_naiss for individual data (not Date_nai) - case-insensitive lookup
+                const dateField = getValue(row, 'Date_naiss');
                 
                 if (!dateField) {
                     console.log(`⚠️ Individual record missing Date_naiss field:`, row);
@@ -1117,7 +1185,7 @@
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_Extrait`);
                 console.log(`📄 Creating individual sheet: ${sheetName} with ${majorExtraitRecords.length} records`);
                 
-                const worksheet = XLSX.utils.json_to_sheet(majorExtraitRecords.map(row => {
+                const sheetData = majorExtraitRecords.map(row => {
                     const filteredRow = {};
                     columns.forEach(col => {
                         if (row.hasOwnProperty(col)) {
@@ -1130,7 +1198,11 @@
                         }
                     });
                     return filteredRow;
-                }));
+                });
+
+                // Add row numbering to sheet data
+                const numberedSheetData = addRowNumbering(sheetData);
+                const worksheet = XLSX.utils.json_to_sheet(numberedSheetData);
                 
                 sheets.push({
                     name: sheetName,
@@ -1143,7 +1215,7 @@
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_Extrait`);
                 console.log(`📄 Creating individual sheet: ${sheetName} with ${minorExtraitRecords.length} records`);
                 
-                const worksheet = XLSX.utils.json_to_sheet(minorExtraitRecords.map(row => {
+                const sheetData = minorExtraitRecords.map(row => {
                     const filteredRow = {};
                     columns.forEach(col => {
                         if (row.hasOwnProperty(col)) {
@@ -1156,7 +1228,11 @@
                         }
                     });
                     return filteredRow;
-                }));
+                });
+
+                // Add row numbering to sheet data
+                const numberedSheetData = addRowNumbering(sheetData);
+                const worksheet = XLSX.utils.json_to_sheet(numberedSheetData);
                 
                 sheets.push({
                     name: sheetName,
@@ -1169,7 +1245,7 @@
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_CNI`);
                 console.log(`📄 Creating individual sheet: ${sheetName} with ${majorStandardRecords.length} records`);
                 
-                const worksheet = XLSX.utils.json_to_sheet(majorStandardRecords.map(row => {
+                const sheetData = majorStandardRecords.map(row => {
                     const filteredRow = {};
                     columns.forEach(col => {
                         if (row.hasOwnProperty(col)) {
@@ -1182,7 +1258,11 @@
                         }
                     });
                     return filteredRow;
-                }));
+                });
+
+                // Add row numbering to sheet data
+                const numberedSheetData = addRowNumbering(sheetData);
+                const worksheet = XLSX.utils.json_to_sheet(numberedSheetData);
                 
                 sheets.push({
                     name: sheetName,
@@ -1195,7 +1275,7 @@
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_CNI`);
                 console.log(`📄 Creating individual sheet: ${sheetName} with ${minorStandardRecords.length} records`);
                 
-                const worksheet = XLSX.utils.json_to_sheet(minorStandardRecords.map(row => {
+                const sheetData = minorStandardRecords.map(row => {
                     const filteredRow = {};
                     columns.forEach(col => {
                         if (row.hasOwnProperty(col)) {
@@ -1208,7 +1288,11 @@
                         }
                     });
                     return filteredRow;
-                }));
+                });
+
+                // Add row numbering to sheet data
+                const numberedSheetData = addRowNumbering(sheetData);
+                const worksheet = XLSX.utils.json_to_sheet(numberedSheetData);
                 
                 sheets.push({
                     name: sheetName,
@@ -1222,7 +1306,7 @@
             const sheetName = truncateSheetName(`${entityType}_${usageType}`);
             console.log(`📄 Creating individual sheet without separation: ${sheetName} with ${data.length} records`);
             
-            const worksheet = XLSX.utils.json_to_sheet(data.map(row => {
+            const sheetData = data.map(row => {
                 const filteredRow = {};
                 columns.forEach(col => {
                     if (row.hasOwnProperty(col)) {
@@ -1235,7 +1319,11 @@
                     }
                 });
                 return filteredRow;
-            }));
+            });
+
+            // Add row numbering to sheet data
+            const numberedSheetData = addRowNumbering(sheetData);
+            const worksheet = XLSX.utils.json_to_sheet(numberedSheetData);
             
             sheets.push({
                 name: sheetName,
@@ -1570,7 +1658,9 @@
             return orderedRow;
         });
 
-        const ws = XLSX.utils.json_to_sheet(processedData, { header: columns });
+        // Add row numbering to processed data
+        const numberedProcessedData = addRowNumbering(processedData);
+        const ws = XLSX.utils.json_to_sheet(numberedProcessedData);
         
         // Enable text wrapping for multi-line content in collective data
         const range = XLSX.utils.decode_range(ws['!ref']);

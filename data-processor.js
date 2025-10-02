@@ -225,7 +225,10 @@ window.BoundouDataProcessor = (() => {
     // Format parcel data with multiple individuals
     const formatParcelData = (row, headers, collectiveParcelErrors) => {
         function getValue(columnName) {
-            const index = headers.indexOf(columnName);
+            // Case-insensitive column lookup
+            const index = headers.findIndex(header => 
+                String(header).toLowerCase() === String(columnName).toLowerCase()
+            );
             return index !== -1 ? row[index] : undefined;
         }
 
