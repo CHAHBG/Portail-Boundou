@@ -21,6 +21,12 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
     
+    <!-- Configuration and Utility Scripts -->
+    <script defer src="config.js"></script>
+    <script defer src="utils.js"></script>
+    <script defer src="data-processor.js"></script>
+    <script defer src="excel-generator.js"></script>
+    
     <!-- Custom JavaScript -->
     <script defer src="generatedeliblist.js"></script>
     <script defer src="app.js"></script>
@@ -85,6 +91,11 @@
                 Générer Liste de Délibération
             </button>
         </div>
+
+        <!-- Message Containers -->
+        <div id="error-container" class="message-container"></div>
+        <div id="success-container" class="message-container"></div>
+        <div id="loadingIndicator" class="loading-indicator" style="display: none;"></div>
 
         <!-- Map Section -->
         <section id="map-section" class="content-section active">

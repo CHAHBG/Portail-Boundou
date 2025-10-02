@@ -1,9 +1,14 @@
-const STATIC_CACHE = 'boundou-static-v3-non-persistent';
+const STATIC_CACHE = 'boundou-static-v5-fixed';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
+  './config.js',
+  './utils.js',
+  './data-processor.js',
+  './excel-generator.js',
+  './generatedeliblist.js',
   './app.js'
 ];
 
@@ -43,6 +48,18 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return; // ignore non-GET
 
   const url = new URL(request.url);
+  
+  // Skip caching for unsupported schemes
+  const unsupportedSchemes = ['chrome-extension', 'moz-extension', 'ms-browser-extension'];
+  if (unsupportedSchemes.some(scheme => url.protocol.startsWith(scheme))) {
+    return; // Let the browser handle these naturally
+  }
+  
+  // Only handle requests from our origin or localhost
+  if (url.origin !== location.origin && !url.hostname.includes('localhost')) {
+    return;
+  }
+
   const isData = /\.(geojson|json)$/i.test(url.pathname) && url.origin === location.origin;
 
   if (isData) {
@@ -50,8 +67,10 @@ self.addEventListener('fetch', event => {
       fetch(request)
         .then(response => {
           // Optionally update cache for offline use
-          const clone = response.clone();
+          if (response.ok) {
+            const clone = response.clone();
             caches.open(STATIC_CACHE).then(c => c.put(request, clone));
+          }
           return response;
         })
         .catch(() => caches.match(request))
@@ -64,8 +83,11 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
       return fetch(request)
         .then(response => {
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then(c => c.put(request, clone));
+          // Only cache successful responses
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then(c => c.put(request, clone));
+          }
           return response;
         })
         .catch(() => {

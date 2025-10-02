@@ -694,10 +694,10 @@ function initializeEventHandlers() {
     const resetBtn = document.getElementById('reset-deliberation');
     if (resetBtn) resetBtn.addEventListener('click', resetDeliberationData);
 
-    if (window.DeliberationListGenerator) {
-        window.DeliberationListGenerator.initializeDeliberationHandlers();
+    if (window.DeliberationListUI) {
+        window.DeliberationListUI.initializeDeliberationHandlers();
     } else {
-        console.warn('Module DeliberationListGenerator non chargé');
+        console.warn('Module DeliberationListUI non chargé');
         showToast('Erreur : module de gestion des délibérations non disponible', 'error');
     }
 }
@@ -720,11 +720,9 @@ function initializeSubTabs() {
 
             // Update file info and preview based on active subsection
             if (subsection === 'individual') {
-                window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalIndividualData, 'individual');
-                window.DeliberationListGenerator.displayPreview('individual');
+                window.DeliberationListUI.displayIndividualPreview();
             } else {
-                window.DeliberationListGenerator.displayFileInfo(window.BoundouDashboard.originalCollectiveData, 'collective');
-                window.DeliberationListGenerator.displayPreview('collective');
+                window.DeliberationListUI.displayCollectivePreview();
             }
         });
     });
@@ -1223,7 +1221,8 @@ async function loadExcelFile(file, type) {
         } else {
             window.BoundouDashboard.originalCollectiveData = data;
         }
-        window.DeliberationListGenerator.displayFileInfo(data, type);
+        // Display file info using new UI module  
+        BoundouUtils.showSuccess(`Fichier chargé: ${data.length} entrées`);
         window.BoundouDashboard.showToast('Fichier chargé avec succès', 'success');
         document.getElementById(`generate-${type}`).disabled = false;
     } catch (error) {
@@ -1246,35 +1245,14 @@ async function readExcelFile(file) {
 }
 
 function processIndividualData(data) {
-    if (!data || data.length <= 1) return [];
-    const headers = data[0];
-    const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
-    
-    // Fonction pour vérifier si une colonne doit être exclue
-    function shouldExcludeColumn(header) {
-        if (!header || typeof header !== 'string') return true;
-        // Exclure les colonnes qui se terminent par _001, _002, _003, etc.
-        return /_(00[1-9]|0[1-9][0-9]|[1-9][0-9]{2,})$/.test(header);
+    // Use the enhanced data processor for better performance and error handling
+    try {
+        return BoundouDataProcessor.processIndividualData(data);
+    } catch (error) {
+        console.error('Erreur dans processIndividualData:', error);
+        BoundouUtils.showError(`Erreur de traitement: ${error.message}`);
+        return [];
     }
-    
-    const validRows = rows.map(row => {
-        const rowData = {};
-        headers.forEach((header, i) => {
-            // Inclure toutes les colonnes sauf celles avec le pattern _001, _002, etc.
-            // Mais toujours inclure Typ_pers et Typ_pers_m pour la différenciation
-            if (!shouldExcludeColumn(header) || ['Typ_pers', 'Typ_pers_m'].includes(header)) {
-                rowData[header] = cleanValue(row[i]);
-            }
-        });
-        return rowData;
-    }).filter(row => {
-        // Check for parcel identifier (flexible column names)
-        const hasParcelId = row['Num_parcel_2'] || row['Num_parcel'] || row['nicad'];
-        const hasVillage = row['Village'];
-        return hasParcelId && hasVillage;
-    });
-    
-    return validRows;
 }
 
 function processCollectiveData(data) {
@@ -1443,9 +1421,13 @@ function processFile(type) {
             const validCount = results.length;
             const errorCount = totalRows - validCount;
 
-            window.DeliberationListGenerator.displayFileInfo(originalData, type);
-            window.DeliberationListGenerator.displayResults(totalRows, validCount, errorCount, collectiveParcelErrors, type);
-            window.DeliberationListGenerator.displayPreview(type);
+            // Display results using new UI system
+            BoundouUtils.showSuccess(`Traitement terminé: ${validCount}/${totalRows} parcelles valides`);
+            if (type === 'individual') {
+                window.DeliberationListUI.displayIndividualPreview();
+            } else {
+                window.DeliberationListUI.displayCollectivePreview();
+            }
             generateDeliberationList(type);
             processBtn.disabled = false;
             processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
@@ -1478,156 +1460,19 @@ function generateDeliberationList(type) {
     }
 }
 
-function generateIndividualDeliberationList(data) {
-    // Colonnes pour Personnes Physiques
-    const personnesPhysiquesColumns = [
-        'Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 
-        'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad'
-    ];
-    
-    // Colonnes pour Personnes Morales
-    const personnesMoralesColumns = [
-        'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
-        'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse'
-    ];
-
-    // Colonnes pour Groupements
-    const groupementColumns = [
-        'Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 
-        'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse',
-        'superficie', 'nicad', 'Vocation', 'type_usag'
-    ];
-
-    // Séparer les données selon Typ_pers et Typ_pers_m
-    const personnesPhysiques = data.filter(row => 
-        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_physique')
-    );
-    
-    const personnesMorales = data.filter(row => 
-        row['Typ_pers'] && row['Typ_pers'].toLowerCase().includes('personne_morale') &&
-        !(row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement'))
-    );
-
-    const groupements = data.filter(row => 
-        row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement')
-    );
-
-    // Créer le workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Créer la feuille Personnes Physiques si il y a des données
-    if (personnesPhysiques.length > 0) {
-        const personnesPhysiquesData = personnesPhysiques.map(row => {
-            const orderedRow = {};
-            personnesPhysiquesColumns.forEach(col => {
-                orderedRow[col] = row[col] || '';
-            });
-            return orderedRow;
-        });
-        
-        const wsPhysiques = XLSX.utils.json_to_sheet(personnesPhysiquesData, { header: personnesPhysiquesColumns });
-        
-        // Définir les largeurs de colonnes pour Personnes Physiques
-        const colWidthsPhysiques = personnesPhysiquesColumns.map(col => {
-            if (['Village', 'Vocation'].includes(col)) return { wch: 20 };
-            if (['nicad', 'superficie'].includes(col)) return { wch: 15 };
-            if (['Prenom', 'Nom'].includes(col)) return { wch: 15 };
-            if (['Num_piece', 'Telephone'].includes(col)) return { wch: 15 };
-            if (['Date_naiss'].includes(col)) return { wch: 12 };
-            return { wch: 10 };
-        });
-        wsPhysiques['!cols'] = colWidthsPhysiques;
-        
-        XLSX.utils.book_append_sheet(wb, wsPhysiques, 'Personnes physiques');
+function generateIndividualDeliberationList() {
+    // Use the enhanced Excel generator for better performance and features
+    try {
+        return BoundouExcelGenerator.generateIndividualDeliberationList();
+    } catch (error) {
+        console.error('Erreur dans generateIndividualDeliberationList:', error);
+        BoundouUtils.showError(`Erreur de génération: ${error.message}`);
     }
-    
-    // Créer la feuille Personnes Morales si il y a des données
-    if (personnesMorales.length > 0) {
-        const personnesMoralesData = personnesMorales.map(row => {
-            const orderedRow = {};
-            personnesMoralesColumns.forEach(col => {
-                orderedRow[col] = row[col] || '';
-            });
-            return orderedRow;
-        });
-        
-        const wsMorales = XLSX.utils.json_to_sheet(personnesMoralesData, { header: personnesMoralesColumns });
-        
-        // Définir les largeurs de colonnes pour Personnes Morales
-        const colWidthsMorales = personnesMoralesColumns.map(col => {
-            if (['Denominat', 'Siege', 'Adresse'].includes(col)) return { wch: 25 };
-            if (['Type_num', 'Autre_pr_ciser'].includes(col)) return { wch: 20 };
-            if (['Mandataire', 'PhotoPieMo_URL'].includes(col)) return { wch: 20 };
-            if (['Telephone_001', 'Numero'].includes(col)) return { wch: 15 };
-            if (['Creation'].includes(col)) return { wch: 12 };
-            return { wch: 10 };
-        });
-        wsMorales['!cols'] = colWidthsMorales;
-        
-        XLSX.utils.book_append_sheet(wb, wsMorales, 'Personne Morale');
-    }
-    
-    // Créer la feuille Groupements si il y a des données
-    if (groupements.length > 0) {
-        const groupementsData = groupements.map(row => {
-            const orderedRow = {};
-            groupementColumns.forEach(col => {
-                orderedRow[col] = row[col] || '';
-            });
-            return orderedRow;
-        });
-        
-        const wsGroupements = XLSX.utils.json_to_sheet(groupementsData, { header: groupementColumns });
-        
-        // Définir les largeurs de colonnes pour Groupements
-        const colWidthsGroupements = groupementColumns.map(col => {
-            if (['Denominat', 'Siege', 'Adresse'].includes(col)) return { wch: 25 };
-            if (['Type_num', 'Autre_pr_ciser', 'Village'].includes(col)) return { wch: 20 };
-            if (['Mandataire', 'PhotoPieMo_URL', 'Vocation'].includes(col)) return { wch: 20 };
-            if (['Telephone_001', 'Numero', 'nicad', 'superficie'].includes(col)) return { wch: 15 };
-            if (['Creation', 'type_usag'].includes(col)) return { wch: 12 };
-            return { wch: 10 };
-        });
-        wsGroupements['!cols'] = colWidthsGroupements;
-        
-        XLSX.utils.book_append_sheet(wb, wsGroupements, 'Groupement');
-    }
-
-    // Générer le fichier
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    const fileName = `LISTE_INDIVIDUELLES_${dateStr}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-
-    // Afficher les statistiques
-    const confirmationHtml = `
-        <div class="results-section" style="margin-top: 20px;">
-            <h3>📥 Téléchargement terminé</h3>
-            <p><strong>Fichier généré :</strong> ${fileName}</p>
-            <div class="stats">
-                <div class="stat-card">
-                    <h3>${personnesPhysiques.length}</h3>
-                    <p>Personnes Physiques</p>
-                </div>
-                <div class="stat-card">
-                    <h3>${personnesMorales.length}</h3>
-                    <p>Personnes Morales</p>
-                </div>
-                <div class="stat-card">
-                    <h3>${groupements.length}</h3>
-                    <p>Groupements</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('resultsIndividual').innerHTML = confirmationHtml;
-    showToast(`Fichier généré avec ${personnesPhysiques.length} personnes physiques, ${personnesMorales.length} personnes morales et ${groupements.length} groupements`, 'success');
 }
 
 function generateCollectiveDeliberationList(data) {
     // Pour les fichiers collectifs, garder le comportement existant
-    const columns = window.DeliberationListGenerator.getOrderedColumns(data);
+    const columns = BoundouUtils.getOrderedColumns(data);
     const orderedData = data.map(row => {
         const orderedRow = {};
         columns.forEach(col => {
@@ -1693,24 +1538,41 @@ async function initializeApp() {
     try {
         initializePerformanceMonitoring();
         initializeTheme();
-        await retryDataLoad();
-        initializeMap(); // Ensure map is initialized
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure map rendering
+        
+        // Show UI immediately for better perceived performance
         initializeEventHandlers();
         initializeSubTabs();
-        initializeFilters();
-        initializeSearch();
+        
+        // Hide loading screen early to show partial UI
+        document.getElementById('loading-screen')?.classList.add('hidden');
+        
+        // Load data in background (non-blocking)
+        setTimeout(async () => {
+            try {
+                await retryDataLoad();
+                initializeMap(); // Initialize map after data is loaded
+                await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
+                initializeFilters();
+                initializeSearch();
+                updateGlobalStats();
+                showToast('Application initialisée avec succès!', 'success');
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+                showToast('Erreur lors du chargement des données', 'error');
+            }
+        }, 0);
+        
+        // Initialize non-data dependent features immediately
         initializePrint();
         initializeAccessibility();
-        updateGlobalStats();
         window.addEventListener('resize', handleResize);
-        loadUserPreferences(); // Move this after map initialization
-        showToast('Application initialisée avec succès!', 'success');
+        loadUserPreferences();
+        
         console.log('Application Boundou Dashboard initialized');
+        
     } catch (error) {
         console.error('Erreur lors de l\'initialisation:', error);
         showToast('Erreur lors du chargement de l\'application', 'error');
-    } finally {
         document.getElementById('loading-screen')?.classList.add('hidden');
     }
 }
