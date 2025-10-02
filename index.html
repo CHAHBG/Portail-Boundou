@@ -288,6 +288,59 @@
 
                         <div id="fileInfoIndividual" class="info-section" style="display: none;"></div>
 
+                        <!-- Column Selection Section -->
+                        <div id="columnSelectionIndividual" class="column-selection-section" style="display: none;">
+                            <div class="column-selection-header">
+                                <h3>📋 Sélection des Colonnes</h3>
+                                <p>Choisissez les colonnes à inclure dans chaque type d'entité :</p>
+                            </div>
+                            
+                            <div class="entity-tabs">
+                                <button class="entity-tab-button active" data-entity="personne_physique">
+                                    👤 Personnes physiques (<span id="count-personne_physique">0</span>)
+                                </button>
+                                <button class="entity-tab-button" data-entity="personne_morale">
+                                    🏢 Personnes morales (<span id="count-personne_morale">0</span>)
+                                </button>
+                                <button class="entity-tab-button" data-entity="groupement">
+                                    👥 Groupements (<span id="count-groupement">0</span>)
+                                </button>
+                            </div>
+
+                            <div id="column-lists">
+                                <div class="column-list" id="columns-personne_physique">
+                                    <div class="column-actions">
+                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_physique')">Tout sélectionner</button>
+                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_physique')">Tout désélectionner</button>
+                                    </div>
+                                    <div class="columns-grid" id="grid-personne_physique"></div>
+                                </div>
+                                <div class="column-list" id="columns-personne_morale" style="display: none;">
+                                    <div class="column-actions">
+                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('personne_morale')">Tout sélectionner</button>
+                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('personne_morale')">Tout désélectionner</button>
+                                    </div>
+                                    <div class="columns-grid" id="grid-personne_morale"></div>
+                                </div>
+                                <div class="column-list" id="columns-groupement" style="display: none;">
+                                    <div class="column-actions">
+                                        <button class="btn btn--secondary btn-sm" onclick="selectAllColumns('groupement')">Tout sélectionner</button>
+                                        <button class="btn btn--secondary btn-sm" onclick="deselectAllColumns('groupement')">Tout désélectionner</button>
+                                    </div>
+                                    <div class="columns-grid" id="grid-groupement"></div>
+                                </div>
+                            </div>
+
+                            <div class="column-actions-footer">
+                                <button id="validateColumns" class="btn btn--primary">
+                                    ✓ Valider la sélection et prévisualiser
+                                </button>
+                                <button id="resetColumns" class="btn btn--secondary">
+                                    🔄 Réinitialiser
+                                </button>
+                            </div>
+                        </div>
+
                         <div style="text-align: center;">
                             <button id="generate-individual" class="process-btn btn btn--success" disabled>
                                 <span id="processTextIndividual">Traiter et Générer Liste Individuelle</span>

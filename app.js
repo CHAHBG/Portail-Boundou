@@ -30,12 +30,14 @@ function resetApplicationState() {
     filteredParcellesData = [];
     lastSelectedCommune = null;
     
-    // Reset BoundouDashboard state
-    window.BoundouDashboard.processedIndividualData = [];
-    window.BoundouDashboard.processedCollectiveData = [];
+    // Only reset BoundouDashboard state if not currently processing a file
+    if (!window.BoundouDashboard.isProcessingFile) {
+        window.BoundouDashboard.processedIndividualData = [];
+        window.BoundouDashboard.processedCollectiveData = [];
+        window.BoundouDashboard.originalIndividualData = null;
+        window.BoundouDashboard.originalCollectiveData = null;
+    }
     window.BoundouDashboard.isProcessingFile = false;
-    window.BoundouDashboard.originalIndividualData = null;
-    window.BoundouDashboard.originalCollectiveData = null;
     
     // Reset UI elements when DOM is ready
     if (document.readyState === 'loading') {
@@ -688,8 +690,8 @@ function initializeEventHandlers() {
 
     const generateIndividualBtn = document.getElementById('generate-individual');
     const generateCollectiveBtn = document.getElementById('generate-collective');
-    if (generateIndividualBtn) generateIndividualBtn.addEventListener('click', () => processFile('individual'));
-    if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => processFile('collective'));
+    if (generateIndividualBtn) generateIndividualBtn.addEventListener('click', () => generateDeliberationList('individual'));
+    if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => generateDeliberationList('collective'));
 
     const resetBtn = document.getElementById('reset-deliberation');
     if (resetBtn) resetBtn.addEventListener('click', resetDeliberationData);
@@ -720,9 +722,19 @@ function initializeSubTabs() {
 
             // Update file info and preview based on active subsection
             if (subsection === 'individual') {
-                window.DeliberationListUI.displayIndividualPreview();
+                // Only display preview if there's processed data
+                if (window.BoundouDashboard.processedIndividualData && 
+                    Array.isArray(window.BoundouDashboard.processedIndividualData) &&
+                    window.BoundouDashboard.processedIndividualData.length > 0) {
+                    window.DeliberationListUI.displayIndividualPreview();
+                }
             } else {
-                window.DeliberationListUI.displayCollectivePreview();
+                // Only display preview if there's processed data
+                if (window.BoundouDashboard.processedCollectiveData && 
+                    Array.isArray(window.BoundouDashboard.processedCollectiveData) &&
+                    window.BoundouDashboard.processedCollectiveData.length > 0) {
+                    window.DeliberationListUI.displayCollectivePreview();
+                }
             }
         });
     });
