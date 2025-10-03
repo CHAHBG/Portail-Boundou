@@ -328,6 +328,10 @@ function processCollectiveFile(file) {
             if (collectiveStatsButton) {
                 collectiveStatsButton.disabled = false;
                 console.log('Collective statistics button enabled');
+                
+                // Setup event handlers for collective statistics
+                console.log('🔧 Setting up collective statistics button event handlers...');
+                setupCollectiveStatsHandler();
             }
             
             displayCollectivePreview();
@@ -1097,6 +1101,80 @@ function displayAdvancedOptions() {
     }
 }
 
+// Setup collective statistics button event handler
+function setupCollectiveStatsHandler() {
+    const collectiveStatsButton = document.getElementById('generateCollectiveStats');
+    console.log('🔍 Setting up collective stats handler for button:', collectiveStatsButton);
+    console.log('🔍 Button exists:', !!collectiveStatsButton);
+    console.log('🔍 Button innerHTML:', collectiveStatsButton?.innerHTML);
+    console.log('🔍 Button disabled:', collectiveStatsButton?.disabled);
+    
+    if (collectiveStatsButton) {
+        console.log('✅ Collective stats button found, adding event listener');
+        
+        // Remove any existing event listeners
+        collectiveStatsButton.onclick = null;
+        
+        // Remove existing event listeners
+        const newButton = collectiveStatsButton.cloneNode(true);
+        collectiveStatsButton.parentNode.replaceChild(newButton, collectiveStatsButton);
+        
+        // Add new event listener to the fresh button
+        const freshButton = document.getElementById('generateCollectiveStats');
+        
+        freshButton.addEventListener('click', function(event) {
+            console.log('🔥 Collective stats button clicked!');
+            console.log('🔍 Event:', event);
+            console.log('🔍 Button disabled state at click:', this.disabled);
+            console.log('🔍 Button classList:', this.classList.toString());
+            
+            // Prevent default action
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!this.disabled) {
+                console.log('✅ Button enabled, calling generateCollectiveStatisticsReport...');
+                try {
+                    generateCollectiveStatisticsReport();
+                } catch (error) {
+                    console.error('❌ Error calling generateCollectiveStatisticsReport:', error);
+                }
+            } else {
+                console.log('❌ Button disabled, cannot generate statistics');
+            }
+        });
+        
+        console.log('✅ Event listener added to fresh collective stats button');
+    } else {
+        console.log('❌ Collective stats button not found during handler setup!');
+    }
+}
+
+// TEST FUNCTION - Call this from console to test the button manually
+window.testCollectiveStatsButton = function() {
+    console.log('🧪 Testing collective stats button...');
+    const button = document.getElementById('generateCollectiveStats');
+    console.log('🔍 Button found:', !!button);
+    console.log('🔍 Button disabled:', button?.disabled);
+    console.log('🔍 Collective data available:', !!window.BoundouDashboard?.processedCollectiveData);
+    console.log('🔍 Data length:', window.BoundouDashboard?.processedCollectiveData?.length);
+    
+    if (button && !button.disabled) {
+        console.log('🔥 Manually triggering button click...');
+        button.click();
+    } else {
+        console.log('❌ Button not available or disabled');
+    }
+    
+    // Also try calling the function directly
+    console.log('🔥 Calling generateCollectiveStatisticsReport directly...');
+    try {
+        generateCollectiveStatisticsReport();
+    } catch (error) {
+        console.error('❌ Error calling function directly:', error);
+    }
+};
+
 // Setup event handlers for advanced options
 function setupAdvancedOptionsHandlers() {
     // Toggle dual lists option
@@ -1184,12 +1262,69 @@ function setupAdvancedOptionsHandlers() {
 
     // Statistics generation button (Collective)
     const collectiveStatsButton = document.getElementById('generateCollectiveStats');
+    console.log('🔍 Looking for collective stats button:', collectiveStatsButton);
+    console.log('🔍 Button exists:', !!collectiveStatsButton);
+    console.log('🔍 Button innerHTML:', collectiveStatsButton?.innerHTML);
+    console.log('🔍 Button disabled:', collectiveStatsButton?.disabled);
+    console.log('🔍 Button style.display:', collectiveStatsButton?.style.display);
+    
     if (collectiveStatsButton) {
-        collectiveStatsButton.addEventListener('click', function() {
+        console.log('✅ Collective stats button found, adding event listener');
+        
+        // Remove any existing event listeners
+        collectiveStatsButton.onclick = null;
+        
+        // Add new event listener
+        collectiveStatsButton.addEventListener('click', function(event) {
+            console.log('🔥 Collective stats button clicked!');
+            console.log('🔍 Event:', event);
+            console.log('🔍 Button disabled state at click:', this.disabled);
+            console.log('🔍 Button classList:', this.classList.toString());
+            
+            // Prevent default action
+            event.preventDefault();
+            event.stopPropagation();
+            
             if (!this.disabled) {
-                generateCollectiveStatisticsReport();
+                console.log('✅ Button enabled, calling generateCollectiveStatisticsReport...');
+                try {
+                    generateCollectiveStatisticsReport();
+                } catch (error) {
+                    console.error('❌ Error calling generateCollectiveStatisticsReport:', error);
+                }
+            } else {
+                console.log('❌ Button disabled, cannot generate statistics');
             }
         });
+        
+        // Also add onclick for backup
+        collectiveStatsButton.onclick = function(event) {
+            console.log('🔥 Collective stats button onclick triggered!');
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!this.disabled) {
+                console.log('✅ Button enabled (onclick), calling generateCollectiveStatisticsReport...');
+                try {
+                    generateCollectiveStatisticsReport();
+                } catch (error) {
+                    console.error('❌ Error in onclick handler:', error);
+                }
+            }
+        };
+        
+        console.log('✅ Event listeners added to collective stats button');
+    } else {
+        console.log('❌ Collective stats button not found!');
+        
+        // Try to find it by class or other means
+        const buttonByClass = document.querySelector('.btn[id="generateCollectiveStats"]');
+        const buttonByText = Array.from(document.querySelectorAll('button')).find(btn => 
+            btn.textContent.includes('Générer les Statistiques Collectives')
+        );
+        
+        console.log('🔍 Button by class:', buttonByClass);
+        console.log('🔍 Button by text:', buttonByText);
     }
 
     console.log('Advanced options handlers setup complete');
@@ -1227,15 +1362,25 @@ function generateStatisticsReport() {
 
 // Generate collective-only statistics report
 function generateCollectiveStatisticsReport() {
+    console.log('🔥 generateCollectiveStatisticsReport called!');
+    
     try {
         BoundouUtils.showLoading('loadingIndicator', 'Génération des statistiques collectives...');
         
+        console.log('🔍 Checking collective data availability...');
+        console.log('window.BoundouDashboard:', window.BoundouDashboard);
+        
         const collectiveData = window.BoundouDashboard.processedCollectiveData;
+        console.log('📊 Collective data:', collectiveData);
+        console.log('📊 Collective data length:', collectiveData ? collectiveData.length : 'undefined');
         
         if (!collectiveData || collectiveData.length === 0) {
+            console.error('❌ No collective data available');
             throw new Error('Aucune donnée collective à analyser');
         }
 
+        console.log('✅ Collective data found, calculating statistics...');
+        
         // Calculate collective-only statistics
         const stats = {
             summary: {
@@ -1249,18 +1394,22 @@ function generateCollectiveStatisticsReport() {
             combined: {}
         };
         
+        console.log('📈 Statistics calculated:', stats);
+        
         // Generate and download statistics Excel file
+        console.log('📁 Generating Excel file...');
         const statsExcel = BoundouExcelGenerator.generateStatisticsExcel(stats);
         
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showSuccess('Rapport de statistiques collectives généré avec succès!');
         
-        console.log('Collective statistics report generated:', stats);
+        console.log('✅ Collective statistics report generated successfully:', stats);
         
     } catch (error) {
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showError(`Erreur génération statistiques collectives: ${error.message}`);
-        console.error('Collective statistics generation error:', error);
+        console.error('❌ Collective statistics generation error:', error);
+        console.error('❌ Error stack:', error.stack);
     }
 }
 
@@ -1366,6 +1515,20 @@ function calculateIndividualStats(data) {
 
 // Calculate statistics for collective data
 function calculateCollectiveStats(data) {
+    console.log('🔍 DEBUG: calculateCollectiveStats called with data:', data);
+    console.log('🔍 DEBUG: Data length:', data?.length);
+    
+    if (!data || !Array.isArray(data)) {
+        console.error('❌ Invalid data passed to calculateCollectiveStats:', data);
+        return {
+            totalParcels: 0,
+            byUsageType: {},
+            byDocumentType: {},
+            byAgeGroup: {},
+            totalAffectataires: 0
+        };
+    }
+
     const stats = {
         totalParcels: data.length,
         byUsageType: {},
@@ -1374,9 +1537,12 @@ function calculateCollectiveStats(data) {
         totalAffectataires: 0
     };
 
-    data.forEach(parcel => {
+    data.forEach((parcel, index) => {
+        console.log(`🔍 DEBUG: Processing parcel ${index}:`, parcel);
+        
         // Count usage types (both type_usa and type_usag fields)
         const usageType = parcel.type_usa || parcel.type_usag || 'Non spécifié';
+        console.log(`🔍 DEBUG: Usage type for parcel ${index}:`, usageType);
         
         if (!stats.byUsageType[usageType]) {
             stats.byUsageType[usageType] = 0;
@@ -1385,6 +1551,7 @@ function calculateCollectiveStats(data) {
 
         // Count document types (field: Type_piec)
         const docType = parcel.Type_piec || 'Non spécifié';
+        console.log(`🔍 DEBUG: Document type for parcel ${index}:`, docType);
         
         if (!stats.byDocumentType[docType]) {
             stats.byDocumentType[docType] = 0;
@@ -1393,8 +1560,10 @@ function calculateCollectiveStats(data) {
 
         // Calculate age of mandataire (using Date_nai field)
         const mandataireBirthDate = parcel.Date_nai;
+        console.log(`🔍 DEBUG: Birth date for parcel ${index}:`, mandataireBirthDate);
         if (mandataireBirthDate) {
             const age = calculateAge(mandataireBirthDate);
+            console.log(`🔍 DEBUG: Calculated age for parcel ${index}:`, age);
             if (age !== null) {
                 const ageThreshold = window.BoundouDashboard.advancedOptions?.ageThreshold || 15;
                 const ageCategory = age <= ageThreshold ? 'Mineur' : 'Majeur';
@@ -1408,10 +1577,13 @@ function calculateCollectiveStats(data) {
 
         // Count affectataires (count newlines in multi-person fields)
         const prenoms = parcel.Prenom || '';
+        console.log(`🔍 DEBUG: Prenoms for parcel ${index}:`, prenoms);
         const affectataireCount = prenoms.split('\n').filter(p => p.trim()).length;
+        console.log(`🔍 DEBUG: Affectataire count for parcel ${index}:`, affectataireCount);
         stats.totalAffectataires += affectataireCount;
     });
 
+    console.log('🔍 DEBUG: Final stats:', stats);
     return stats;
 }
 
