@@ -643,6 +643,24 @@
                     columns = [...columns, 'superficie']; // Add default name if not found
                 }
             }
+            
+            // Ensure 'num_parcel' is always included (case-insensitive check)
+            const hasNumParcelVariant = columns.some(col => col.toLowerCase() === 'num_parcel' || col.toLowerCase() === 'num_parcel_2');
+            if (!hasNumParcelVariant) {
+                // Check if any case variant exists in the data
+                const dataKeys = Object.keys(entityData[0] || {});
+                const numParcelKey = dataKeys.find(key => 
+                    key.toLowerCase() === 'num_parcel' || 
+                    key.toLowerCase() === 'num_parcel_2' ||
+                    key.toLowerCase() === 'numero_parcelle' ||
+                    key.toLowerCase() === 'id_parcelle'
+                );
+                if (numParcelKey) {
+                    columns = [...columns, numParcelKey];
+                } else {
+                    columns = [...columns, 'num_parcel']; // Add default name if not found
+                }
+            }
 
             // Separate by usage type based on entity type
             let habitatData, agricoleData;
@@ -789,6 +807,24 @@
                     columns = [...columns, superficieKey];
                 } else {
                     columns = [...columns, 'superficie']; // Add default name if not found
+                }
+            }
+            
+            // Ensure 'num_parcel' is always included (case-insensitive check)
+            const hasNumParcelVariant = columns.some(col => col.toLowerCase() === 'num_parcel' || col.toLowerCase() === 'num_parcel_2');
+            if (!hasNumParcelVariant) {
+                // Check if any case variant exists in the data
+                const dataKeys = Object.keys(entityData[0] || {});
+                const numParcelKey = dataKeys.find(key => 
+                    key.toLowerCase() === 'num_parcel' || 
+                    key.toLowerCase() === 'num_parcel_2' ||
+                    key.toLowerCase() === 'numero_parcelle' ||
+                    key.toLowerCase() === 'id_parcelle'
+                );
+                if (numParcelKey) {
+                    columns = [...columns, numParcelKey];
+                } else {
+                    columns = [...columns, 'num_parcel']; // Add default name if not found
                 }
             }
 
