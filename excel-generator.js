@@ -216,7 +216,7 @@
             if (data.personne_physique && data.personne_physique.length > 0) {
                 const physiquesData = data.personne_physique.map(row => {
                     const orderedRow = {};
-                    const columns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'num_parcel'];
+                    const columns = ['Village', 'Prenom', 'Nom', 'Sexe', 'Date_naiss', 'Num_piece', 'Type_piece', 'Telephone', 'Vocation', 'type_usag', 'superficie', 'nicad', 'Num_parcel'];
                     columns.forEach(col => {
                         if (col === 'Date_naiss') {
                             // Apply date formatting to Date_naiss field
@@ -265,7 +265,7 @@
                 console.log(`🏢 EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
                 
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m', 'num_parcel'];
+                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m', 'Num_parcel'];
                 
                 // Debug first personne_morale entity
                 if (data.personne_morale.length > 0) {
@@ -325,7 +325,7 @@
             // Sheet 3: Groupements
             if (data.groupement && data.groupement.length > 0) {
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'num_parcel'];
+                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'Num_parcel'];
                 
                 const groupementsData = data.groupement.map(row => {
                     const orderedRow = {};
@@ -645,20 +645,28 @@
             }
             
             // Ensure 'num_parcel' is always included (case-insensitive check)
-            const hasNumParcelVariant = columns.some(col => col.toLowerCase() === 'num_parcel' || col.toLowerCase() === 'num_parcel_2');
+            // For individual data, prioritize 'Num_parcel', for collective data prioritize 'Num_parcel_2'
+            const hasNumParcelVariant = columns.some(col => 
+                col.toLowerCase() === 'num_parcel' || 
+                col.toLowerCase() === 'num_parcel_2' ||
+                col === 'Num_parcel' ||
+                col === 'Num_parcel_2'
+            );
             if (!hasNumParcelVariant) {
                 // Check if any case variant exists in the data
                 const dataKeys = Object.keys(entityData[0] || {});
-                const numParcelKey = dataKeys.find(key => 
-                    key.toLowerCase() === 'num_parcel' || 
-                    key.toLowerCase() === 'num_parcel_2' ||
-                    key.toLowerCase() === 'numero_parcelle' ||
-                    key.toLowerCase() === 'id_parcelle'
-                );
+                // For individual data, prioritize Num_parcel first
+                const numParcelKey = dataKeys.find(key => key === 'Num_parcel') ||
+                                   dataKeys.find(key => key === 'num_parcel') ||
+                                   dataKeys.find(key => key === 'Num_parcel_2') ||
+                                   dataKeys.find(key => 
+                                       key.toLowerCase() === 'numero_parcelle' ||
+                                       key.toLowerCase() === 'id_parcelle'
+                                   );
                 if (numParcelKey) {
                     columns = [...columns, numParcelKey];
                 } else {
-                    columns = [...columns, 'num_parcel']; // Add default name if not found
+                    columns = [...columns, 'Num_parcel']; // Add default individual field name
                 }
             }
 
@@ -811,20 +819,28 @@
             }
             
             // Ensure 'num_parcel' is always included (case-insensitive check)
-            const hasNumParcelVariant = columns.some(col => col.toLowerCase() === 'num_parcel' || col.toLowerCase() === 'num_parcel_2');
+            // For individual data, prioritize 'Num_parcel', for collective data prioritize 'Num_parcel_2'
+            const hasNumParcelVariant = columns.some(col => 
+                col.toLowerCase() === 'num_parcel' || 
+                col.toLowerCase() === 'num_parcel_2' ||
+                col === 'Num_parcel' ||
+                col === 'Num_parcel_2'
+            );
             if (!hasNumParcelVariant) {
                 // Check if any case variant exists in the data
                 const dataKeys = Object.keys(entityData[0] || {});
-                const numParcelKey = dataKeys.find(key => 
-                    key.toLowerCase() === 'num_parcel' || 
-                    key.toLowerCase() === 'num_parcel_2' ||
-                    key.toLowerCase() === 'numero_parcelle' ||
-                    key.toLowerCase() === 'id_parcelle'
-                );
+                // For individual data, prioritize Num_parcel first
+                const numParcelKey = dataKeys.find(key => key === 'Num_parcel') ||
+                                   dataKeys.find(key => key === 'num_parcel') ||
+                                   dataKeys.find(key => key === 'Num_parcel_2') ||
+                                   dataKeys.find(key => 
+                                       key.toLowerCase() === 'numero_parcelle' ||
+                                       key.toLowerCase() === 'id_parcelle'
+                                   );
                 if (numParcelKey) {
                     columns = [...columns, numParcelKey];
                 } else {
-                    columns = [...columns, 'num_parcel']; // Add default name if not found
+                    columns = [...columns, 'Num_parcel']; // Add default individual field name
                 }
             }
 
