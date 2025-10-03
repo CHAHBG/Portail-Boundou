@@ -384,80 +384,114 @@ window.BoundouDataProcessor = (() => {
             return index !== -1 ? row[index] : undefined;
         }
 
-        const prenoms = [];
-        const noms = [];
-        const sexes = [];
-        const pieces = [];
-        const telephones = [];
-        const datesNaissance = [];
-        const residences = [];
-
-        // Process mandataire (main person)
+        const individuals = []; // Store all individuals with their info
+        
+        // Process mandataire (main person) first
         const prenomM = getValue('Prenom_M');
         const nomM = getValue('Nom_M');
         
         if (prenomM && nomM && prenomM !== '' && nomM !== '') {
-            prenoms.push(cleanValue(prenomM));
-            noms.push(cleanValue(nomM));
-            const sexeMndt = getValue('Sexe_Mndt') || getValue('Sexe_M') || getValue('Sexe');
-            sexes.push(cleanValue(sexeMndt));
-            pieces.push(cleanValue(getValue('Num_piec') || getValue('Num_piece')));
-            
-            // Handle telephone fields
-            const tel1 = getValue('Telephon1');
-            const tel2 = getValue('Telephon2');
-            const telephone = getValue('Telephone');
-            if (tel1 && tel1 !== '') {
-                telephones.push(cleanValue(tel1));
-            } else if (tel2 && tel2 !== '') {
-                telephones.push(cleanValue(tel2));
-            } else if (telephone && telephone !== '') {
-                telephones.push(cleanValue(telephone));
-            } else {
-                telephones.push('-');
-            }
-            
-            datesNaissance.push(cleanValue(getValue('Date_nai') || getValue('Date_nais') || getValue('Date_naissance')));
-            residences.push(cleanValue(getValue('Residence_M') || getValue('Residence')));
+            const mandataireInfo = {
+                prenom: cleanValue(prenomM),
+                nom: cleanValue(nomM),
+                sexe: cleanValue(getValue('Sexe_Mndt') || getValue('Sexe_M') || getValue('Sexe')),
+                numero_piece: cleanValue(getValue('Num_piec') || getValue('Num_piece')),
+                date_naissance: cleanValue(getValue('Date_nai') || getValue('Date_nais') || getValue('Date_naissance')),
+                lieu_naissance: cleanValue(getValue('Lieu_nais')),
+                type_piece: cleanValue(getValue('Type_piec')),
+                lieu_residence: cleanValue(getValue('Lieu_resi2') || getValue('Residence_M') || getValue('Residence')),
+                telephone: (() => {
+                    const tel1 = getValue('Telephon1');
+                    const tel2 = getValue('Telephon2');
+                    const telephone = getValue('Telephone');
+                    if (tel1 && tel1 !== '') return cleanValue(tel1);
+                    if (tel2 && tel2 !== '') return cleanValue(tel2);
+                    if (telephone && telephone !== '') return cleanValue(telephone);
+                    return '-';
+                })(),
+                isMandataire: true,
+                source: 'mandataire'
+            };
+            individuals.push(mandataireInfo);
         }
 
-        // Process affectataires (other individuals)
+        // Process all affectataires (including those who might be duplicates of mandataire)
         const affectataires = new Map();
+        
+        // Find all affectataire fields with improved detection
         headers.forEach((col, index) => {
             if (!col) return;
             let affectataireId = null;
             let fieldType = null;
 
-            if (col === 'Prenom' || (col.startsWith('Prenom_') && col !== 'Prenom_M')) {
+            const colStr = String(col);
+            
+            // Prenom fields
+            if (colStr === 'Prenom' || (colStr.startsWith('Prenom_') && colStr !== 'Prenom_M')) {
                 fieldType = 'prenom';
-                affectataireId = col === 'Prenom' ? '1' : col.replace('Prenom_', '');
-            } else if (col === 'Nom' || (col.startsWith('Nom_') && col !== 'Nom_M')) {
+                affectataireId = colStr === 'Prenom' ? '1' : colStr.replace('Prenom_', '');
+            } 
+            // Nom fields
+            else if (colStr === 'Nom' || (colStr.startsWith('Nom_') && colStr !== 'Nom_M')) {
                 fieldType = 'nom';
-                affectataireId = col === 'Nom' ? '1' : col.replace('Nom_', '');
-            } else if ((col === 'Sexe' || col.startsWith('Sexe_')) && !['Sexe_Mndt', 'Sexe_M'].includes(col)) {
+                affectataireId = colStr === 'Nom' ? '1' : colStr.replace('Nom_', '');
+            } 
+            // Sexe fields
+            else if ((colStr === 'Sexe' || colStr.startsWith('Sexe_')) && !['Sexe_Mndt', 'Sexe_M'].includes(colStr)) {
                 fieldType = 'sexe';
-                affectataireId = col === 'Sexe' ? '1' : col.replace('Sexe_', '');
-            } else if (col.startsWith('Num_piece') && !['Num_piec', 'Num_piece'].includes(col)) {
+                affectataireId = colStr === 'Sexe' ? '1' : colStr.replace('Sexe_', '');
+            } 
+            // Numero piece fields - improved detection
+            else if (colStr.includes('Num_piece') && !['Num_piec'].includes(colStr)) {
                 fieldType = 'numero_piece';
-                affectataireId = col.replace('Num_piece_', '').replace('Num_piece', '1');
-            } else if (col.startsWith('Telephon') && !['Telephon1', 'Telephon2'].includes(col)) {
-                fieldType = 'telephone';
-                const telNum = col.replace('Telephon', '');
-                if (telNum === '3') affectataireId = '1';
-                else if (parseInt(telNum) > 3) affectataireId = String(parseInt(telNum) - 2);
-            } else if (col.startsWith('Date_nais') || col.startsWith('Dat_nais')) {
+                if (colStr === 'Num_piece') {
+                    affectataireId = '1';
+                } else {
+                    affectataireId = colStr.replace('Num_piece_', '').replace('Num_piece', '');
+                }
+            }
+            // Type piece fields
+            else if (colStr.startsWith('Type_piec_') || (colStr === 'Type_piece' && colStr !== 'Type_piec')) {
+                fieldType = 'type_piece';
+                affectataireId = colStr.replace('Type_piec_', '').replace('Type_piece', '1') || '1';
+            }
+            // Date naissance fields
+            else if (colStr.startsWith('Date_nais') || colStr.startsWith('Dat_nais')) {
                 fieldType = 'date_naissance';
-                affectataireId = col.replace('Date_nais', '').replace('Dat_nais', '') || '1';
-            } else if (col.startsWith('Residence') && !['Residence_M'].includes(col)) {
+                affectataireId = colStr.replace('Date_nais_', '').replace('Date_nais', '').replace('Dat_nais_', '').replace('Dat_nais', '') || '1';
+            }
+            // Lieu naissance fields
+            else if (colStr.startsWith('Lieu_nais') && colStr !== 'Lieu_nais') {
+                fieldType = 'lieu_naissance';
+                affectataireId = colStr.replace('Lieu_nais_', '') || '1';
+            }
+            // Residence fields
+            else if (colStr.startsWith('Residence') && !['Residence_M'].includes(colStr)) {
                 fieldType = 'residence';
-                affectataireId = col.replace('Residence', '') || '1';
+                affectataireId = colStr.replace('Residence_', '').replace('Residence', '') || '1';
+            }
+            // Lieu residence fields
+            else if (colStr.startsWith('Lieu_resi') && colStr !== 'Lieu_resi2') {
+                fieldType = 'lieu_residence';
+                affectataireId = colStr.replace('Lieu_resi_', '').replace('Lieu_resi', '') || '1';
+            }
+            // Telephone fields - improved detection
+            else if (colStr.startsWith('Telephon') && !['Telephon1', 'Telephon2'].includes(colStr)) {
+                fieldType = 'telephone';
+                const telNum = colStr.replace('Telephon_', '').replace('Telephon', '');
+                if (telNum === '3' || telNum === '') affectataireId = '1';
+                else if (parseInt(telNum) > 3) affectataireId = String(parseInt(telNum) - 2);
+                else affectataireId = telNum;
             }
 
             if (affectataireId && fieldType) {
-                affectataireId = affectataireId.replace(/^0+/, '') || '1';
+                // Clean up affectataireId
+                affectataireId = String(affectataireId).replace(/^0+/, '') || '1';
+                
                 if (!affectataires.has(affectataireId)) {
                     affectataires.set(affectataireId, {});
                 }
+                
                 const value = row[index];
                 if (value !== undefined && value !== null && value !== '') {
                     affectataires.get(affectataireId)[fieldType] = cleanValue(value);
@@ -465,7 +499,7 @@ window.BoundouDataProcessor = (() => {
             }
         });
 
-        // Sort and add affectataires
+        // Convert affectataires to individuals array
         const sortedIds = Array.from(affectataires.keys()).sort((a, b) => {
             const numA = parseInt(a) || 999;
             const numB = parseInt(b) || 999;
@@ -474,23 +508,85 @@ window.BoundouDataProcessor = (() => {
 
         sortedIds.forEach(affectataireId => {
             const info = affectataires.get(affectataireId);
+            
+            // Only include if has both prenom and nom
             if (info.prenom && info.nom) {
-                const isDuplicate = (info.prenom === cleanValue(prenomM) && info.nom === cleanValue(nomM));
-                if (!isDuplicate) {
-                    prenoms.push(info.prenom);
-                    noms.push(info.nom);
-                    sexes.push(info.sexe || '-');
-                    pieces.push(info.numero_piece || '-');
-                    telephones.push(info.telephone || '-');
-                    datesNaissance.push(info.date_naissance || '-');
-                    residences.push(info.residence || '-');
+                const affectataireInfo = {
+                    prenom: info.prenom,
+                    nom: info.nom,
+                    sexe: info.sexe || '-',
+                    numero_piece: info.numero_piece || '-',
+                    date_naissance: info.date_naissance || '-',
+                    lieu_naissance: info.lieu_naissance || '-',
+                    type_piece: info.type_piece || '-',
+                    lieu_residence: info.lieu_residence || info.residence || '-',
+                    telephone: info.telephone || '-',
+                    isMandataire: false,
+                    source: `affectataire_${affectataireId}`
+                };
+                
+                // Check if this affectataire is the same person as mandataire
+                // Two people are the same ONLY if they have the same name AND same Num_piece
+                const mandataire = individuals.find(ind => ind.isMandataire);
+                const isSamePersonAsMandataire = mandataire && 
+                    affectataireInfo.prenom === mandataire.prenom && 
+                    affectataireInfo.nom === mandataire.nom &&
+                    affectataireInfo.numero_piece === mandataire.numero_piece &&
+                    affectataireInfo.numero_piece !== '-' &&
+                    mandataire.numero_piece !== '-';
+                
+                // If different name or different Num_piece, it's a different person (even if homonym)
+                if (!isSamePersonAsMandataire) {
+                    individuals.push(affectataireInfo);
+                } else {
+                    // Same person as mandataire - still add them but mark as duplicate
+                    affectataireInfo.isDuplicateOfMandataire = true;
+                    individuals.push(affectataireInfo);
                 }
             }
         });
 
-        // Include all parcelles regardless of number of affectataires
-        // (Previous version excluded parcelles with less than 2 individuals)
-        
+        // Debug logging for the specific parcel mentioned
+        const numParcel2 = getValue('Num_parcel_2');
+        if (numParcel2 === '0522010201096') {
+            console.log(`🔍 DEBUG - Parcel ${numParcel2}:`);
+            console.log(`📊 Total individuals found: ${individuals.length}`);
+            individuals.forEach((ind, idx) => {
+                console.log(`  ${idx + 1}. ${ind.prenom} ${ind.nom} (${ind.numero_piece}) [${ind.source}]${ind.isMandataire ? ' **MANDATAIRE**' : ''}`);
+            });
+        }
+
+        // Prepare output arrays with bold formatting for mandataire
+        const prenoms = [];
+        const noms = [];
+        const sexes = [];
+        const pieces = [];
+        const telephones = [];
+        const datesNaissance = [];
+        const residences = [];
+
+        individuals.forEach(ind => {
+            if (ind.isMandataire) {
+                // Mark mandataire with uppercase for visibility
+                prenoms.push(ind.prenom.toUpperCase());
+                noms.push(ind.nom.toUpperCase());
+                sexes.push(ind.sexe);
+                pieces.push(ind.numero_piece);
+                telephones.push(ind.telephone);
+                datesNaissance.push(ind.date_naissance);
+                residences.push(ind.lieu_residence);
+            } else {
+                // Regular formatting for affectataires
+                prenoms.push(ind.prenom);
+                noms.push(ind.nom);
+                sexes.push(ind.sexe);
+                pieces.push(ind.numero_piece);
+                telephones.push(ind.telephone);
+                datesNaissance.push(ind.date_naissance);
+                residences.push(ind.lieu_residence);
+            }
+        });
+
         return {
             'Village': cleanValue(getValue('Village')),
             'nicad': cleanValue(getValue('nicad') || getValue('Num_parcel_2')),
