@@ -265,7 +265,7 @@
                 console.log(`🏢 EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
                 
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'Typ_pers_m', 'Num_parcel'];
+                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Typ_pers_m', 'Num_parcel'];
                 
                 // Debug first personne_morale entity
                 if (data.personne_morale.length > 0) {
@@ -314,7 +314,11 @@
                     { wch: 25 }, // PhotoPieMo_URL
                     { wch: 20 }, // Mandataire
                     { wch: 15 }, // Telephone_001
-                    { wch: 25 }  // Adresse
+                    { wch: 25 }, // Adresse
+                    { wch: 15 }, // superficie
+                    { wch: 15 }, // nicad
+                    { wch: 20 }, // Typ_pers_m
+                    { wch: 15 }  // Num_parcel
                 ];
                 wsMorales['!cols'] = colWidthsMorales;
                 
@@ -2012,6 +2016,14 @@
                 individualData.push([moraleType, count, `${percentage}%`]);
             });
 
+            individualData.push([''], ['=== RÃ‰PARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
+            
+            // Add NICAD status statistics
+            Object.entries(stats.individual.byNicad || {}).forEach(([nicadStatus, count]) => {
+                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
+                individualData.push([nicadStatus, count, `${percentage}%`]);
+            });
+
             const wsIndividual = XLSX.utils.aoa_to_sheet(individualData);
             XLSX.utils.book_append_sheet(wb, wsIndividual, 'Stats Individuelles');
         }
@@ -2049,6 +2061,14 @@
             Object.entries(stats.collective.byAgeGroup || {}).forEach(([age, count]) => {
                 const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
                 collectiveData.push([age, count, `${percentage}%`]);
+            });
+
+            collectiveData.push([''], ['=== RÃ‰PARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
+            
+            // Add NICAD status statistics
+            Object.entries(stats.collective.byNicad || {}).forEach(([nicadStatus, count]) => {
+                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
+                collectiveData.push([nicadStatus, count, `${percentage}%`]);
             });
 
             const wsCollective = XLSX.utils.aoa_to_sheet(collectiveData);

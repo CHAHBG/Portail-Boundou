@@ -1455,7 +1455,8 @@ function calculateIndividualStats(data) {
         byUsageType: {},
         byDocumentType: {},
         byAgeGroup: {},
-        byMoraleType: {}
+        byMoraleType: {},
+        byNicad: {}
     };
 
     // Process each entity type
@@ -1472,6 +1473,14 @@ function calculateIndividualStats(data) {
                 stats.byUsageType[usageType] = 0;
             }
             stats.byUsageType[usageType]++;
+
+            // Count NICAD status
+            const nicadStatus = entity.nicad || entity.Num_parcel_2 || 'Non spécifié';
+            
+            if (!stats.byNicad[nicadStatus]) {
+                stats.byNicad[nicadStatus] = 0;
+            }
+            stats.byNicad[nicadStatus]++;
 
             // Group by document type (for person entities)
             if (entityType === 'personne_physique') {
@@ -1534,6 +1543,7 @@ function calculateCollectiveStats(data) {
         byUsageType: {},
         byDocumentType: {},
         byAgeGroup: {},
+        byNicad: {},
         totalAffectataires: 0
     };
 
@@ -1557,6 +1567,15 @@ function calculateCollectiveStats(data) {
             stats.byDocumentType[docType] = 0;
         }
         stats.byDocumentType[docType]++;
+
+        // Count NICAD status
+        const nicadStatus = parcel.nicad || parcel.Num_parcel_2 || 'Non spécifié';
+        console.log(`🔍 DEBUG: NICAD status for parcel ${index}:`, nicadStatus);
+        
+        if (!stats.byNicad[nicadStatus]) {
+            stats.byNicad[nicadStatus] = 0;
+        }
+        stats.byNicad[nicadStatus]++;
 
         // Calculate age of mandataire (using Date_nai field)
         const mandataireBirthDate = parcel.Date_nai;

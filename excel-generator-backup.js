@@ -226,7 +226,7 @@
             // Sheet 2: Personnes morales (excluding groupements)
             if (data.personne_morale && data.personne_morale.length > 0) {
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'Typ_pers_m'];
+                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Typ_pers_m'];
                 
                 const moralesData = data.personne_morale.map(row => {
                     const orderedRow = {};
@@ -255,7 +255,10 @@
                     { wch: 25 }, // PhotoPieMo_URL
                     { wch: 20 }, // Mandataire
                     { wch: 15 }, // Telephone_001
-                    { wch: 25 }  // Adresse
+                    { wch: 25 }, // Adresse
+                    { wch: 15 }, // superficie
+                    { wch: 15 }, // nicad
+                    { wch: 20 }  // Typ_pers_m
                 ];
                 wsMorales['!cols'] = colWidthsMorales;
                 
