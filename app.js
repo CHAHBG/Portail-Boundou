@@ -778,20 +778,20 @@ function switchSection(sectionName) {
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.getElementById(`${sectionName}-section`)?.classList.add('active');
 
-    if (sectionName === 'stats') createGlobalCharts();
-    else if (sectionName === 'map') {
+    if (sectionName === 'stats') {
+        createGlobalCharts();
+    } else if (sectionName === 'map') {
         setTimeout(() => map?.invalidateSize(), 100);
         updateMapLegend();
         if (lastSelectedCommune && communesLayer) {
             const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
             if (layer) zoomToCommune(lastSelectedCommune, layer);
-            else {
-                console.warn('No layer found for commune:', lastSelectedCommune);
-                showToast(`Commune ${lastSelectedCommune} non trouvée`, 'warning');
-            }
-        } else if (lastSelectedCommune) {
-            console.warn('Communes layer not initialized');
-            showToast('La carte n\'est pas encore chargée', 'warning');
+        }
+    } else if (sectionName === 'sif') {
+        // Handle SIF iframe loading or refresh if needed
+        const frame = document.getElementById('sif-frame');
+        if (frame && !frame.src) {
+            frame.src = "https://sifboundou.netlify.app/";
         }
     }
 }
