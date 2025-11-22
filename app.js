@@ -29,7 +29,7 @@ function resetApplicationState() {
     collectiveParcelErrors = [];
     filteredParcellesData = [];
     lastSelectedCommune = null;
-    
+
     // Only reset BoundouDashboard state if not currently processing a file
     if (!window.BoundouDashboard.isProcessingFile) {
         window.BoundouDashboard.processedIndividualData = [];
@@ -38,14 +38,14 @@ function resetApplicationState() {
         window.BoundouDashboard.originalCollectiveData = null;
     }
     window.BoundouDashboard.isProcessingFile = false;
-    
+
     // Reset UI elements when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', resetUIElements);
     } else {
         resetUIElements();
     }
-    
+
     console.log('Application state reset for fresh page load');
 }
 
@@ -56,31 +56,31 @@ function resetUIElements() {
         const fileNameCollective = document.getElementById('fileNameCollective');
         if (fileNameIndividual) fileNameIndividual.textContent = '';
         if (fileNameCollective) fileNameCollective.textContent = '';
-        
+
         // Reset info displays
         const fileInfoIndividual = document.getElementById('fileInfoIndividual');
         const fileInfoCollective = document.getElementById('fileInfoCollective');
         if (fileInfoIndividual) fileInfoIndividual.style.display = 'none';
         if (fileInfoCollective) fileInfoCollective.style.display = 'none';
-        
+
         // Reset results displays
         const resultsIndividual = document.getElementById('resultsIndividual');
         const resultsCollective = document.getElementById('resultsCollective');
         if (resultsIndividual) resultsIndividual.style.display = 'none';
         if (resultsCollective) resultsCollective.style.display = 'none';
-        
+
         // Reset preview displays
         const previewIndividual = document.getElementById('previewIndividual');
         const previewCollective = document.getElementById('previewCollective');
         if (previewIndividual) previewIndividual.style.display = 'none';
         if (previewCollective) previewCollective.style.display = 'none';
-        
+
         // Reset buttons
         const generateIndividual = document.getElementById('generate-individual');
         const generateCollective = document.getElementById('generate-collective');
         if (generateIndividual) generateIndividual.disabled = true;
         if (generateCollective) generateCollective.disabled = true;
-        
+
         console.log('UI elements reset for fresh page load');
     } catch (e) {
         console.warn('Could not reset all UI elements:', e);
@@ -151,7 +151,7 @@ function showToast(message, type = 'info') {
 }
 
 function cleanValue(value) {
-    if (value === null || value === undefined || value === '' || 
+    if (value === null || value === undefined || value === '' ||
         (typeof value === 'number' && isNaN(value))) {
         return "-";
     }
@@ -170,7 +170,7 @@ function animateValue(element, start, end, duration = 1000) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const current = start + (end - start) * progress;
-        element.textContent = typeof end === 'number' ? 
+        element.textContent = typeof end === 'number' ?
             (end % 1 === 0 ? Math.floor(current) : current.toFixed(1)) : end;
         if (progress < 1) requestAnimationFrame(update);
     }
@@ -250,7 +250,7 @@ async function loadExternalData() {
         communesData = getSampleGeoJSON();
         parcellesData = getSampleParcelles();
         filteredParcellesData = [...parcellesData];
-    updateLastUpdatedLabel(new Date());
+        updateLastUpdatedLabel(new Date());
         debugData();
         initializeMap(); // Reinitialize map with sample data
         return false;
@@ -334,7 +334,7 @@ function loadCommunesLayer() {
     if (communesLayer) map.removeLayer(communesLayer);
 
     communesLayer = L.geoJSON(communesData, {
-        style: function(feature) {
+        style: function (feature) {
             const communeName = getCommuneName(feature.properties);
             const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
             const config = communesConfig[communeName.toUpperCase()];
@@ -347,17 +347,17 @@ function loadCommunesLayer() {
                 fillOpacity: config ? 0.7 : 0.3
             };
         },
-        onEachFeature: function(feature, layer) {
+        onEachFeature: function (feature, layer) {
             const communeName = getCommuneName(feature.properties);
             const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
             const config = communesConfig[communeName.toUpperCase()];
-            
-            let statusText = config 
-                ? (config.status === 'active' ? 'Opérations foncières en cours' : 
-                   config.status === 'completed' ? 'Opérations foncières terminées' : 'Opérations foncières non démarrées')
+
+            let statusText = config
+                ? (config.status === 'active' ? 'Opérations foncières en cours' :
+                    config.status === 'completed' ? 'Opérations foncières terminées' : 'Opérations foncières non démarrées')
                 : 'Hors zone PROCASEF';
-            
-            const buttonHtml = config && config.hasOperations && communeStats.totalParcelles > 0 
+
+            const buttonHtml = config && config.hasOperations && communeStats.totalParcelles > 0
                 ? `<button onclick="showCommuneDetails('${communeName}')" class="btn btn--primary btn--sm">Voir les détails</button>`
                 : '';
 
@@ -375,16 +375,16 @@ function loadCommunesLayer() {
 
             layer.bindPopup(popupContent);
             layer.on({
-                mouseover: function(e) {
+                mouseover: function (e) {
                     e.target.setStyle({
                         weight: 3,
                         fillOpacity: config ? 0.9 : 0.5
                     });
                 },
-                mouseout: function(e) {
+                mouseout: function (e) {
                     communesLayer.resetStyle(e.target);
                 },
-                click: function(e) {
+                click: function (e) {
                     if (config && config.hasOperations && communeStats.totalParcelles > 0) {
                         zoomToCommune(communeName, e.target);
                         showCommuneDetails(communeName);
@@ -410,7 +410,7 @@ function zoomToCommune(communeName, layer) {
 
 function updateMapLegend() {
     let legendElement = document.querySelector('.map-legend');
-    
+
     if (!legendElement) {
         console.warn('Élément .map-legend non trouvé, création dynamique...');
         legendElement = document.createElement('div');
@@ -547,8 +547,8 @@ function createCommunesChart() {
     const backgroundColors = communeNames.map(name => {
         const config = communesConfig[name.toUpperCase()];
         if (!config) return '#F0F0F0';
-        return config.status === 'active' ? colors.operationsActive : 
-               config.status === 'completed' ? colors.operationsCompleted : colors.operationsPending;
+        return config.status === 'active' ? colors.operationsActive :
+            config.status === 'completed' ? colors.operationsCompleted : colors.operationsPending;
     });
 
     if (currentCharts.communes) currentCharts.communes.destroy();
@@ -574,12 +574,12 @@ function createCommunesChart() {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const communeName = context.label;
                             const config = communesConfig[communeName.toUpperCase()];
-                            let status = config ? 
-                                (config.status === 'active' ? 'Opérations en cours' : 
-                                 config.status === 'completed' ? 'Opérations terminées' : 'Opérations non démarrées') : 
+                            let status = config ?
+                                (config.status === 'active' ? 'Opérations en cours' :
+                                    config.status === 'completed' ? 'Opérations terminées' : 'Opérations non démarrées') :
                                 'Hors zone PROCASEF';
                             return [
                                 `${communeName}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''} levée${context.parsed.y > 1 ? 's' : ''}`,
@@ -629,7 +629,7 @@ function createGlobalUsageChart() {
                         font: { size: 11 },
                         padding: 10,
                         usePointStyle: true,
-                        generateLabels: function(chart) {
+                        generateLabels: function (chart) {
                             const data = chart.data;
                             const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
                             return data.labels.map((label, i) => {
@@ -642,7 +642,7 @@ function createGlobalUsageChart() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
                             return `${context.label}: ${context.parsed} (${percentage}%)`;
@@ -724,13 +724,13 @@ function initializeSubTabs() {
     const subContentSections = document.querySelectorAll('.sub-content-section');
 
     subTabButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             const subsection = this.dataset.subsection;
-            
+
             // Remove active class from all sub-tabs and sub-sections
             subTabButtons.forEach(btn => btn.classList.remove('active'));
             subContentSections.forEach(section => section.classList.remove('active'));
-            
+
             // Add active class to clicked tab and corresponding section
             this.classList.add('active');
             document.getElementById(`${subsection}-subsection`).classList.add('active');
@@ -738,14 +738,14 @@ function initializeSubTabs() {
             // Update file info and preview based on active subsection
             if (subsection === 'individual') {
                 // Only display preview if there's processed data
-                if (window.BoundouDashboard.processedIndividualData && 
+                if (window.BoundouDashboard.processedIndividualData &&
                     Array.isArray(window.BoundouDashboard.processedIndividualData) &&
                     window.BoundouDashboard.processedIndividualData.length > 0) {
                     window.DeliberationListUI.displayIndividualPreview();
                 }
             } else {
                 // Only display preview if there's processed data
-                if (window.BoundouDashboard.processedCollectiveData && 
+                if (window.BoundouDashboard.processedCollectiveData &&
                     Array.isArray(window.BoundouDashboard.processedCollectiveData) &&
                     window.BoundouDashboard.processedCollectiveData.length > 0) {
                     window.DeliberationListUI.displayCollectivePreview();
@@ -790,6 +790,14 @@ function switchSection(sectionName) {
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.getElementById(`${sectionName}-section`)?.classList.add('active');
 
+    // Scroll to top of main content area when switching sections
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.scrollTop = 0;
+    }
+    // Also scroll window to top for better UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     if (sectionName === 'stats') {
         createGlobalCharts();
     } else if (sectionName === 'map') {
@@ -819,7 +827,7 @@ function switchDashboard(dashboardName) {
 
     const urls = {
         'boundou': 'https://boundoudash.netlify.app/',
-    'edl': 'https://suivioperation.netlify.app/'
+        'edl': 'https://suivioperation.netlify.app/'
     };
 
     if (loading) loading.style.display = 'block';
@@ -971,8 +979,8 @@ function initializeTheme() {
 function updateLastUpdatedLabel(dateObj) {
     const label = document.getElementById('last-updated-label');
     if (!label || !dateObj) return;
-    const mois = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-    const jour = String(dateObj.getDate()).padStart(2,'0');
+    const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const jour = String(dateObj.getDate()).padStart(2, '0');
     const moisTxt = mois[dateObj.getMonth()];
     const annee = dateObj.getFullYear();
     label.innerHTML = `<span class="update-icon">📅</span> Données mises à jour le ${jour} ${moisTxt} ${annee}`;
@@ -1044,7 +1052,7 @@ function clearBrowserCaches() {
             }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
-        
+
         // Clear all session storage except what we need
         const sessionKeysToKeep = ['theme'];
         const sessionKeysToRemove = [];
@@ -1055,7 +1063,7 @@ function clearBrowserCaches() {
             }
         }
         sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
-        
+
         console.log('Browser caches cleared for fresh page load');
     } catch (e) {
         console.warn('Could not clear browser caches:', e);
@@ -1076,7 +1084,7 @@ function registerServiceWorker() {
                     console.log('Demande de purge des caches envoyée (nouveau chargement de page).');
                 }
             });
-            
+
             // Also clear browser caches on every page load
             clearBrowserCaches();
         } catch (e) { console.warn('Service worker message non disponible', e); }
@@ -1101,7 +1109,7 @@ function initializeSearch() {
 }
 
 function performSearch(query) {
-    const results = parcellesData.filter(parcelle => 
+    const results = parcellesData.filter(parcelle =>
         Object.values(parcelle).some(value => value && value.toString().toLowerCase().includes(query))
     );
     displaySearchResults(results.slice(0, 10));
@@ -1180,7 +1188,7 @@ function fadeIn(element, duration = 300) {
 
 function validateFileType(data, expectedType) {
     if (!data || data.length === 0) return { valid: false, message: 'Aucune donnée dans le fichier' };
-    
+
     const headers = data[0] || [];
     const collectiveColumns = ['Prenom_1', 'Nom_1', 'Prenom_M', 'Nom_M'];
     const individualColumns = ['Prenom', 'Nom'];
@@ -1236,7 +1244,7 @@ async function loadExcelFile(file, type) {
         window.BoundouDashboard.isProcessingFile = true;
         window.BoundouDashboard.showToast('Chargement du fichier...', 'info');
         const data = await readExcelFile(file);
-        
+
         // Valider le type de fichier
         const validation = validateFileType(data, type);
         if (!validation.valid) {
@@ -1309,7 +1317,7 @@ function formatParcelData(row, headers) {
 
     const prenomM = getValue('Prenom_M');
     const nomM = getValue('Nom_M');
-    
+
     if (prenomM && nomM && prenomM !== '' && nomM !== '') {
         prenoms.push(cleanValue(prenomM));
         noms.push(cleanValue(nomM));
@@ -1497,13 +1505,13 @@ function generateIndividualDeliberationList() {
         // Check if advanced options are enabled
         const advancedOptions = window.BoundouDashboard.advancedOptions;
         console.log('🔍 Advanced options check:', advancedOptions);
-        
+
         const hasAdvancedOptions = advancedOptions && (
-            advancedOptions.enableDualLists || 
+            advancedOptions.enableDualLists ||
             advancedOptions.enableMandataireSeparation ||
             advancedOptions.enableDateNormalization
         );
-        
+
         console.log('🔍 Has advanced options:', hasAdvancedOptions);
         console.log('  - Dual Lists:', advancedOptions?.enableDualLists);
         console.log('  - Mandataire Separation:', advancedOptions?.enableMandataireSeparation);
@@ -1537,70 +1545,70 @@ function resetDeliberationData(type = 'both') {
     // Clear file input elements
     const individualFileInput = document.getElementById('individual-file');
     const collectiveFileInput = document.getElementById('collective-file');
-    
+
     if (type === 'individual' || type === 'both') {
         // Reset individual data
         window.BoundouDashboard.processedIndividualData = [];
         window.BoundouDashboard.originalIndividualData = null;
-        
+
         // Clear file input
         if (individualFileInput) {
             individualFileInput.value = '';
         }
-        
+
         // Reset individual UI elements
         const fileNameIndividual = document.getElementById('fileNameIndividual');
         if (fileNameIndividual) fileNameIndividual.textContent = '';
-        
+
         const previewIndividual = document.getElementById('previewIndividual');
         if (previewIndividual) {
             previewIndividual.style.display = 'none';
             previewIndividual.innerHTML = '';
         }
-        
+
         const generateBtn = document.getElementById('generate-individual');
         if (generateBtn) generateBtn.disabled = true;
-        
+
         const statsBtn = document.getElementById('generateStats');
         if (statsBtn) statsBtn.disabled = true;
-        
+
         console.log('Individual data reset complete');
     }
-    
+
     if (type === 'collective' || type === 'both') {
         // Reset collective data
         window.BoundouDashboard.processedCollectiveData = [];
         window.BoundouDashboard.originalCollectiveData = null;
-        
+
         // Clear file input
         if (collectiveFileInput) {
             collectiveFileInput.value = '';
         }
-        
+
         // Reset collective UI elements
         const fileNameCollective = document.getElementById('fileNameCollective');
         if (fileNameCollective) fileNameCollective.textContent = '';
-        
+
         const previewCollective = document.getElementById('previewCollective');
         if (previewCollective) {
             previewCollective.style.display = 'none';
             previewCollective.innerHTML = '';
         }
-        
+
         const generateBtn = document.getElementById('generate-collective');
         if (generateBtn) generateBtn.disabled = true;
-        
+
         const statsBtn = document.getElementById('generateCollectiveStats');
         if (statsBtn) statsBtn.disabled = true;
-        
+
         console.log('Collective data reset complete');
     }
-    
+
     // Show appropriate success message
-    const message = type === 'individual' ? 'Données individuelles réinitialisées' : 
-                   type === 'collective' ? 'Données collectives réinitialisées' : 
-                   'Toutes les données de délibération réinitialisées';
-    
+    const message = type === 'individual' ? 'Données individuelles réinitialisées' :
+        type === 'collective' ? 'Données collectives réinitialisées' :
+            'Toutes les données de délibération réinitialisées';
+
     showToast(message, 'info');
 }
 
@@ -1608,14 +1616,14 @@ async function initializeApp() {
     try {
         initializePerformanceMonitoring();
         initializeTheme();
-        
+
         // Show UI immediately for better perceived performance
         initializeEventHandlers();
         initializeSubTabs();
-        
+
         // Hide loading screen early to show partial UI
         document.getElementById('loading-screen')?.classList.add('hidden');
-        
+
         // Load data in background (non-blocking)
         setTimeout(async () => {
             try {
@@ -1631,15 +1639,15 @@ async function initializeApp() {
                 showToast('Erreur lors du chargement des données', 'error');
             }
         }, 0);
-        
+
         // Initialize non-data dependent features immediately
         initializePrint();
         initializeAccessibility();
         window.addEventListener('resize', handleResize);
         loadUserPreferences();
-        
+
         console.log('Application Boundou Dashboard initialized');
-        
+
     } catch (error) {
         console.error('Erreur lors de l\'initialisation:', error);
         showToast('Erreur lors du chargement de l\'application', 'error');
@@ -1687,7 +1695,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear all caches first to ensure non-persistent cache behavior
     clearBrowserCaches();
     registerServiceWorker();
-    
+
     loadUserPreferences();
 
     // Fix: initial dashboard iframe spinner never hides on first visit because
@@ -1703,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Provide feedback only the very first time
             if (!iframe.dataset.initialLoadNotified) {
                 iframe.dataset.initialLoadNotified = 'true';
-                try { showToast('Dashboard principal chargé', 'success'); } catch (_) {}
+                try { showToast('Dashboard principal chargé', 'success'); } catch (_) { }
             }
         }, { once: true });
         // Safety timeout in case onload never fires (network/CSP issues)
