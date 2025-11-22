@@ -525,6 +525,7 @@ p {
   height: calc(100vh - 160px);
   min-height: 70vh;
   width: 100%;
+  overflow: hidden;
 }
 
 #sif-section .section-header {
@@ -544,6 +545,8 @@ p {
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
+  /* Force layout recalculation on visibility change */
+  contain: layout;
 }
 
 .sif-frame {
@@ -554,6 +557,8 @@ p {
   padding: 0;
   border: none;
   display: block;
+  /* Ensure iframe triggers resize events */
+  flex: 1;
 }
 
 .sif-fallback {

@@ -735,6 +735,29 @@ function initializeEventHandlers() {
         console.warn('Module DeliberationListUI non chargé');
         showToast('Erreur : module de gestion des délibérations non disponible', 'error');
     }
+
+    // Handle SIF iframe load to force map resize
+    const sifFrame = document.getElementById('sif-frame');
+    if (sifFrame) {
+        sifFrame.addEventListener('load', () => {
+            // Send message to iframe to resize map if it has a postMessage API
+            setTimeout(() => {
+                try {
+                    sifFrame.contentWindow.postMessage({ type: 'resize' }, 'https://sifboundou.netlify.app');
+                } catch (e) {
+                    console.log('Could not send resize message to iframe');
+                }
+                // Also try to reload iframe's content by toggling display
+                const container = sifFrame.parentElement;
+                if (container) {
+                    container.style.display = 'none';
+                    setTimeout(() => {
+                        container.style.display = 'flex';
+                    }, 10);
+                }
+            }, 500);
+        });
+    }
 }
 
 function initializeSubTabs() {
@@ -836,8 +859,28 @@ function switchSection(sectionName) {
     } else if (sectionName === 'sif') {
         // Handle SIF iframe loading or refresh if needed
         const frame = document.getElementById('sif-frame');
-        if (frame && !frame.src) {
-            frame.src = "https://sifboundou.netlify.app/";
+        if (frame) {
+            if (!frame.src) {
+                frame.src = "https://sifboundou.netlify.app/";
+            }
+            // Force iframe to re-render by toggling visibility
+            setTimeout(() => {
+                const container = frame.parentElement;
+                if (container) {
+                    container.style.display = 'none';
+                    requestAnimationFrame(() => {
+                        container.style.display = 'flex';
+                        // Try to send resize message to iframe
+                        setTimeout(() => {
+                            try {
+                                frame.contentWindow.postMessage({ type: 'resize' }, 'https://sifboundou.netlify.app');
+                            } catch (e) {
+                                // Silently fail if cross-origin
+                            }
+                        }, 300);
+                    });
+                }
+            }, 100);
         }
     } else if (sectionName === 'dashboards') {
         // Ensure dashboard is visible
