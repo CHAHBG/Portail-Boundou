@@ -136,18 +136,36 @@ const colors = {
 
 // === Utility Functions ===
 function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+    };
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
     container.appendChild(toast);
 
     setTimeout(() => {
-        toast.style.animation = 'slideInRight 0.3s ease reverse';
-        setTimeout(() => container.contains(toast) && container.removeChild(toast), 300);
-    }, 3000);
+        if (container.contains(toast)) {
+            toast.style.animation = 'slideInRight 0.3s ease reverse';
+            setTimeout(() => container.contains(toast) && container.removeChild(toast), 300);
+        }
+    }, 4000);
 }
 
 function cleanValue(value) {
@@ -876,7 +894,10 @@ function toggleTheme() {
     const currentTheme = document.documentElement.dataset.colorScheme || 'light';
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.colorScheme = newTheme;
-    document.querySelector('.theme-icon').textContent = newTheme === 'light' ? '🌙' : '☀️';
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = newTheme === 'light' ? '🌙' : '☀️';
+    }
     localStorage.setItem('theme', newTheme);
     showToast(`Mode ${newTheme === 'dark' ? 'sombre' : 'clair'} activé`, 'success');
 }
