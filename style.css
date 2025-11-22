@@ -464,6 +464,7 @@ p {
   padding-bottom: 1rem;
   border-bottom: 3px solid var(--color-gold-500);
   position: relative;
+  background: transparent;
 }
 
 .section-header::after {
@@ -481,6 +482,7 @@ p {
   color: var(--color-primary-700);
   font-weight: 700;
   margin-bottom: 0.5rem;
+  background: transparent;
 }
 
 .section-header p {
