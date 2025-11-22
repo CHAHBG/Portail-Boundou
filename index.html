@@ -1,28 +1,33 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portail PROCASEF Boundou - Inventaires Fonciers</title>
-    <meta name="description" content="Portail de visualisation des inventaires fonciers et traitement des parcelles dans la région de Boundou, Sénégal">
-    
+    <meta name="description"
+        content="Portail de visualisation des inventaires fonciers et traitement des parcelles dans la région de Boundou, Sénégal">
+
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
     <!-- Main Styles -->
     <link rel="stylesheet" href="workflow-styles.css">
     <link rel="stylesheet" href="style.css">
-    
+
     <!-- Libraries -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <!-- App Scripts -->
     <script defer src="config.js"></script>
     <script defer src="utils.js"></script>
@@ -31,9 +36,11 @@
     <script defer src="workflow.js"></script>
     <script defer src="generatedeliblist.js"></script>
     <script defer src="app.js"></script>
-    
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2314b8a6'/%3E%3Ctext x='50' y='58' font-size='58' text-anchor='middle' fill='white'%3E🗺️%3C/text%3E%3C/svg%3E">
+
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2314b8a6'/%3E%3Ctext x='50' y='58' font-size='58' text-anchor='middle' fill='white'%3E🗺️%3C/text%3E%3C/svg%3E">
 </head>
+
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
@@ -51,7 +58,7 @@
                 <h1>🗺️ SIG PROCASEF</h1>
                 <span class="nav-subtitle">Région de Boundou</span>
             </div>
-            
+
             <div class="nav-controls">
                 <div class="font-size-controls">
                     <span class="update-date" id="last-updated-label">
@@ -59,7 +66,7 @@
                     </span>
                 </div>
                 <button id="theme-toggle" class="btn btn--secondary btn--sm" title="Basculer le thème">
-                    🌙
+                    <span class="theme-icon">🌙</span>
                 </button>
             </div>
         </div>
@@ -92,19 +99,21 @@
 
         <!-- Map Section -->
         <section id="map-section" class="content-section active">
-            <div class="section-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div class="section-header"
+                style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h2 class="text-primary">Carte Interactive</h2>
                     <p>Visualisation des opérations foncières par commune</p>
                 </div>
                 <div class="map-controls" style="display: flex; gap: 1rem;">
-                    <select id="commune-filter" class="form-control" style="padding: 0.5rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <select id="commune-filter" class="form-control"
+                        style="padding: 0.5rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
                         <option value="">Toutes les communes</option>
                     </select>
                     <button id="export-data" class="btn btn--primary btn--sm">📥 Exporter CSV</button>
                 </div>
             </div>
-            
+
             <div class="map-container">
                 <div id="map" class="map-main" style="width: 100%; height: 100%;"></div>
                 <div class="map-legend">
@@ -137,7 +146,8 @@
                         <div class="stat-label">Délibérées</div>
                     </div>
                 </div>
-                <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                <div class="charts-container"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
                     <div class="chart-wrapper" style="height: 300px;">
                         <canvas id="usage-chart"></canvas>
                     </div>
@@ -155,11 +165,7 @@
                 <p>Plateforme externe de visualisation 3D et recherche avancée</p>
             </div>
             <div class="sif-container">
-                <iframe 
-                    id="sif-frame" 
-                    class="sif-frame"
-                    src="https://sifboundou.netlify.app/"
-                    title="SIF Boundou"
+                <iframe id="sif-frame" class="sif-frame" src="https://sifboundou.netlify.app/" title="SIF Boundou"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen>
                 </iframe>
@@ -182,15 +188,12 @@
                     <button class="dashboard-tab" data-dashboard="edl">Suivi Opération</button>
                 </div>
             </div>
-            
+
             <div class="dashboard-container" style="height: 80vh;">
                 <div class="dashboard-loading">
                     <div class="loading-spinner"></div>
                 </div>
-                <iframe 
-                    id="dashboard-frame" 
-                    src="https://boundoudash.netlify.app/"
-                    title="Dashboard Boundou"
+                <iframe id="dashboard-frame" src="https://boundoudash.netlify.app/" title="Dashboard Boundou"
                     style="width: 100%; height: 100%; border: none;">
                 </iframe>
             </div>
@@ -206,15 +209,18 @@
                     <h3>Résumé Global</h3>
                     <div class="overview-metrics" style="display: flex; gap: 2rem; margin-top: 1rem;">
                         <div class="metric">
-                            <span class="metric-value" id="total-communes" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                            <span class="metric-value" id="total-communes"
+                                style="font-size: 1.5rem; font-weight: bold;">0</span>
                             <span class="metric-label">Communes</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-value" id="total-parcelles-global" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                            <span class="metric-value" id="total-parcelles-global"
+                                style="font-size: 1.5rem; font-weight: bold;">0</span>
                             <span class="metric-label">Parcelles</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-value" id="superficie-globale" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                            <span class="metric-value" id="superficie-globale"
+                                style="font-size: 1.5rem; font-weight: bold;">0</span>
                             <span class="metric-label">Hectares</span>
                         </div>
                     </div>
@@ -251,9 +257,11 @@
                     <div class="workflow-container">
                         <div class="workflow-step active" id="step1">
                             <h3>1. Sélectionner le fichier Excel</h3>
-                            <div class="upload-section">
-                                <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls" style="display: none;">
-                                <button class="btn btn--primary" onclick="document.getElementById('individual-file').click()">
+                            <div class="upload-section" id="uploadSectionIndividual">
+                                <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls"
+                                    style="display: none;">
+                                <button class="btn btn--primary"
+                                    onclick="document.getElementById('individual-file').click()">
                                     📂 Choisir un fichier
                                 </button>
                                 <p id="fileNameIndividual" style="margin-top: 0.5rem;"></p>
@@ -272,7 +280,7 @@
                             <h3>4. Génération</h3>
                             <button id="generate-individual" class="btn btn--success">Générer</button>
                         </div>
-                        
+
                         <div class="workflow-navigation" style="margin-top: 2rem; display: flex; gap: 1rem;">
                             <button id="prevStep" class="btn btn--secondary" style="display: none;">Précédent</button>
                             <button id="nextStep" class="btn btn--primary" style="display: none;">Suivant</button>
@@ -286,20 +294,26 @@
                 <div class="card" style="padding: 2rem;">
                     <h3>Parcelles Collectives</h3>
                     <div class="workflow-container">
-                         <div class="workflow-step active" id="collective-step1">
-                            <input type="file" id="collective-file" style="display: none;">
-                            <button class="btn btn--primary" onclick="document.getElementById('collective-file').click()">📂 Choisir fichier collectif</button>
-                            <p id="fileNameCollective"></p>
-                         </div>
-                         <!-- Logic placeholders -->
-                         <div id="collective-step2" style="display:none;"></div>
-                         <div id="collective-step3" style="display:none;">
+                        <div class="workflow-step active" id="collective-step1">
+                            <div class="upload-section" id="uploadSectionCollective">
+                                <input type="file" id="collective-file" style="display: none;">
+                                <button class="btn btn--primary"
+                                    onclick="document.getElementById('collective-file').click()">📂 Choisir fichier
+                                    collectif</button>
+                                <p id="fileNameCollective"></p>
+                            </div>
+                        </div>
+                        <!-- Logic placeholders -->
+                        <div id="collective-step2" style="display:none;"></div>
+                        <div id="collective-step3" style="display:none;">
                             <button id="generate-collective" class="btn btn--success">Générer</button>
-                         </div>
-                         
-                         <div class="workflow-navigation" style="margin-top: 2rem; display: flex; gap: 1rem;">
-                            <button id="prevStepCollective" class="btn btn--secondary" style="display: none;">Précédent</button>
-                            <button id="nextStepCollective" class="btn btn--primary" style="display: none;">Suivant</button>
+                        </div>
+
+                        <div class="workflow-navigation" style="margin-top: 2rem; display: flex; gap: 1rem;">
+                            <button id="prevStepCollective" class="btn btn--secondary"
+                                style="display: none;">Précédent</button>
+                            <button id="nextStepCollective" class="btn btn--primary"
+                                style="display: none;">Suivant</button>
                             <button id="reset-collective" class="btn btn--secondary">Réinitialiser</button>
                         </div>
                     </div>
@@ -309,6 +323,8 @@
     </main>
 
     <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;"></div>
+    <div id="toast-container" class="toast-container"
+        style="position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;"></div>
 </body>
+
 </html>
