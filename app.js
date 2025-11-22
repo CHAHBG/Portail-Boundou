@@ -694,10 +694,22 @@ function initializeEventHandlers() {
     if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => generateDeliberationList('collective'));
 
     const resetBtn = document.getElementById('reset-deliberation');
-    if (resetBtn) resetBtn.addEventListener('click', () => resetDeliberationData('individual'));
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        resetDeliberationData('individual');
+        // Reset workflow to step 1
+        if (window.WorkflowManager && window.WorkflowManager.showStep) {
+            window.WorkflowManager.showStep(1);
+        }
+    });
 
     const resetCollectiveBtn = document.getElementById('reset-collective');
-    if (resetCollectiveBtn) resetCollectiveBtn.addEventListener('click', () => resetDeliberationData('collective'));
+    if (resetCollectiveBtn) resetCollectiveBtn.addEventListener('click', () => {
+        resetDeliberationData('collective');
+        // Reset workflow to step 1
+        if (window.WorkflowManager && window.WorkflowManager.showCollectiveStep) {
+            window.WorkflowManager.showCollectiveStep(1);
+        }
+    });
 
     if (window.DeliberationListUI) {
         window.DeliberationListUI.initializeDeliberationHandlers();
@@ -1523,8 +1535,8 @@ function generateCollectiveDeliberationList(data) {
 
 function resetDeliberationData(type = 'both') {
     // Clear file input elements
-    const individualFileInput = document.getElementById('fileInput');
-    const collectiveFileInput = document.getElementById('fileInputCollective');
+    const individualFileInput = document.getElementById('individual-file');
+    const collectiveFileInput = document.getElementById('collective-file');
     
     if (type === 'individual' || type === 'both') {
         // Reset individual data
@@ -1537,23 +1549,22 @@ function resetDeliberationData(type = 'both') {
         }
         
         // Reset individual UI elements
-        document.getElementById('fileNameIndividual').textContent = '';
-        document.getElementById('fileInfoIndividual').style.display = 'none';
-        document.getElementById('resultsIndividual').style.display = 'none';
-        document.getElementById('previewIndividual').style.display = 'none';
-        document.getElementById('generate-individual').disabled = true;
+        const fileNameIndividual = document.getElementById('fileNameIndividual');
+        if (fileNameIndividual) fileNameIndividual.textContent = '';
         
-        // Reset individual step navigation - go back to file upload step
-        const nextStepBtn = document.getElementById('nextStep');
-        if (nextStepBtn) {
-            nextStepBtn.style.display = 'none';
+        const previewIndividual = document.getElementById('previewIndividual');
+        if (previewIndividual) {
+            previewIndividual.style.display = 'none';
+            previewIndividual.innerHTML = '';
         }
         
-        // Show file upload section again
-        const uploadSection = document.querySelector('#individual-subsection .upload-section');
-        if (uploadSection) {
-            uploadSection.style.display = 'block';
-        }
+        const generateBtn = document.getElementById('generate-individual');
+        if (generateBtn) generateBtn.disabled = true;
+        
+        const statsBtn = document.getElementById('generateStats');
+        if (statsBtn) statsBtn.disabled = true;
+        
+        console.log('Individual data reset complete');
     }
     
     if (type === 'collective' || type === 'both') {
@@ -1567,23 +1578,22 @@ function resetDeliberationData(type = 'both') {
         }
         
         // Reset collective UI elements
-        document.getElementById('fileNameCollective').textContent = '';
-        document.getElementById('fileInfoCollective').style.display = 'none';
-        document.getElementById('resultsCollective').style.display = 'none';
-        document.getElementById('previewCollective').style.display = 'none';
-        document.getElementById('generate-collective').disabled = true;
+        const fileNameCollective = document.getElementById('fileNameCollective');
+        if (fileNameCollective) fileNameCollective.textContent = '';
         
-        // Reset collective step navigation - go back to file upload step
-        const nextStepCollectiveBtn = document.getElementById('nextStepCollective');
-        if (nextStepCollectiveBtn) {
-            nextStepCollectiveBtn.style.display = 'none';
+        const previewCollective = document.getElementById('previewCollective');
+        if (previewCollective) {
+            previewCollective.style.display = 'none';
+            previewCollective.innerHTML = '';
         }
         
-        // Show file upload section again
-        const uploadSectionCollective = document.querySelector('#collective-subsection .upload-section');
-        if (uploadSectionCollective) {
-            uploadSectionCollective.style.display = 'block';
-        }
+        const generateBtn = document.getElementById('generate-collective');
+        if (generateBtn) generateBtn.disabled = true;
+        
+        const statsBtn = document.getElementById('generateCollectiveStats');
+        if (statsBtn) statsBtn.disabled = true;
+        
+        console.log('Collective data reset complete');
     }
     
     // Show appropriate success message

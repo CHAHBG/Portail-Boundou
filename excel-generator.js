@@ -1029,6 +1029,14 @@
             console.log(`   ðŸ‘¶ Extrait Minor: ${extraitMinorRecords.length}`);
             
             // Generate separate sheets for each category
+            // VALIDATION: Ensure no data loss in collective processing
+            const totalCollectiveProcessed = standardRecords.length + extraitMajorRecords.length + extraitMinorRecords.length;
+            if (totalCollectiveProcessed !== data.length) {
+                console.error(`MISSING COLLECTIVE RECORDS: ${data.length - totalCollectiveProcessed} not categorized!`);
+            } else {
+                console.log(`All ${data.length} collective records accounted for`);
+            }
+            
             if (standardRecords.length > 0) {
                 const ws = createEntityWorksheet(standardRecords, columns, 'physiques');
                 sheets.push({
@@ -1244,19 +1252,20 @@
             data.forEach(row => {
                 const age = getIndividualRecordAge(row);
                 
-                if (age === null) {
-                    console.log(`⚠️ Skipping individual record due to age calculation failure:`, row);
-                    return;
-                }
-                
-                const isMajor = age >= ageThreshold;
+                // Default to treating records without age as adults (major)
+                // This ensures NO records are skipped due to missing dates
+                const isMajor = age === null ? true : age >= ageThreshold;
                 const hasExtrait = hasExtraitDocumentIndividual(row);
                 const hasStandard = hasStandardDocumentIndividual(row);
+                
+                if (age === null) {
+                    console.log(`⚠️ Individual record without age, defaulting to MAJOR category:`, row.prenom, row.nom);
+                }
                 
                 if (hasExtrait) {
                     if (isMajor) {
                         majorExtraitRecords.push(row);
-                        console.log(`📋 Added individual to major extrait: age ${age}, doc: ${row.Type_piece}`);
+                        console.log(`📋 Added individual to major extrait: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
                     } else {
                         minorExtraitRecords.push(row);
                         console.log(`📋 Added individual to minor extrait: age ${age}, doc: ${row.Type_piece}`);
@@ -1264,13 +1273,16 @@
                 } else if (hasStandard) {
                     if (isMajor) {
                         majorStandardRecords.push(row);
-                        console.log(`📋 Added individual to major standard: age ${age}, doc: ${row.Type_piece}`);
+                        console.log(`📋 Added individual to major standard: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
                     } else {
                         minorStandardRecords.push(row);
                         console.log(`📋 Added individual to minor standard: age ${age}, doc: ${row.Type_piece}`);
                     }
                 } else {
-                    console.log(`❓ Individual record with unknown document type: ${row.Type_piece}, age: ${age}`);
+                    // Default: Records with unknown/missing document types go to major standard category
+                    // This ensures ALL records are included in the output
+                    majorStandardRecords.push(row);
+                    console.log(`❓ Individual record with unknown document type added to MAJOR STANDARD: ${row.Type_piece}, age: ${age || 'N/A'}`);
                 }
             });
             
@@ -1279,6 +1291,18 @@
             console.log(`   - Minor extrait: ${minorExtraitRecords.length}`);
             console.log(`   - Major standard: ${majorStandardRecords.length}`);
             console.log(`   - Minor standard: ${minorStandardRecords.length}`);
+            
+            // VALIDATION: Ensure all records are accounted for
+            const totalProcessed = majorExtraitRecords.length + minorExtraitRecords.length + 
+                                   majorStandardRecords.length + minorStandardRecords.length;
+            console.log(`✅ VALIDATION: Input records: ${data.length}, Output records: ${totalProcessed}`);
+            
+            if (totalProcessed !== data.length) {
+                console.error(`❌ MISSING RECORDS: ${data.length - totalProcessed} records were not categorized!`);
+                BoundouUtils.showError(`Attention: ${data.length - totalProcessed} enregistrements n'ont pas été catégorisés`);
+            } else {
+                console.log(`✅ All ${data.length} records successfully categorized - NO MISSING DATA`);
+            }
             
             // Create separate sheets for each category
             if (majorExtraitRecords.length > 0) {

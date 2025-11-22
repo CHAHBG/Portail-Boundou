@@ -243,6 +243,12 @@ function processIndividualFile(file) {
     // Set processing flag to prevent data reset
     window.BoundouDashboard.isProcessingFile = true;
     
+    // Update file name display
+    const fileNameDisplay = document.getElementById('fileNameIndividual');
+    if (fileNameDisplay) {
+        fileNameDisplay.textContent = `Fichier: ${file.name} (${BoundouUtils.formatFileSize(file.size)})`;
+    }
+    
     reader.onload = async function(e) {
         try {
             BoundouUtils.showLoading('previewIndividual', BoundouConfig.MESSAGES.INFO.PROCESSING);
@@ -263,13 +269,18 @@ function processIndividualFile(file) {
             // Enable the generate button
             document.getElementById('generate-individual').disabled = false;
             
-            // Show column selection instead of immediate preview
-            displayColumnSelection();
-            
             BoundouUtils.showSuccess(`Fichier traité: ${jsonData.length} entrées`);
             
             // Clear processing flag
             window.BoundouDashboard.isProcessingFile = false;
+            
+            // Automatically advance to step 2 (Configuration)
+            if (window.WorkflowManager && window.WorkflowManager.showStep) {
+                setTimeout(() => {
+                    console.log('🚀 Advancing to step 2 after file processing');
+                    window.WorkflowManager.showStep(2);
+                }, 500);
+            }
 
         } catch (error) {
             BoundouUtils.showError(`Erreur de traitement: ${error.message}`);
@@ -295,6 +306,12 @@ function processCollectiveFile(file) {
     // Set processing flag to prevent data reset
     window.BoundouDashboard.isProcessingFile = true;
     
+    // Update file name display
+    const fileNameDisplay = document.getElementById('fileNameCollective');
+    if (fileNameDisplay) {
+        fileNameDisplay.textContent = `Fichier: ${file.name} (${BoundouUtils.formatFileSize(file.size)})`;
+    }
+    
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
@@ -316,22 +333,11 @@ function processCollectiveFile(file) {
             // Enable the generate button
             document.getElementById('generate-collective').disabled = false;
             
-            // Show collective statistics section  
-            const collectiveStatsSection = document.getElementById('statisticsCollectiveSection');
-            if (collectiveStatsSection) {
-                collectiveStatsSection.style.display = 'block';
-                console.log('Collective statistics section displayed');
-            }
-            
             // Enable collective statistics button
             const collectiveStatsButton = document.getElementById('generateCollectiveStats');
             if (collectiveStatsButton) {
                 collectiveStatsButton.disabled = false;
                 console.log('Collective statistics button enabled');
-                
-                // Setup event handlers for collective statistics
-                console.log('🔧 Setting up collective statistics button event handlers...');
-                setupCollectiveStatsHandler();
             }
             
             displayCollectivePreview();
@@ -347,6 +353,14 @@ function processCollectiveFile(file) {
             
             // Clear processing flag
             window.BoundouDashboard.isProcessingFile = false;
+            
+            // Automatically advance to step 2 (Configuration)
+            if (window.WorkflowManager && window.WorkflowManager.showCollectiveStep) {
+                setTimeout(() => {
+                    console.log('🚀 Advancing to collective step 2 after file processing');
+                    window.WorkflowManager.showCollectiveStep(2);
+                }, 500);
+            }
 
         } catch (error) {
             BoundouUtils.showError(`Erreur collective: ${error.message}`);

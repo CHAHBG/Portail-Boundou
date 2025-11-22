@@ -1,0 +1,199 @@
+<!-- COMPLETE DELIBERATIONS WORKFLOW STRUCTURE -->
+<!-- This file contains the complete workflow structure to be merged into index.html -->
+
+<!-- INDIVIDUAL WORKFLOW -->
+<div id="individual-subsection" class="sub-content-section active">
+    <div class="card" style="padding: 2rem;">
+        <div class="workflow-container">
+            <!-- Step 1: File Upload -->
+            <div class="workflow-step active" id="step1">
+                <h3>📂 Étape 1: Sélectionner le fichier Excel</h3>
+                <div class="upload-section" id="uploadSectionIndividual">
+                    <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls"
+                        style="display: none;">
+                    <button class="btn btn--primary" onclick="document.getElementById('individual-file').click()">
+                        📂 Choisir un fichier
+                    </button>
+                    <p id="fileNameIndividual" style="margin-top: 0.5rem; color: var(--color-text-muted);"></p>
+                </div>
+            </div>
+
+            <!-- Step 2: Configuration Options -->
+            <div id="step2" class="workflow-step" style="display:none;">
+                <h3>⚙️ Étape 2: Configuration</h3>
+                <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez le type de liste à générer
+                </p>
+
+                <div class="options-quick-config">
+                    <div class="quick-option-card" data-config="basic" data-type="individual">
+                        <span class="card-icon">📋</span>
+                        <h4>Basique</h4>
+                        <p>3 feuilles standard</p>
+                        <div class="card-features">
+                            <span class="feature">Personnes physiques</span>
+                            <span class="feature">Personnes morales</span>
+                            <span class="feature">Groupements</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-option-card" data-config="habitat-agricole" data-type="individual">
+                        <span class="card-icon">🏘️</span>
+                        <h4>Habitat & Agricole</h4>
+                        <p>Séparation par usage</p>
+                        <div class="card-features">
+                            <span class="feature">Habitat séparé</span>
+                            <span class="feature">Agricole séparé</span>
+                            <span class="feature">+ 3 feuilles standard</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-option-card" data-config="mandataire" data-type="individual">
+                        <span class="card-icon">👥</span>
+                        <h4>Mandataire</h4>
+                        <p>Séparation mandataires</p>
+                        <div class="card-features">
+                            <span class="feature">Avec mandataire</span>
+                            <span class="feature">Sans mandataire</span>
+                            <span class="feature">+ 3 feuilles standard</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-option-card" data-config="complete" data-type="individual">
+                        <span class="card-icon">🎯</span>
+                        <h4>Complet</h4>
+                        <p>Toutes les options</p>
+                        <div class="card-features">
+                            <span class="feature">Habitat & Agricole</span>
+                            <span class="feature">Mandataire</span>
+                            <span class="feature">+ 3 feuilles standard</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="advancedOptionsIndividual" style="display: none; margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- Step 3: Column Selection -->
+            <div id="step3" class="workflow-step" style="display:none;">
+                <h3>📊 Étape 3: Sélection des colonnes</h3>
+                <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez les colonnes à inclure dans
+                    la liste</p>
+                <div id="columnSelectionIndividual"></div>
+                <div id="previewIndividual" style="margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- Step 4: Generation -->
+            <div id="step4" class="workflow-step" style="display:none;">
+                <h3>✨ Étape 4: Génération</h3>
+                <div class="generation-section">
+                    <div class="generation-actions">
+                        <button id="generate-individual" class="btn btn--primary btn-large">📥 Générer la liste</button>
+                        <button id="generateStats" class="btn btn--secondary btn-large">📊 Générer statistiques</button>
+                    </div>
+                    <div id="statisticsSection" class="statistics-section" style="display: none;">
+                        <div class="statistics-header">
+                            <h4>📊 Statistiques</h4>
+                            <p>Aperçu des données traitées</p>
+                        </div>
+                        <div id="statisticsContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workflow-navigation">
+                <button id="prevStep" class="btn btn--secondary" style="display: none;">← Précédent</button>
+                <button id="nextStep" class="btn btn--primary" style="display: none;">Suivant →</button>
+                <button id="reset-deliberation" class="btn btn--secondary">🔄 Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COLLECTIVE WORKFLOW -->
+<div id="collective-subsection" class="sub-content-section">
+    <div class="card" style="padding: 2rem;">
+        <h3>Parcelles Collectives</h3>
+        <div class="workflow-container">
+            <!-- Collective Step 1: File Upload -->
+            <div class="workflow-step active" id="collective-step1">
+                <h3>📂 Étape 1: Sélectionner le fichier Excel</h3>
+                <div class="upload-section" id="uploadSectionCollective">
+                    <input type="file" id="collective-file" class="file-input" accept=".xlsx,.xls"
+                        style="display: none;">
+                    <button class="btn btn--primary" onclick="document.getElementById('collective-file').click()">
+                        📂 Choisir fichier collectif
+                    </button>
+                    <p id="fileNameCollective" style="margin-top: 0.5rem; color: var(--color-text-muted);"></p>
+                </div>
+            </div>
+
+            <!-- Collective Step 2: Configuration -->
+            <div id="collective-step2" class="workflow-step" style="display:none;">
+                <h3>⚙️ Étape 2: Configuration</h3>
+                <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez le type de liste collective
+                    à générer</p>
+
+                <div class="options-quick-config">
+                    <div class="quick-option-card" data-config="basic" data-type="collective">
+                        <span class="card-icon">📋</span>
+                        <h4>Basique</h4>
+                        <p>Liste collective standard</p>
+                        <div class="card-features">
+                            <span class="feature">Parcelles groupées</span>
+                            <span class="feature">Membres par parcelle</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-option-card" data-config="habitat-agricole" data-type="collective">
+                        <span class="card-icon">🏘️</span>
+                        <h4>Habitat & Agricole</h4>
+                        <p>Séparation par usage</p>
+                        <div class="card-features">
+                            <span class="feature">Habitat séparé</span>
+                            <span class="feature">Agricole séparé</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-option-card" data-config="complete" data-type="collective">
+                        <span class="card-icon">🎯</span>
+                        <h4>Complet</h4>
+                        <p>Toutes les options</p>
+                        <div class="card-features">
+                            <span class="feature">Habitat & Agricole</span>
+                            <span class="feature">Statistiques détaillées</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="advancedOptionsCollective" style="display: none; margin-top: 1.5rem;"></div>
+                <div id="previewCollective" style="margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- Collective Step 3: Generation -->
+            <div id="collective-step3" class="workflow-step" style="display:none;">
+                <h3>✨ Étape 3: Génération</h3>
+                <div class="generation-section">
+                    <div class="generation-actions">
+                        <button id="generate-collective" class="btn btn--primary btn-large">📥 Générer la liste
+                            collective</button>
+                        <button id="generateCollectiveStats" class="btn btn--secondary btn-large">📊 Générer
+                            statistiques</button>
+                    </div>
+                    <div id="statisticsCollectiveSection" class="statistics-section" style="display: none;">
+                        <div class="statistics-header">
+                            <h4>📊 Statistiques Collectives</h4>
+                            <p>Aperçu des parcelles collectives</p>
+                        </div>
+                        <div id="statisticsCollectiveContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workflow-navigation">
+                <button id="prevStepCollective" class="btn btn--secondary" style="display: none;">← Précédent</button>
+                <button id="nextStepCollective" class="btn btn--primary" style="display: none;">Suivant →</button>
+                <button id="reset-collective" class="btn btn--secondary">🔄 Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+</div>

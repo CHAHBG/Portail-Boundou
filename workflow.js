@@ -23,21 +23,11 @@
         showStep(1);
         updateNavigationButtons();
         
-        // Listen for file upload to automatically advance to step 2 (Configuration)
+        // Set up file upload listener (don't replace the input element)
         const fileInput = document.getElementById('individual-file');
         if (fileInput) {
-            // Remove any existing listeners to avoid duplicates
-            const newFileInput = fileInput.cloneNode(true);
-            fileInput.parentNode.replaceChild(newFileInput, fileInput);
-            
-            newFileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    console.log('📁 File selected, advancing to configuration step');
-                    setTimeout(() => {
-                        showStep(2); // Go to step 2 (Configuration)
-                    }, 800); // Delay for file processing
-                }
-            });
+            console.log('✅ Individual file input found');
+            // Event listener is handled by generatedeliblist.js
         }
     }
 
@@ -48,21 +38,11 @@
         showCollectiveStep(1);
         updateCollectiveNavigationButtons();
         
-        // Listen for file upload to automatically advance to step 2 (Configuration)
+        // Set up file upload listener (don't replace the input element)
         const fileInput = document.getElementById('collective-file');
         if (fileInput) {
-            // Remove any existing listeners to avoid duplicates
-            const newFileInput = fileInput.cloneNode(true);
-            fileInput.parentNode.replaceChild(newFileInput, fileInput);
-            
-            newFileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    console.log('📁 Collective file selected, advancing to configuration step');
-                    setTimeout(() => {
-                        showCollectiveStep(2); // Go to step 2 (Configuration)
-                    }, 800); // Delay for file processing
-                }
-            });
+            console.log('✅ Collective file input found');
+            // Event listener is handled by generatedeliblist.js
         }
     }
 
@@ -95,6 +75,30 @@
         
         currentCollectiveStep = stepNumber;
         updateCollectiveNavigationButtons();
+        
+        // Special handling for specific steps
+        if (stepNumber === 2) {
+            // Show configuration options
+            console.log('Collective Step 2: Configuration options visible');
+        }
+        
+        if (stepNumber === 3) {
+            // Show preview and generation options
+            console.log('Collective Step 3: Showing preview and generation');
+            const previewContainer = document.getElementById('previewCollective');
+            if (previewContainer) {
+                previewContainer.style.display = 'block';
+                if (window.DeliberationListUI && window.DeliberationListUI.displayCollectivePreview) {
+                    window.DeliberationListUI.displayCollectivePreview();
+                }
+            }
+            
+            // Show statistics section
+            const statsSection = document.getElementById('statisticsCollectiveSection');
+            if (statsSection) {
+                statsSection.style.display = 'block';
+            }
+        }
     }
 
     function updateCollectiveNavigationButtons() {
@@ -102,11 +106,13 @@
         const nextButton = document.getElementById('nextStepCollective');
         
         if (prevButton) {
+            // Show previous button for steps 2 and 3
             prevButton.style.display = currentCollectiveStep > 1 ? 'inline-block' : 'none';
         }
         
         if (nextButton) {
-            nextButton.style.display = currentCollectiveStep < totalCollectiveSteps ? 'inline-block' : 'none';
+            // Show next button only for step 2 (to go to step 3)
+            nextButton.style.display = currentCollectiveStep === 2 ? 'inline-block' : 'none';
         }
     }
 
@@ -128,14 +134,20 @@
                 // Apply configuration based on selection
                 if (type === 'collective') {
                     applyCollectiveQuickConfiguration(config);
-                    // Auto-advance to next step after configuration
+                    // Show preview and auto-advance to next step after configuration
                     setTimeout(() => {
+                        if (window.DeliberationListUI && window.DeliberationListUI.displayCollectivePreview) {
+                            window.DeliberationListUI.displayCollectivePreview();
+                        }
                         showCollectiveStep(3);
                     }, 300);
                 } else {
                     applyQuickConfiguration(config);
-                    // Auto-advance to next step after configuration
+                    // Show preview and auto-advance to next step after configuration
                     setTimeout(() => {
+                        if (window.DeliberationListUI && window.DeliberationListUI.displayIndividualPreview) {
+                            window.DeliberationListUI.displayIndividualPreview();
+                        }
                         showStep(3);
                     }, 300);
                 }
@@ -311,6 +323,7 @@
         if (nextButton) {
             nextButton.addEventListener('click', function() {
                 if (currentStep < totalSteps) {
+                    // Advance to next step
                     showStep(currentStep + 1);
                 }
             });
@@ -331,6 +344,7 @@
         if (nextButtonCollective) {
             nextButtonCollective.addEventListener('click', function() {
                 if (currentCollectiveStep < totalCollectiveSteps) {
+                    // For collective, step 2 goes directly to step 3 (generation)
                     showCollectiveStep(currentCollectiveStep + 1);
                 }
             });
@@ -368,16 +382,26 @@
         updateNavigationButtons();
         
         // Special handling for specific steps
+        if (stepNumber === 2) {
+            // Show configuration options
+            console.log('Step 2: Configuration options visible');
+        }
+        
         if (stepNumber === 3) {
-            // Ensure column selection is visible
-            const columnSelection = document.getElementById('columnSelectionIndividual');
-            if (columnSelection) {
-                columnSelection.style.display = 'block';
+            // Show preview
+            console.log('Step 3: Showing preview');
+            const previewContainer = document.getElementById('previewIndividual');
+            if (previewContainer) {
+                previewContainer.style.display = 'block';
+                if (window.DeliberationListUI && window.DeliberationListUI.displayIndividualPreview) {
+                    window.DeliberationListUI.displayIndividualPreview();
+                }
             }
         }
         
         if (stepNumber === 4) {
-            // Show statistics section
+            // Show generation options
+            console.log('Step 4: Generation options visible');
             const statsSection = document.getElementById('statisticsSection');
             if (statsSection) {
                 statsSection.style.display = 'block';
@@ -390,15 +414,21 @@
         const nextButton = document.getElementById('nextStep');
         
         if (prevButton) {
+            // Show previous button for steps 2, 3, 4
             prevButton.style.display = currentStep > 1 ? 'inline-block' : 'none';
         }
         
         if (nextButton) {
-            nextButton.style.display = currentStep < totalSteps ? 'inline-block' : 'none';
+            // Show next button for steps 2 and 3 (not for step 1 or 4)
+            if (currentStep === 2 || currentStep === 3) {
+                nextButton.style.display = 'inline-block';
+            } else {
+                nextButton.style.display = 'none';
+            }
         }
     }
 
-    function setupAdvancedOptionsToggle() {
+    function updateCollectiveNavigationButtons() {
         // Individual advanced options toggle
         const toggleButton = document.getElementById('toggleAdvancedOptions');
         const advancedSection = document.getElementById('advancedOptionsIndividual');
