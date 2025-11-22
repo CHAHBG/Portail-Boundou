@@ -234,6 +234,162 @@
     }
 }
 
+/* Preview Section Styles */
+.preview-section {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.sheet-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+}
+
+.sheet-icon {
+    font-size: 1.5rem;
+}
+
+.preview-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.total-count {
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.preview-note {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: white;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.preview-table thead {
+    background: linear-gradient(135deg, var(--color-slate-700), var(--color-slate-800));
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.preview-table thead th {
+    padding: 1rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--color-primary-600);
+    white-space: nowrap;
+}
+
+.preview-table tbody tr {
+    border-bottom: 1px solid var(--color-slate-200);
+    transition: background-color var(--transition-fast);
+}
+
+.preview-table tbody tr:hover {
+    background-color: var(--color-primary-50);
+}
+
+.preview-table tbody tr:nth-child(even) {
+    background-color: var(--color-slate-50);
+}
+
+.preview-table tbody tr:nth-child(even):hover {
+    background-color: var(--color-primary-50);
+}
+
+.preview-table tbody td {
+    padding: 0.875rem 0.75rem;
+    color: var(--color-text-main);
+    vertical-align: top;
+}
+
+.preview-table tbody td:first-child {
+    font-weight: 600;
+    color: var(--color-primary-600);
+    width: 50px;
+    text-align: center;
+}
+
+.multi-line-cell {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    max-width: 200px;
+}
+
+.preview-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    padding: 3rem;
+    background: var(--color-slate-50);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-border);
+}
+
+.placeholder-content {
+    text-align: center;
+    max-width: 400px;
+}
+
+.placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.5;
+}
+
+.placeholder-content h3 {
+    color: var(--color-text-main);
+    margin-bottom: 0.5rem;
+}
+
+.placeholder-content p {
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
 /* Dark Theme Support */
 [data-color-scheme="dark"] .workflow-step {
     background: var(--card-bg);
@@ -251,6 +407,33 @@
 
 [data-color-scheme="dark"] .statistics-section {
     background: var(--bg-secondary);
+}
+
+[data-color-scheme="dark"] .preview-section {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-color-scheme="dark"] .table-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-color-scheme="dark"] .preview-table thead {
+    background: linear-gradient(135deg, var(--color-slate-800), var(--color-slate-900));
+}
+
+[data-color-scheme="dark"] .preview-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-color-scheme="dark"] .preview-table tbody tr:hover {
+    background-color: rgba(20, 184, 166, 0.1);
+}
+
+[data-color-scheme="dark"] .preview-placeholder {
+    background: var(--card-bg);
+    border-color: var(--border-color);
 }
 
 /* Step Progress Indicator */

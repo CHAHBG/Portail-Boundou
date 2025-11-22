@@ -13,7 +13,6 @@
         initializeCollectiveWorkflow();
         setupQuickConfig();
         setupNavigationControls();
-        setupAdvancedOptionsToggle();
     });
 
     function initializeWorkflow() {
