@@ -784,20 +784,28 @@ function initializeSubTabs() {
 }
 
 function switchSection(sectionName) {
+    // Remove active class from all tabs
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
+    const activeTab = document.querySelector(`[data-section="${sectionName}"]`);
+    if (activeTab) activeTab.classList.add('active');
 
-    document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
-    document.getElementById(`${sectionName}-section`)?.classList.add('active');
-
-    // Scroll to top of main content area when switching sections
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        mainContent.scrollTop = 0;
+    // Hide all sections first
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
+    
+    // Show only the selected section
+    const targetSection = document.getElementById(`${sectionName}-section`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
     }
-    // Also scroll window to top for better UX
+
+    // Scroll to top of page for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // Section-specific initialization
     if (sectionName === 'stats') {
         createGlobalCharts();
     } else if (sectionName === 'map') {
@@ -813,6 +821,14 @@ function switchSection(sectionName) {
         if (frame && !frame.src) {
             frame.src = "https://sifboundou.netlify.app/";
         }
+    } else if (sectionName === 'dashboards') {
+        // Ensure dashboard is visible
+        setTimeout(() => {
+            const iframe = document.getElementById('dashboard-frame');
+            if (iframe && !iframe.src) {
+                iframe.src = 'https://boundoudash.netlify.app/';
+            }
+        }, 100);
     }
 }
 
