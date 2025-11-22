@@ -857,30 +857,18 @@ function switchSection(sectionName) {
             if (layer) zoomToCommune(lastSelectedCommune, layer);
         }
     } else if (sectionName === 'sif') {
-        // Handle SIF iframe loading or refresh if needed
+        // Handle SIF iframe loading - force complete reload to fix map sizing
         const frame = document.getElementById('sif-frame');
         if (frame) {
-            if (!frame.src) {
-                frame.src = "https://sifboundou.netlify.app/";
-            }
-            // Force iframe to re-render by toggling visibility
+            // Store the current src
+            const currentSrc = frame.src || "https://sifboundou.netlify.app/";
+            
+            // Complete reload: remove src, wait, then set it again
+            // This forces the embedded app to recalculate dimensions
+            frame.src = '';
             setTimeout(() => {
-                const container = frame.parentElement;
-                if (container) {
-                    container.style.display = 'none';
-                    requestAnimationFrame(() => {
-                        container.style.display = 'flex';
-                        // Try to send resize message to iframe
-                        setTimeout(() => {
-                            try {
-                                frame.contentWindow.postMessage({ type: 'resize' }, 'https://sifboundou.netlify.app');
-                            } catch (e) {
-                                // Silently fail if cross-origin
-                            }
-                        }, 300);
-                    });
-                }
-            }, 100);
+                frame.src = currentSrc;
+            }, 50);
         }
     } else if (sectionName === 'dashboards') {
         // Ensure dashboard is visible
