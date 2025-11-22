@@ -740,22 +740,22 @@ function initializeEventHandlers() {
     const sifFrame = document.getElementById('sif-frame');
     if (sifFrame) {
         sifFrame.addEventListener('load', () => {
-            // Send message to iframe to resize map if it has a postMessage API
+            // Wait for iframe content to initialize, then trigger window resize
             setTimeout(() => {
+                // Dispatch resize event on window to force embedded map to recalculate
+                window.dispatchEvent(new Event('resize'));
+                
+                // Try sending postMessage to iframe
                 try {
-                    sifFrame.contentWindow.postMessage({ type: 'resize' }, 'https://sifboundou.netlify.app');
+                    sifFrame.contentWindow.postMessage({ 
+                        type: 'resize',
+                        width: sifFrame.offsetWidth,
+                        height: sifFrame.offsetHeight 
+                    }, '*');
                 } catch (e) {
                     console.log('Could not send resize message to iframe');
                 }
-                // Also try to reload iframe's content by toggling display
-                const container = sifFrame.parentElement;
-                if (container) {
-                    container.style.display = 'none';
-                    setTimeout(() => {
-                        container.style.display = 'flex';
-                    }, 10);
-                }
-            }, 500);
+            }, 1000);
         });
     }
 }
