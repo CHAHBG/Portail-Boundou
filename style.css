@@ -361,6 +361,15 @@ p {
   box-shadow: 0 4px 6px -1px rgba(20, 184, 166, 0.3);
 }
 
+/* Sub-content sections visibility */
+.sub-content-section {
+  display: none;
+}
+
+.sub-content-section.active {
+  display: block;
+}
+
 /* === Cards & Containers === */
 .card,
 .stats-panel,
@@ -444,9 +453,21 @@ p {
 }
 
 /* === SIF Section (Iframe) === */
+#sif-section {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 600px;
+}
+
+#sif-section .section-header {
+  flex-shrink: 0;
+}
+
 .sif-container {
   width: 100%;
-  height: 85vh;
+  flex: 1;
+  min-height: 0;
   border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--color-slate-100);
