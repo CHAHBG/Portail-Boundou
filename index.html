@@ -125,21 +125,24 @@
             <div class="map-wrapper">
                 <div id="map" class="map-canvas"></div>
                 <div class="map-legend glass-card" id="map-legend"><h4>Légende</h4></div>
-            </div>
-            <div id="stats-panel" class="commune-panel glass-card hidden">
-                <div class="commune-panel-header">
-                    <h3 id="selected-commune">Statistiques</h3>
-                    <button id="close-stats" class="btn-icon" aria-label="Fermer">&times;</button>
-                </div>
-                <div class="kpi-row">
-                    <div class="kpi-card accent-left"><span class="kpi-value" id="total-parcelles">0</span><span class="kpi-label">Parcelles</span></div>
-                    <div class="kpi-card"><span class="kpi-value" id="superficie-totale">0</span><span class="kpi-label">M² Total</span></div>
-                    <div class="kpi-card"><span class="kpi-value" id="pourcentage-nicad">0%</span><span class="kpi-label">NICAD</span></div>
-                    <div class="kpi-card"><span class="kpi-value" id="pourcentage-deliberees">0%</span><span class="kpi-label">Délibérées</span></div>
-                </div>
-                <div class="charts-duo">
-                    <div class="chart-box"><canvas id="usage-chart"></canvas></div>
-                    <div class="chart-box"><canvas id="status-chart"></canvas></div>
+                <!-- Commune stats popup — floating INSIDE the map -->
+                <div id="stats-panel" class="map-stats-popup hidden">
+                    <div class="map-stats-popup-header">
+                        <h3 id="selected-commune">Statistiques</h3>
+                        <button id="close-stats" class="btn-icon" aria-label="Fermer">&times;</button>
+                    </div>
+                    <div class="map-stats-popup-body">
+                        <div class="kpi-row compact">
+                            <div class="kpi-card mini accent-left"><span class="kpi-value" id="total-parcelles">0</span><span class="kpi-label">Parcelles</span></div>
+                            <div class="kpi-card mini"><span class="kpi-value" id="superficie-totale">0</span><span class="kpi-label">M² Total</span></div>
+                            <div class="kpi-card mini"><span class="kpi-value" id="pourcentage-nicad">0%</span><span class="kpi-label">NICAD</span></div>
+                            <div class="kpi-card mini"><span class="kpi-value" id="pourcentage-deliberees">0%</span><span class="kpi-label">Délibérées</span></div>
+                        </div>
+                        <div class="charts-duo compact">
+                            <div class="chart-box mini"><canvas id="usage-chart"></canvas></div>
+                            <div class="chart-box mini"><canvas id="status-chart"></canvas></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
