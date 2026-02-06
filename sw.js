@@ -1,9 +1,9 @@
-const STATIC_CACHE = 'boundou-static-v5-fixed';
+const STATIC_CACHE = 'boundou-static-v6';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
+  './styles.css',
   './config.js',
   './utils.js',
   './data-processor.js',
