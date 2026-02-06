@@ -8,13 +8,13 @@ try {
     const rawData = fs.readFileSync('./data/parcelles.json', 'utf8');
     const data = JSON.parse(rawData);
     
-    console.log(`📊 Loaded ${data.length} total records`);
+    console.log(`[STAT] Loaded ${data.length} total records`);
     
     // Find the test parcel 0522010201096
     const testParcel = data.find(row => row.Num_parcel_2 === '0522010201096');
     
     if (testParcel) {
-        console.log('\n🔍 Found test parcel 0522010201096:');
+        console.log('\n[DBG] Found test parcel 0522010201096:');
         console.log('Raw data inspection:');
         
         // List all fields that contain names or IDs
@@ -46,9 +46,9 @@ try {
             piece: testParcel.Num_piec || testParcel.Num_piece
         };
         
-        console.log(`\n📋 Mandataire: ${mandataire.prenom} ${mandataire.nom} (ID: ${mandataire.piece})`);
-        console.log(`📋 Expected affectataires: ${affectataireCount}`);
-        console.log(`📋 Total expected individuals: ${affectataireCount + 1} (${affectataireCount} affectataires + 1 mandataire)`);
+        console.log(`\n<i class="bi bi-list-check"></i> Mandataire: ${mandataire.prenom} ${mandataire.nom} (ID: ${mandataire.piece})`);
+        console.log(`[LIST] Expected affectataires: ${affectataireCount}`);
+        console.log(`[LIST] Total expected individuals: ${affectataireCount + 1} (${affectataireCount} affectataires + 1 mandataire)`);
         
         // Check for homonyms (same name, different ID)
         const allIndividuals = [];
@@ -79,7 +79,7 @@ try {
             }
         }
         
-        console.log('\n🔍 All individuals analysis:');
+        console.log('\n[DBG] All individuals analysis:');
         allIndividuals.forEach((ind, idx) => {
             console.log(`${idx + 1}. ${ind.prenom} ${ind.nom} (ID: ${ind.piece}) [${ind.role}]`);
         });
@@ -94,30 +94,30 @@ try {
             nameGroups[nameKey].push(ind);
         });
         
-        console.log('\n🔍 Name group analysis:');
+        console.log('\n[DBG] Name group analysis:');
         Object.keys(nameGroups).forEach(nameKey => {
             const group = nameGroups[nameKey];
             if (group.length > 1) {
-                console.log(`⚠️  Homonym group "${nameKey}": ${group.length} individuals`);
+                console.log(`[WARN]  Homonym group "${nameKey}": ${group.length} individuals`);
                 group.forEach((ind, idx) => {
                     console.log(`   ${idx + 1}. ID: ${ind.piece} [${ind.role}]`);
                 });
             } else {
-                console.log(`✅ Unique: "${nameKey}" - ID: ${group[0].piece} [${group[0].role}]`);
+                console.log(`[OK] Unique: "${nameKey}" - ID: ${group[0].piece} [${group[0].role}]`);
             }
         });
         
     } else {
-        console.log('❌ Test parcel 0522010201096 not found in data');
+        console.log('[ERR] Test parcel 0522010201096 not found in data');
         
         // Show available parcels with Num_parcel_2 values
         const collectiveParcels = data.filter(row => row.Num_parcel_2).slice(0, 5);
-        console.log('\n📋 Sample collective parcels found:');
+        console.log('\n<i class="bi bi-list-check"></i> Sample collective parcels found:');
         collectiveParcels.forEach(row => {
             console.log(`- ${row.Num_parcel_2} (Village: ${row.Village})`);
         });
     }
     
 } catch (error) {
-    console.error('❌ Test failed:', error.message);
+    console.error('[ERR] Test failed:', error.message);
 }

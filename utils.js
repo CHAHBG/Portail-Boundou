@@ -57,7 +57,7 @@ window.BoundouUtils = (() => {
         errorDiv.className = 'error-message fade-in';
         errorDiv.innerHTML = `
             <div class="error-content">
-                <i class="error-icon">⚠️</i>
+                <i class="error-icon">[WARN]</i>
                 <span class="error-text">${message}</span>
                 <button class="error-close" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
@@ -80,7 +80,7 @@ window.BoundouUtils = (() => {
         successDiv.className = 'success-message fade-in';
         successDiv.innerHTML = `
             <div class="success-content">
-                <i class="success-icon">✅</i>
+                <i class="success-icon">[OK]</i>
                 <span class="success-text">${message}</span>
                 <button class="success-close" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>

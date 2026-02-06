@@ -16,7 +16,7 @@
     });
 
     function initializeWorkflow() {
-        console.log('🚀 Initializing workflow interface');
+        console.log('[START] Initializing workflow interface');
         
         // Show only the first step initially
         showStep(1);
@@ -25,13 +25,13 @@
         // Set up file upload listener (don't replace the input element)
         const fileInput = document.getElementById('individual-file');
         if (fileInput) {
-            console.log('✅ Individual file input found');
+            console.log('[OK] Individual file input found');
             // Event listener is handled by generatedeliblist.js
         }
     }
 
     function initializeCollectiveWorkflow() {
-        console.log('🚀 Initializing collective workflow interface');
+        console.log('[START] Initializing collective workflow interface');
         
         // Show only the first step initially
         showCollectiveStep(1);
@@ -40,13 +40,13 @@
         // Set up file upload listener (don't replace the input element)
         const fileInput = document.getElementById('collective-file');
         if (fileInput) {
-            console.log('✅ Collective file input found');
+            console.log('[OK] Collective file input found');
             // Event listener is handled by generatedeliblist.js
         }
     }
 
     function showCollectiveStep(stepNumber) {
-        console.log(`📋 Showing collective step ${stepNumber}`);
+        console.log(`[LIST] Showing collective step ${stepNumber}`);
         
         // Hide all collective steps
         for (let i = 1; i <= totalCollectiveSteps; i++) {
@@ -155,7 +155,7 @@
     }
 
     function applyQuickConfiguration(config) {
-        console.log(`🔧 Applying quick configuration: ${config}`);
+        console.log(`[CFG] Applying quick configuration: ${config}`);
         
         // Initialize advanced options if not exists
         if (!window.BoundouDashboard.advancedOptions) {
@@ -184,7 +184,7 @@
         switch (config) {
             case 'basic':
                 // No additional options needed - just basic three sheets
-                console.log('✅ Basic configuration applied');
+                console.log('[OK] Basic configuration applied');
                 break;
                 
             case 'habitat-agricole':
@@ -193,7 +193,7 @@
                     window.BoundouDashboard.advancedOptions.enableDualLists = true;
                     // Trigger the change event to update the UI and internal state
                     dualListsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('✅ Habitat & Agricole separation enabled');
+                    console.log('[OK] Habitat & Agricole separation enabled');
                 }
                 break;
                 
@@ -203,7 +203,7 @@
                     window.BoundouDashboard.advancedOptions.enableMandataireSeparation = true;
                     // Trigger the change event to update the UI and internal state
                     mandataireCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('✅ Mandataire separation enabled');
+                    console.log('[OK] Mandataire separation enabled');
                 }
                 break;
                 
@@ -218,20 +218,20 @@
                     window.BoundouDashboard.advancedOptions.enableMandataireSeparation = true;
                     mandataireCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-                console.log('✅ Complete configuration applied');
+                console.log('[OK] Complete configuration applied');
                 break;
                 
             default:
-                console.log('⚠️ Unknown configuration:', config);
+                console.log('[WARN] Unknown configuration:', config);
         }
         
         // Store the selected configuration for use during generation
         window.selectedQuickConfig = config;
-        console.log(`📋 Configuration stored: ${config}`, window.BoundouDashboard.advancedOptions);
+        console.log(`[LIST] Configuration stored: ${config}`, window.BoundouDashboard.advancedOptions);
     }
 
     function applyCollectiveQuickConfiguration(config) {
-        console.log(`🔧 Applying collective quick configuration: ${config}`);
+        console.log(`[CFG] Applying collective quick configuration: ${config}`);
         
         // Initialize advanced options if not exists
         if (!window.BoundouDashboard.advancedOptionsCollective) {
@@ -260,7 +260,7 @@
         switch (config) {
             case 'basic':
                 // No additional options needed - just basic collective sheets
-                console.log('✅ Basic collective configuration applied');
+                console.log('[OK] Basic collective configuration applied');
                 break;
                 
             case 'habitat-agricole':
@@ -269,7 +269,7 @@
                     window.BoundouDashboard.advancedOptionsCollective.enableDualLists = true;
                     // Trigger the change event to update the UI and internal state
                     dualListsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('✅ Collective Habitat & Agricole separation enabled');
+                    console.log('[OK] Collective Habitat & Agricole separation enabled');
                 }
                 break;
                 
@@ -279,7 +279,7 @@
                     window.BoundouDashboard.advancedOptionsCollective.enableMandataireSeparation = true;
                     // Trigger the change event to update the UI and internal state
                     mandataireCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('✅ Collective Mandataire separation enabled');
+                    console.log('[OK] Collective Mandataire separation enabled');
                 }
                 break;
                 
@@ -294,16 +294,16 @@
                     window.BoundouDashboard.advancedOptionsCollective.enableMandataireSeparation = true;
                     mandataireCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-                console.log('✅ Complete collective configuration applied');
+                console.log('[OK] Complete collective configuration applied');
                 break;
                 
             default:
-                console.log('⚠️ Unknown collective configuration:', config);
+                console.log('[WARN] Unknown collective configuration:', config);
         }
         
         // Store the selected configuration for use during generation
         window.selectedCollectiveQuickConfig = config;
-        console.log(`📋 Collective configuration stored: ${config}`, window.BoundouDashboard.advancedOptionsCollective);
+        console.log(`[LIST] Collective configuration stored: ${config}`, window.BoundouDashboard.advancedOptionsCollective);
     }
 
     function setupNavigationControls() {
@@ -351,7 +351,7 @@
     }
 
     function showStep(stepNumber) {
-        console.log(`📋 Showing step ${stepNumber}`);
+        console.log(`[LIST] Showing step ${stepNumber}`);
         
         // Hide all steps
         for (let i = 1; i <= totalSteps; i++) {
@@ -438,10 +438,10 @@
                 
                 if (isVisible) {
                     advancedSection.style.display = 'none';
-                    this.textContent = '🔧 Options Avancées';
+                    this.textContent = '<i class="bi bi-wrench"></i> Options Avancées';
                 } else {
                     advancedSection.style.display = 'block';
-                    this.textContent = '📋 Options Simples';
+                    this.textContent = '<i class="bi bi-list-check"></i> Options Simples';
                 }
             });
         }
@@ -456,10 +456,10 @@
                 
                 if (isVisible) {
                     advancedSectionCollective.style.display = 'none';
-                    this.textContent = '🔧 Options Avancées';
+                    this.textContent = '<i class="bi bi-wrench"></i> Options Avancées';
                 } else {
                     advancedSectionCollective.style.display = 'block';
-                    this.textContent = '📋 Options Simples';
+                    this.textContent = '<i class="bi bi-list-check"></i> Options Simples';
                 }
             });
         }
@@ -515,7 +515,7 @@
             const validateButton = document.getElementById('validateColumns');
             if (validateButton) {
                 validateButton.addEventListener('click', function(event) {
-                    console.log('✅ Columns validated, advancing to generation step');
+                    console.log('[OK] Columns validated, advancing to generation step');
                     setTimeout(() => showStep(4), 500);
                 });
             }
@@ -524,7 +524,7 @@
     
     // Listen for collective data processing completion
     window.addEventListener('collectiveDataProcessed', function() {
-        console.log('📊 Collective data processed, updating workflow');
+        console.log('[STAT] Collective data processed, updating workflow');
         
         // Update collective count (all records are physical persons)
         const data = window.BoundouDashboard.processedCollectiveData;
@@ -532,7 +532,7 @@
         
         if (data && Array.isArray(data) && physicalCount) {
             physicalCount.textContent = data.length;
-            console.log(`📊 Updated collective physical persons count: ${data.length}`);
+            console.log(`[STAT] Updated collective physical persons count: ${data.length}`);
         }
         
         // Automatically advance to step 3 (column selection) if in step 2
@@ -543,5 +543,5 @@
         }
     });
 
-    console.log('✅ Workflow interface initialized');
+    console.log('[OK] Workflow interface initialized');
 })();

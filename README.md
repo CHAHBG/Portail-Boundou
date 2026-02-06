@@ -1,12 +1,12 @@
-# 🗺️ Portal Boundou - Système d'Information Géographique
+#  Portal Boundou - Système d'Information Géographique
 
-## 🔍 À propos du projet
+##  À propos du projet
 
 **Portal Boundou** est un **Système d’Information Géographique (SIG)** développé dans le cadre du **Projet de Cadastre et de Sécurisation Foncière (PROCASEF)**. Il permet la **visualisation, le suivi et l’analyse des données foncières** dans les communes de la région de Boundou, au Sénégal.
 
 ---
 
-## 🎯 Objectifs
+##  Objectifs
 
 - Visualiser les données foncières des communes de Boundou via une carte interactive
 - Suivre les indicateurs de performance du projet PROCASEF
@@ -15,7 +15,7 @@
 
 ---
 
-## 📊 Chiffres clés (mise à jour : 19/07/2025)
+##  Chiffres clés (mise à jour : 19/07/2025)
 
 - **33 457** parcelles inventoriées  
 - **149 905 408 m²** de superficie totale couverte  
@@ -26,21 +26,21 @@
 
 ---
 
-## 🛠️ Fonctionnalités principales
+##  Fonctionnalités principales
 
-### 🗺️ Carte interactive
+###  Carte interactive
 - Visualisation géographique des 17 communes de Boundou
 - Filtrage par commune et par type d’usage
 - Légende colorée (0–5, 6–10, 11+ parcelles)
 - Interface basée sur OpenStreetMap
 
-### 📈 Tableaux de bord (Dashboard PROCASEF)
+###  Tableaux de bord (Dashboard PROCASEF)
 - Suivi des parcelles identifiées et délibérées
 - Projections mensuelles (2025)
 - Répartition par genre
 - Top des communes par nombre de parcelles
 
-### 📊 Statistiques
+###  Statistiques
 - Vue d’ensemble des 14 communes disponibles
 - Répartition des types d’usage :
   - Agriculture (irriguée, pluviale, traditionnelle)
@@ -55,7 +55,7 @@
 
 ---
 
-## 🏘️ Communes couvertes
+##  Communes couvertes
 
 - BALABOU  
 - BANDAFASSI  
@@ -73,7 +73,7 @@
 
 ---
 
-## 🔗 Accès et navigation
+##  Accès et navigation
 
 - **URL du portail** : [https://portalboundou.netlify.app/](https://portalboundou.netlify.app/)
 - **Navigation** : via les onglets en haut (Carte Interactive, Tableaux de Bord, Statistiques)

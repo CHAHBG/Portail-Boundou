@@ -1,46 +1,46 @@
-# 🗺️ Portail PROCASEF Boundou - Dashboard Avancé
+#  Portail PROCASEF Boundou - Dashboard Avancé
 
 ## Vue d'ensemble
 
 Le Portail PROCASEF Boundou est une application web moderne et optimisée pour la visualisation et la gestion des inventaires fonciers dans la région de Boundou, Sénégal. Cette version améliore considérablement les performances, l'expérience utilisateur et la maintenabilité du code.
 
-## ✨ Nouvelles Fonctionnalités
+##  Nouvelles Fonctionnalités
 
-### 🎯 Optimisations Principales
+###  Optimisations Principales
 - **Architecture Modulaire** : Code divisé en modules réutilisables pour une meilleure maintenabilité
 - **Performance Améliorée** : Traitement des données par chunks et debouncing des interactions
 - **Interface Utilisateur Enhanced** : Animations fluides, messages d'erreur/succès améliores
 - **Gestion d'Erreurs Robuste** : Validation des fichiers et gestion des erreurs centralisée
 - **Accessibilité** : Support clavier, focus management, et ARIA labels
 
-### 📊 Génération Excel Avancée
+###  Génération Excel Avancée
 - **Prévisualisation Interactive** : Tables triables, recherche en temps réel, expansion de lignes
 - **Export Multi-feuilles** : Personnes physiques, morales et groupements séparés automatiquement
 - **Validation des Données** : Vérification de taille, format et structure des fichiers
 - **Messages Informatifs** : Feedback détaillé sur le processus de génération
 
-### 🎨 Interface Utilisateur
+###  Interface Utilisateur
 - **Design System** : Variables CSS consistantes et thème cohérent
 - **Animations** : Transitions fluides et indicateurs de chargement
 - **Responsive** : Adaptation mobile et desktop optimisée
 - **Dark/Light Mode Ready** : Variables CSS préparées pour les thèmes
 
-## 🏗️ Architecture Technique
+##  Architecture Technique
 
 ### Structure des Modules
 
 ```
-📁 Portail-Boundou/
-├── 📄 index.html              # Point d'entrée principal
-├── 🎨 style.css               # Styles globaux avec variables CSS
-├── ⚙️ config.js               # Configuration centralisée
-├── 🛠️ utils.js                # Utilitaires et helpers
-├── 📊 data-processor.js       # Traitement et validation des données
-├── 📈 excel-generator.js      # Génération Excel avancée
-├── 🎯 generatedeliblist.js    # Interface de prévisualisation
-├── 🚀 app.js                  # Application principale
-├── 🔧 sw.js                   # Service Worker optimisé
-└── 📁 data/                   # Données géographiques
+ Portail-Boundou/
+├──  index.html              # Point d'entrée principal
+├──  style.css               # Styles globaux avec variables CSS
+├──  config.js               # Configuration centralisée
+├──  utils.js                # Utilitaires et helpers
+├──  data-processor.js       # Traitement et validation des données
+├──  excel-generator.js      # Génération Excel avancée
+├──  generatedeliblist.js    # Interface de prévisualisation
+├──  app.js                  # Application principale
+├──  sw.js                   # Service Worker optimisé
+└──  data/                   # Données géographiques
     ├── communes_boundou.geojson
     └── parcelles.json
 ```
@@ -95,7 +95,7 @@ window.BoundouExcelGenerator = {
 }
 ```
 
-## 🚀 Installation et Utilisation
+##  Installation et Utilisation
 
 ### Pré-requis
 - Serveur web moderne (Apache, Nginx, ou serveur de développement)
@@ -155,7 +155,7 @@ http://localhost:8000
 - **Statistiques** : Graphiques interactifs avec Chart.js
 - **Export** : Données cartographiques en différents formats
 
-## 🎨 Personnalisation
+##  Personnalisation
 
 ### Variables CSS
 ```css
@@ -174,7 +174,7 @@ Modifier `config.js` pour :
 - Messages d'interface
 - Paramètres de performance
 
-## 🔧 API et Extensibilité
+##  API et Extensibilité
 
 ### Hooks Disponibles
 ```javascript
@@ -226,7 +226,7 @@ console.log(window.BoundouConfig);
 3. **Erreur de génération**
    - Solution : Vérifier la console pour les détails d'erreur
 
-## 📈 Performance
+##  Performance
 
 ### Optimisations Implémentées
 - **Debouncing** : Recherche et interactions (300ms)
@@ -241,7 +241,7 @@ console.log(window.BoundouConfig);
 - **Memory Usage** : <50MB pour 10k entrées
 - **Bundle Size** : <500KB (gzippé)
 
-## 🔒 Sécurité
+##  Sécurité
 
 ### Mesures de Sécurité
 - **Validation d'entrée** : Tous les fichiers sont validés
@@ -274,18 +274,18 @@ console.log(window.BoundouConfig);
 - **Conventions** : CamelCase pour JS, kebab-case pour CSS
 - **Documentation** : JSDoc pour les fonctions publiques
 
-## 📄 Licence
+##  Licence
 
 Ce projet est sous licence MIT. Voir `LICENSE` pour plus de détails.
 
-## 👥 Équipe
+##  Équipe
 
 - **Développement** : Équipe PROCASEF
 - **Design** : Interface utilisateur moderne
 - **Données** : Inventaires fonciers Boundou
 - **Support** : [GitHub Issues](https://github.com/CHAHBG/Portail-Boundou/issues)
 
-## 🔗 Liens Utiles
+##  Liens Utiles
 
 - **Documentation XLSX.js** : https://sheetjs.com/
 - **Leaflet.js** : https://leafletjs.com/

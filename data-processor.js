@@ -21,7 +21,7 @@ window.BoundouDataProcessor = (() => {
             
             for (const variant of superficieVariants) {
                 if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
-                    console.log(`✅ Found superficie variant "${variant}" with value:`, row[variant]);
+                    console.log(`[OK] Found superficie variant "${variant}" with value:`, row[variant]);
                     return row[variant];
                 }
             }
@@ -40,7 +40,7 @@ window.BoundouDataProcessor = (() => {
             
             for (const variant of numParcelVariants) {
                 if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
-                    console.log(`✅ Found num_parcel variant "${variant}" with value:`, row[variant]);
+                    console.log(`[OK] Found num_parcel variant "${variant}" with value:`, row[variant]);
                     return row[variant];
                 }
             }
@@ -57,8 +57,8 @@ window.BoundouDataProcessor = (() => {
 
     // Filter data based on entity type
     const filterByEntityType = (data, entityType) => {
-        console.log(`🔍 Filtering data for entity type: ${entityType}`);
-        console.log(`📊 Total rows in data: ${data.length}`);
+        console.log(`[DBG] Filtering data for entity type: ${entityType}`);
+        console.log(`[STAT] Total rows in data: ${data.length}`);
         
         let filtered = [];
         switch (entityType) {
@@ -88,10 +88,10 @@ window.BoundouDataProcessor = (() => {
                 filtered = [];
         }
         
-        console.log(`📋 Filtered results for ${entityType}: ${filtered.length} rows`);
+        console.log(`[LIST] Filtered results for ${entityType}: ${filtered.length} rows`);
         if (filtered.length > 0) {
-            console.log(`📝 First ${entityType} row sample:`, filtered[0]);
-            console.log(`📊 Sample ${entityType} superficie values:`, filtered.slice(0, 3).map(row => {
+            console.log(`[NOTE] First ${entityType} row sample:`, filtered[0]);
+            console.log(`[STAT] Sample ${entityType} superficie values:`, filtered.slice(0, 3).map(row => {
                 const keys = Object.keys(row);
                 const superficieKeys = keys.filter(k => k.toLowerCase().includes('superficie'));
                 console.log(`  Found superficie-related keys: ${superficieKeys.join(', ')}`);
@@ -170,7 +170,7 @@ window.BoundouDataProcessor = (() => {
                     }
 
                     if (entityType && entityFieldMappings[entityType]) {
-                        console.log(`🔧 Processing ${entityType} entity:`, {
+                        console.log(`[CFG] Processing ${entityType} entity:`, {
                             rowTypePers, 
                             rowTypePersM,
                             hasSuperficie: !!row['superficie'],
@@ -181,11 +181,11 @@ window.BoundouDataProcessor = (() => {
                         
                         // Special debugging for personne_morale
                         if (entityType === 'personne_morale') {
-                            console.log(`🏢 PERSONNE_MORALE DEBUG - All available fields:`, Object.keys(row));
+                            console.log(`[CORP] PERSONNE_MORALE DEBUG - All available fields:`, Object.keys(row));
                             const superficieVariants = Object.keys(row).filter(k => k.toLowerCase().includes('superficie'));
-                            console.log(`🏢 PERSONNE_MORALE - Superficie variants found:`, superficieVariants);
+                            console.log(`[CORP] PERSONNE_MORALE - Superficie variants found:`, superficieVariants);
                             superficieVariants.forEach(variant => {
-                                console.log(`🏢 PERSONNE_MORALE - ${variant} value:`, row[variant]);
+                                console.log(`[CORP] PERSONNE_MORALE - ${variant} value:`, row[variant]);
                             });
                         }
                         
@@ -195,7 +195,7 @@ window.BoundouDataProcessor = (() => {
                             if (field === 'superficie') {
                                 // Try case-insensitive lookup for superficie field
                                 const superficieValue = getValue(row, 'superficie');
-                                console.log(`📏 Processing ${entityType} superficie:`, superficieValue, 'from getValue lookup');
+                                console.log(`[RULER] Processing ${entityType} superficie:`, superficieValue, 'from getValue lookup');
                                 cleanedRow[field] = formatDecimalValue(superficieValue || '');
                             } else {
                                 cleanedRow[field] = BoundouUtils.sanitizeForExcel(row[field] || '');
@@ -218,7 +218,7 @@ window.BoundouDataProcessor = (() => {
             window.BoundouDashboard.originalIndividualData = BoundouUtils.deepClone(data);
 
             // DEBUG: Check what's actually stored for each entity type
-            console.log(`📊 STORED DATA SUMMARY:`);
+            console.log(`[STAT] STORED DATA SUMMARY:`);
             ['personne_physique', 'personne_morale', 'groupement'].forEach(entityType => {
                 const count = categorizedData[entityType].length;
                 console.log(`${entityType}: ${count} entities`);
@@ -347,13 +347,13 @@ window.BoundouDataProcessor = (() => {
             
             if (!isNaN(numericValue)) {
                 // Return the number with period as decimal separator
-                console.log(`🔢 Decimal formatting: "${value}" -> "${numericValue.toString()}"`);
+                console.log(`[NUM] Decimal formatting: "${value}" -> "${numericValue.toString()}"`);
                 return numericValue.toString();
             }
         }
         
         // If not a valid number pattern, return original cleaned value
-        console.log(`⚠️ Invalid decimal format: "${value}" -> "${stringValue}" (keeping original)`);
+        console.log(`[WARN] Invalid decimal format: "${value}" -> "${stringValue}" (keeping original)`);
         return stringValue;
     };
 
@@ -549,8 +549,8 @@ window.BoundouDataProcessor = (() => {
         // Debug logging for the specific parcel mentioned
         const numParcel2 = getValue('Num_parcel_2');
         if (numParcel2 === '0522010201096') {
-            console.log(`🔍 DEBUG - Parcel ${numParcel2}:`);
-            console.log(`📊 Total individuals found: ${individuals.length}`);
+            console.log(`[DBG] DEBUG - Parcel ${numParcel2}:`);
+            console.log(`[STAT] Total individuals found: ${individuals.length}`);
             individuals.forEach((ind, idx) => {
                 console.log(`  ${idx + 1}. ${ind.prenom} ${ind.nom} (${ind.numero_piece}) [${ind.source}]${ind.isMandataire ? ' **MANDATAIRE**' : ''}`);
             });
@@ -600,7 +600,7 @@ window.BoundouDataProcessor = (() => {
             'Residence': residences.join('\n'),
             'superficie': (() => {
                 const superficieValue = getValue('superficie');
-                console.log(`📏 Processing superficie for parcel:`, superficieValue);
+                console.log(`[RULER] Processing superficie for parcel:`, superficieValue);
                 return formatDecimalValue(superficieValue);
             })(),
             'Vocation_1': cleanValue(getValue('Vocation_1')),

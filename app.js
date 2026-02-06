@@ -301,7 +301,7 @@
                 const fallback = document.createElement('div');
                 fallback.className = 'sif-fallback suivi-fallback';
                 fallback.style.display = 'flex';
-                fallback.innerHTML = `<span style="font-size:2rem;margin-bottom:0.5rem">🔗</span>
+                fallback.innerHTML = `<span style="font-size:2rem;margin-bottom:0.5rem"><i class="bi bi-link-45deg"></i></span>
                     <h3>Ce site bloque l'intégration</h3>
                     <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.88rem">Le serveur bloque l'affichage en iframe (politique CSP)</p>
                     <a href="${url}" target="_blank" class="btn btn-primary btn-lg">Ouvrir Suivi Opération ↗</a>`;
@@ -368,7 +368,7 @@
         _toast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
             if (!container) return;
-            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            const icons = { success: '<i class="bi bi-check-circle-fill"></i>', error: '<i class="bi bi-x-circle-fill"></i>', warning: '<i class="bi bi-exclamation-triangle-fill"></i>', info: '<i class="bi bi-info-circle-fill"></i>' };
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>
@@ -446,9 +446,9 @@
                 this._populateCommuneFilter(data);
                 this._buildLegend(data);
 
-                console.log('✅ GeoJSON loaded:', data.features.length, 'features');
+                console.log('[OK] GeoJSON loaded:', data.features.length, 'features');
             } catch (e) {
-                console.warn('⚠️ GeoJSON load failed:', e);
+                console.warn('[WARN] GeoJSON load failed:', e);
             }
         },
 
@@ -457,10 +457,10 @@
                 const resp = await fetch('data/parcelles.json');
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 AppState.parcelsData = await resp.json();
-                console.log('✅ Parcelles loaded:', AppState.parcelsData.length);
+                console.log('[OK] Parcelles loaded:', AppState.parcelsData.length);
                 this._populateUsageFilter();
             } catch (e) {
-                console.warn('⚠️ Parcelles load failed:', e);
+                console.warn('[WARN] Parcelles load failed:', e);
             }
         },
 
@@ -484,7 +484,7 @@
                 o.textContent = u.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
                 sel.appendChild(o);
             });
-            console.log('✅ Usage filter populated:', sorted.length, 'types');
+            console.log('[OK] Usage filter populated:', sorted.length, 'types');
         },
 
         _populateCommuneFilter(geojson) {
@@ -986,7 +986,7 @@
                     }
                 }
                 const validateEl = document.getElementById(`file-validation-${type}`);
-                if (validateEl) { validateEl.textContent = '✅ Fichier chargé avec succès'; validateEl.className = 'validation-msg success'; }
+                if (validateEl) { validateEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> Fichier charg\u00e9 avec succ\u00e8s'; validateEl.className = 'validation-msg success'; }
 
                 // Enable next button
                 this._refreshWizardButtons(type);
@@ -994,7 +994,7 @@
             } catch (err) {
                 console.error('File processing error:', err);
                 const validateEl = document.getElementById(`file-validation-${type}`);
-                if (validateEl) { validateEl.textContent = `❌ Erreur: ${err.message}`; validateEl.className = 'validation-msg error'; }
+                if (validateEl) { validateEl.innerHTML = `<i class="bi bi-x-circle-fill"></i> Erreur: ${err.message}`; validateEl.className = 'validation-msg error'; }
             }
         },
 
@@ -1115,12 +1115,12 @@
                         }
 
                         if (fill) fill.style.width = '100%';
-                        if (label) label.textContent = '✅ Terminé !';
+                        if (label) label.textContent = 'Terminé !';
                         UI._toast('Liste individuelle générée !', 'success');
                     } catch (err) {
                         console.error(err);
                         UI._toast('Erreur lors de la génération', 'error');
-                        if (label) label.textContent = '❌ Erreur';
+                        if (label) label.textContent = 'Erreur';
                     }
                     setTimeout(() => { genInd.disabled = false; }, 2000);
                 });
@@ -1143,12 +1143,12 @@
                         }
 
                         if (fill) fill.style.width = '100%';
-                        if (label) label.textContent = '✅ Terminé !';
+                        if (label) label.textContent = 'Terminé !';
                         UI._toast('Liste collective générée !', 'success');
                     } catch (err) {
                         console.error(err);
                         UI._toast('Erreur lors de la génération', 'error');
-                        if (label) label.textContent = '❌ Erreur';
+                        if (label) label.textContent = 'Erreur';
                     }
                     setTimeout(() => { genCol.disabled = false; }, 2000);
                 });
@@ -1181,7 +1181,7 @@
        BOOTSTRAP — Wire everything when DOM is ready
        ================================================================ */
     function boot() {
-        console.log('🚀 PROCASEF Boundou v2 — Starting...');
+        console.log('[START] PROCASEF Boundou v2 -- Starting...');
 
         // Theme
         UI.initTheme();
@@ -1241,7 +1241,7 @@
         // Fallback: hide skeleton after 4s regardless
         setTimeout(() => UI.hideSkeleton(), 4000);
 
-        console.log('✅ Boot sequence complete');
+        console.log('[OK] Boot sequence complete');
     }
 
     // Start

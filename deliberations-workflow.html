@@ -7,12 +7,12 @@
         <div class="workflow-container">
             <!-- Step 1: File Upload -->
             <div class="workflow-step active" id="step1">
-                <h3>📂 Étape 1: Sélectionner le fichier Excel</h3>
+                <h3><i class="bi bi-folder2-open"></i> Étape 1: Sélectionner le fichier Excel</h3>
                 <div class="upload-section" id="uploadSectionIndividual">
                     <input type="file" id="individual-file" class="file-input" accept=".xlsx,.xls"
                         style="display: none;">
                     <button class="btn btn--primary" onclick="document.getElementById('individual-file').click()">
-                        📂 Choisir un fichier
+                        <i class="bi bi-folder2-open"></i> Choisir un fichier
                     </button>
                     <p id="fileNameIndividual" style="margin-top: 0.5rem; color: var(--color-text-muted);"></p>
                 </div>
@@ -20,13 +20,13 @@
 
             <!-- Step 2: Configuration Options -->
             <div id="step2" class="workflow-step" style="display:none;">
-                <h3>⚙️ Étape 2: Configuration</h3>
+                <h3><i class="bi bi-gear-fill"></i> Étape 2: Configuration</h3>
                 <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez le type de liste à générer
                 </p>
 
                 <div class="options-quick-config">
                     <div class="quick-option-card" data-config="basic" data-type="individual">
-                        <span class="card-icon">📋</span>
+                        <span class="card-icon"><i class="bi bi-list-check"></i></span>
                         <h4>Basique</h4>
                         <p>3 feuilles standard</p>
                         <div class="card-features">
@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="quick-option-card" data-config="habitat-agricole" data-type="individual">
-                        <span class="card-icon">🏘️</span>
+                        <span class="card-icon"><i class="bi bi-houses"></i></span>
                         <h4>Habitat & Agricole</h4>
                         <p>Séparation par usage</p>
                         <div class="card-features">
@@ -48,7 +48,7 @@
                     </div>
 
                     <div class="quick-option-card" data-config="mandataire" data-type="individual">
-                        <span class="card-icon">👥</span>
+                        <span class="card-icon"><i class="bi bi-people-fill"></i></span>
                         <h4>Mandataire</h4>
                         <p>Séparation mandataires</p>
                         <div class="card-features">
@@ -59,7 +59,7 @@
                     </div>
 
                     <div class="quick-option-card" data-config="complete" data-type="individual">
-                        <span class="card-icon">🎯</span>
+                        <span class="card-icon"><i class="bi bi-bullseye"></i></span>
                         <h4>Complet</h4>
                         <p>Toutes les options</p>
                         <div class="card-features">
@@ -75,7 +75,7 @@
 
             <!-- Step 3: Column Selection -->
             <div id="step3" class="workflow-step" style="display:none;">
-                <h3>📊 Étape 3: Sélection des colonnes</h3>
+                <h3><i class="bi bi-bar-chart-fill"></i> Étape 3: Sélection des colonnes</h3>
                 <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez les colonnes à inclure dans
                     la liste</p>
                 <div id="columnSelectionIndividual"></div>
@@ -84,15 +84,15 @@
 
             <!-- Step 4: Generation -->
             <div id="step4" class="workflow-step" style="display:none;">
-                <h3>✨ Étape 4: Génération</h3>
+                <h3><i class="bi bi-stars"></i> Étape 4: Génération</h3>
                 <div class="generation-section">
                     <div class="generation-actions">
-                        <button id="generate-individual" class="btn btn--primary btn-large">📥 Générer la liste</button>
-                        <button id="generateStats" class="btn btn--secondary btn-large">📊 Générer statistiques</button>
+                        <button id="generate-individual" class="btn btn--primary btn-large"><i class="bi bi-download"></i> Générer la liste</button>
+                        <button id="generateStats" class="btn btn--secondary btn-large"><i class="bi bi-bar-chart-fill"></i> Générer statistiques</button>
                     </div>
                     <div id="statisticsSection" class="statistics-section" style="display: none;">
                         <div class="statistics-header">
-                            <h4>📊 Statistiques</h4>
+                            <h4><i class="bi bi-bar-chart-fill"></i> Statistiques</h4>
                             <p>Aperçu des données traitées</p>
                         </div>
                         <div id="statisticsContent"></div>
@@ -103,7 +103,7 @@
             <div class="workflow-navigation">
                 <button id="prevStep" class="btn btn--secondary" style="display: none;">← Précédent</button>
                 <button id="nextStep" class="btn btn--primary" style="display: none;">Suivant →</button>
-                <button id="reset-deliberation" class="btn btn--secondary">🔄 Réinitialiser</button>
+                <button id="reset-deliberation" class="btn btn--secondary"><i class="bi bi-arrow-counterclockwise"></i> Réinitialiser</button>
             </div>
         </div>
     </div>
@@ -116,12 +116,12 @@
         <div class="workflow-container">
             <!-- Collective Step 1: File Upload -->
             <div class="workflow-step active" id="collective-step1">
-                <h3>📂 Étape 1: Sélectionner le fichier Excel</h3>
+                <h3><i class="bi bi-folder2-open"></i> Étape 1: Sélectionner le fichier Excel</h3>
                 <div class="upload-section" id="uploadSectionCollective">
                     <input type="file" id="collective-file" class="file-input" accept=".xlsx,.xls"
                         style="display: none;">
                     <button class="btn btn--primary" onclick="document.getElementById('collective-file').click()">
-                        📂 Choisir fichier collectif
+                        <i class="bi bi-folder2-open"></i> Choisir fichier collectif
                     </button>
                     <p id="fileNameCollective" style="margin-top: 0.5rem; color: var(--color-text-muted);"></p>
                 </div>
@@ -129,13 +129,13 @@
 
             <!-- Collective Step 2: Configuration -->
             <div id="collective-step2" class="workflow-step" style="display:none;">
-                <h3>⚙️ Étape 2: Configuration</h3>
+                <h3><i class="bi bi-gear-fill"></i> Étape 2: Configuration</h3>
                 <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Choisissez le type de liste collective
                     à générer</p>
 
                 <div class="options-quick-config">
                     <div class="quick-option-card" data-config="basic" data-type="collective">
-                        <span class="card-icon">📋</span>
+                        <span class="card-icon"><i class="bi bi-list-check"></i></span>
                         <h4>Basique</h4>
                         <p>Liste collective standard</p>
                         <div class="card-features">
@@ -145,7 +145,7 @@
                     </div>
 
                     <div class="quick-option-card" data-config="habitat-agricole" data-type="collective">
-                        <span class="card-icon">🏘️</span>
+                        <span class="card-icon"><i class="bi bi-houses"></i></span>
                         <h4>Habitat & Agricole</h4>
                         <p>Séparation par usage</p>
                         <div class="card-features">
@@ -155,7 +155,7 @@
                     </div>
 
                     <div class="quick-option-card" data-config="complete" data-type="collective">
-                        <span class="card-icon">🎯</span>
+                        <span class="card-icon"><i class="bi bi-bullseye"></i></span>
                         <h4>Complet</h4>
                         <p>Toutes les options</p>
                         <div class="card-features">
@@ -171,17 +171,17 @@
 
             <!-- Collective Step 3: Generation -->
             <div id="collective-step3" class="workflow-step" style="display:none;">
-                <h3>✨ Étape 3: Génération</h3>
+                <h3><i class="bi bi-stars"></i> Étape 3: Génération</h3>
                 <div class="generation-section">
                     <div class="generation-actions">
-                        <button id="generate-collective" class="btn btn--primary btn-large">📥 Générer la liste
+                        <button id="generate-collective" class="btn btn--primary btn-large"><i class="bi bi-download"></i> Générer la liste
                             collective</button>
-                        <button id="generateCollectiveStats" class="btn btn--secondary btn-large">📊 Générer
+                        <button id="generateCollectiveStats" class="btn btn--secondary btn-large"><i class="bi bi-bar-chart-fill"></i> Générer
                             statistiques</button>
                     </div>
                     <div id="statisticsCollectiveSection" class="statistics-section" style="display: none;">
                         <div class="statistics-header">
-                            <h4>📊 Statistiques Collectives</h4>
+                            <h4><i class="bi bi-bar-chart-fill"></i> Statistiques Collectives</h4>
                             <p>Aperçu des parcelles collectives</p>
                         </div>
                         <div id="statisticsCollectiveContent"></div>
@@ -192,7 +192,7 @@
             <div class="workflow-navigation">
                 <button id="prevStepCollective" class="btn btn--secondary" style="display: none;">← Précédent</button>
                 <button id="nextStepCollective" class="btn btn--primary" style="display: none;">Suivant →</button>
-                <button id="reset-collective" class="btn btn--secondary">🔄 Réinitialiser</button>
+                <button id="reset-collective" class="btn btn--secondary"><i class="bi bi-arrow-counterclockwise"></i> Réinitialiser</button>
             </div>
         </div>
     </div>

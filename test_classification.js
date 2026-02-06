@@ -49,12 +49,12 @@ const getCollectiveRecordCategory = (record, ageThreshold) => {
     // Check document type (for collective data, use Type_piec field)
     const docField = record.Type_piec;
     if (!docField) {
-        console.log(`⚠️ No Type_piec field found, classifying as standard`);
+        console.log(`[WARN] No Type_piec field found, classifying as standard`);
         return 'standard';
     }
     
     const docType = String(docField).toLowerCase().trim();
-    console.log(`🔍 Checking document type: "${docType}" for mandataire with Date_nai: ${record.Date_nai}`);
+    console.log(`[DBG] Checking document type: "${docType}" for mandataire with Date_nai: ${record.Date_nai}`);
     
     // Check if it's an extrait de naissance document
     const isExtrait = docType === 'extrait_de_naissance' || 
@@ -66,16 +66,16 @@ const getCollectiveRecordCategory = (record, ageThreshold) => {
         const age = calculateAge(record.Date_nai);
         
         if (age === null) {
-            console.log(`⚠️ Could not calculate age for extrait document, defaulting to standard`);
+            console.log(`[WARN] Could not calculate age for extrait document, defaulting to standard`);
             return 'standard';
         }
         
         const category = age <= ageThreshold ? 'extrait_minor' : 'extrait_major';
-        console.log(`📋 Extrait document with age ${age} (threshold: ${ageThreshold}) → ${category}`);
+        console.log(`[LIST] Extrait document with age ${age} (threshold: ${ageThreshold}) → ${category}`);
         return category;
     } else {
         // For standard documents (CNI, passport, etc.), no age separation
-        console.log(`📋 Standard document (${docType}) → standard (no age separation)`);
+        console.log(`[LIST] Standard document (${docType}) → standard (no age separation)`);
         return 'standard';
     }
 };
@@ -109,7 +109,7 @@ const testRecords = [
     }
 ];
 
-console.log('🧪 Testing simplified classification system...\n');
+console.log('[TEST] Testing simplified classification system...\n');
 
 const ageThreshold = 15;
 testRecords.forEach((record, index) => {

@@ -1,6 +1,6 @@
 // Test the enhanced statistics system
 
-console.log('🧪 Testing Enhanced Statistics System...\n');
+console.log('[TEST] Testing Enhanced Statistics System...\n');
 
 // Test individual statistics calculation
 const testIndividualData = {
@@ -51,31 +51,31 @@ const testCollectiveData = [
     }
 ];
 
-console.log('📊 Test data prepared:');
+console.log('[STAT] Test data prepared:');
 console.log('  - Individual records:', 
     testIndividualData.personne_physique.length + 
     testIndividualData.personne_morale.length + 
     testIndividualData.groupement.length);
 console.log('  - Collective records:', testCollectiveData.length);
 
-console.log('\n✅ Expected Statistics Features:');
-console.log('📈 INDIVIDUAL STATISTICS:');
-console.log('  ✓ Number of parcels by entity type (Typ_pers)');
-console.log('  ✓ Number of personne_physique, personne_morale, groupement');
-console.log('  ✓ Number of major and minor (by age)');
-console.log('  ✓ Number by usage type (type_usag)');
-console.log('  ✓ Number by morale person type (Typ_pers_m)');
-console.log('  ✓ Number by document type (Type_piece)');
+console.log('\n<i class="bi bi-check-circle-fill"></i> Expected Statistics Features:');
+console.log('[GRAPH] INDIVIDUAL STATISTICS:');
+console.log('  [v] Number of parcels by entity type (Typ_pers)');
+console.log('  [v] Number of personne_physique, personne_morale, groupement');
+console.log('  [v] Number of major and minor (by age)');
+console.log('  [v] Number by usage type (type_usag)');
+console.log('  [v] Number by morale person type (Typ_pers_m)');
+console.log('  [v] Number by document type (Type_piece)');
 
-console.log('\n📈 COLLECTIVE STATISTICS:');
-console.log('  ✓ Number of collective parcels');
-console.log('  ✓ Number by usage type (type_usa/type_usag)');
-console.log('  ✓ Number by document type (Type_piec)');
-console.log('  ✓ Number of major and minor mandataires');
-console.log('  ✓ Total affectataires count');
+console.log('\n<i class="bi bi-graph-up-arrow"></i> COLLECTIVE STATISTICS:');
+console.log('  [v] Number of collective parcels');
+console.log('  [v] Number by usage type (type_usa/type_usag)');
+console.log('  [v] Number by document type (Type_piec)');
+console.log('  [v] Number of major and minor mandataires');
+console.log('  [v] Total affectataires count');
 
-console.log('\n🎯 EXPECTED OUTPUTS:');
-console.log('  ✓ Individual stats: 4 total parcels');
+console.log('\n<i class="bi bi-bullseye"></i> EXPECTED OUTPUTS:');
+console.log('  [v] Individual stats: 4 total parcels');
 console.log('    - personne_physique: 2');
 console.log('    - personne_morale: 1');
 console.log('    - groupement: 1');
@@ -87,7 +87,7 @@ console.log('    - CNI documents: 1');
 console.log('    - Extrait documents: 1');
 console.log('    - Association type: 1');
 
-console.log('\n  ✓ Collective stats: 2 total parcels');
+console.log('\n  [v] Collective stats: 2 total parcels');
 console.log('    - Habitat usage: 1');
 console.log('    - Agricole usage: 1');
 console.log('    - CNI documents: 1');
@@ -96,14 +96,14 @@ console.log('    - Major mandataires: 1 (born 1990)');
 console.log('    - Minor mandataires: 1 (born 2015)');
 console.log('    - Total affectataires: 5 (2+3)');
 
-console.log('\n🔧 IMPLEMENTATION STATUS:');
-console.log('  ✅ Enhanced calculateIndividualStats function');
-console.log('  ✅ Enhanced calculateCollectiveStats function');
-console.log('  ✅ Updated generateStatisticsExcel function');
-console.log('  ✅ Added collective statistics section to HTML');
-console.log('  ✅ Added collective statistics button');
-console.log('  ✅ Added generateCollectiveStatisticsReport function');
-console.log('  ✅ Added event listeners for both buttons');
-console.log('  ✅ Auto-enable stats buttons after data processing');
+console.log('\n<i class="bi bi-wrench"></i> IMPLEMENTATION STATUS:');
+console.log('  <i class="bi bi-check-circle-fill"></i> Enhanced calculateIndividualStats function');
+console.log('  <i class="bi bi-check-circle-fill"></i> Enhanced calculateCollectiveStats function');
+console.log('  <i class="bi bi-check-circle-fill"></i> Updated generateStatisticsExcel function');
+console.log('  <i class="bi bi-check-circle-fill"></i> Added collective statistics section to HTML');
+console.log('  <i class="bi bi-check-circle-fill"></i> Added collective statistics button');
+console.log('  <i class="bi bi-check-circle-fill"></i> Added generateCollectiveStatisticsReport function');
+console.log('  <i class="bi bi-check-circle-fill"></i> Added event listeners for both buttons');
+console.log('  <i class="bi bi-check-circle-fill"></i> Auto-enable stats buttons after data processing');
 
-console.log('\n🚀 Ready for testing in the browser!');
+console.log('\n<i class="bi bi-rocket-takeoff"></i> Ready for testing in the browser!');

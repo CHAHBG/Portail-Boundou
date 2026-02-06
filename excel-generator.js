@@ -1,4 +1,4 @@
-﻿window.BoundouExcelGenerator = (() => {
+window.BoundouExcelGenerator = (() => {
     'use strict';
 
     // Helper function to format dates to DD/MM/YYYY format
@@ -198,12 +198,12 @@
             
             // Check if data is a Promise (async operation still pending)
             if (data && typeof data.then === 'function') {
-                throw new Error('Les donnÃ©es sont encore en cours de traitement. Veuillez rÃ©essayer dans quelques instants.');
+                throw new Error('Les données sont encore en cours de traitement. Veuillez réessayer dans quelques instants.');
             }
             
             // Validate categorized data structure
             if (!data || typeof data !== 'object' || (!data.personne_physique && !data.personne_morale && !data.groupement)) {
-                throw new Error('Aucune donnÃ©e catÃ©gorisÃ©e Ã  exporter');
+                throw new Error('Aucune donnée catégorisée à exporter');
             }
 
             BoundouUtils.showLoading('loadingIndicator', BoundouConfig.MESSAGES.INFO.GENERATING);
@@ -226,7 +226,7 @@
                             const rawValue = getValue(row, col) || '';
                             // Since formatDecimalValue is not available here, use direct value but with debugging
                             orderedRow[col] = rawValue;
-                            console.log(`📏 Excel generation - personne_physique superficie:`, rawValue, 'from row:', row.superficie);
+                            console.log(`[RULER] Excel generation - personne_physique superficie:`, rawValue, 'from row:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -262,7 +262,7 @@
 
             // Sheet 2: Personnes morales (excluding groupements)
             if (data.personne_morale && data.personne_morale.length > 0) {
-                console.log(`🏢 EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
+                console.log(`[CORP] EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
                 
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
                 const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Typ_pers_m', 'Num_parcel'];
@@ -270,10 +270,10 @@
                 // Debug first personne_morale entity
                 if (data.personne_morale.length > 0) {
                     const firstEntity = data.personne_morale[0];
-                    console.log(`🏢 EXCEL GEN - First personne_morale entity keys:`, Object.keys(firstEntity));
-                    console.log(`🏢 EXCEL GEN - First personne_morale superficie field variants:`, 
+                    console.log(`[CORP] EXCEL GEN - First personne_morale entity keys:`, Object.keys(firstEntity));
+                    console.log(`[CORP] EXCEL GEN - First personne_morale superficie field variants:`, 
                         Object.keys(firstEntity).filter(k => k.toLowerCase().includes('superficie')));
-                    console.log(`🏢 EXCEL GEN - First personne_morale superficie values:`, {
+                    console.log(`[CORP] EXCEL GEN - First personne_morale superficie values:`, {
                         direct: firstEntity.superficie,
                         getValue: getValue(firstEntity, 'superficie')
                     });
@@ -289,7 +289,7 @@
                             // Apply decimal formatting to superficie field
                             const rawValue = getValue(row, col) || '';
                             orderedRow[col] = rawValue;
-                            console.log(`📏 Excel generation - personne_morale ${index + 1} superficie:`, rawValue, 'from row.superficie:', row.superficie);
+                            console.log(`[RULER] Excel generation - personne_morale ${index + 1} superficie:`, rawValue, 'from row.superficie:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -341,7 +341,7 @@
                             // Apply decimal formatting to superficie field
                             const rawValue = getValue(row, col) || '';
                             orderedRow[col] = rawValue;
-                            console.log(`📏 Excel generation - groupement superficie:`, rawValue, 'from row:', row.superficie);
+                            console.log(`[RULER] Excel generation - groupement superficie:`, rawValue, 'from row:', row.superficie);
                         } else {
                             orderedRow[col] = row[col] || '';
                         }
@@ -379,7 +379,7 @@
             }
 
             if (totalExported === 0) {
-                throw new Error('Aucune donnÃ©e Ã  exporter dans les catÃ©gories supportÃ©es');
+                throw new Error('Aucune donnée à exporter dans les catégories supportées');
             }
 
             // Generate filename with timestamp
@@ -398,7 +398,7 @@
             if (data.groupement?.length > 0) sheetsInfo.push(`${data.groupement.length} Groupements`);
             
             BoundouUtils.showSuccess(
-                `Fichier Excel gÃ©nÃ©rÃ© avec succÃ¨s: ${filename}\n${sheetsInfo.join(', ')}`
+                `Fichier Excel généré avec succès: ${filename}\n${sheetsInfo.join(', ')}`
             );
 
             // Enable statistics generation
@@ -414,7 +414,7 @@
 
         } catch (error) {
             BoundouUtils.hideLoading('loadingIndicator');
-            BoundouUtils.showError(`Erreur de gÃ©nÃ©ration Excel: ${error.message}`);
+            BoundouUtils.showError(`Erreur de génération Excel: ${error.message}`);
             throw error;
         }
     };
@@ -427,14 +427,14 @@
             const advancedOptions = window.BoundouDashboard.advancedOptionsCollective || {};
             
             if (!data || data.length === 0) {
-                throw new Error('Aucune donnÃ©e collective Ã  traiter');
+                throw new Error('Aucune donnée collective à traiter');
             }
 
-            BoundouUtils.showLoading('loadingIndicator', 'GÃ©nÃ©ration de la liste collective...');
+            BoundouUtils.showLoading('loadingIndicator', 'Génération de la liste collective...');
 
-            console.log('ðŸ” Collective advanced options:', advancedOptions);
-            console.log('ðŸ” Mandataire separation enabled:', advancedOptions.enableMandataireSeparation);
-            console.log('ðŸ” Dual lists enabled:', advancedOptions.enableDualLists);
+            console.log('[DBG] Collective advanced options:', advancedOptions);
+            console.log('[DBG] Mandataire separation enabled:', advancedOptions.enableMandataireSeparation);
+            console.log('[DBG] Dual lists enabled:', advancedOptions.enableDualLists);
 
             const wb = XLSX.utils.book_new();
             let totalExported = 0;
@@ -442,7 +442,7 @@
 
             // Check if advanced options are enabled for collective data
             if (advancedOptions.enableMandataireSeparation || advancedOptions.enableDualLists) {
-                console.log('ðŸŽ¯ Enhanced collective generation with advanced options');
+                console.log('[TGT] Enhanced collective generation with advanced options');
                 
                 // For collective data, we process all as physical persons since
                 // collective data contains only multiple physical persons (no entity types)
@@ -465,11 +465,11 @@
                 
                 BoundouUtils.hideLoading('loadingIndicator');
                 BoundouUtils.showSuccess(
-                    `Liste collective avec sÃ©paration gÃ©nÃ©rÃ©e: ${filename}\n${totalExported} entrÃ©es exportÃ©es`
+                    `Liste collective avec séparation générée: ${filename}\n${totalExported} entrées exportées`
                 );
                 
             } else {
-                console.log('ðŸ“‹ Standard collective generation');
+                console.log('[LIST] Standard collective generation');
                 
                 // Standard collective generation
                 const orderedColumns = BoundouDataProcessor.getCollectiveOrderedColumns();
@@ -518,7 +518,7 @@
                 
                 BoundouUtils.hideLoading('loadingIndicator');
                 BoundouUtils.showSuccess(
-                    `Fichier Excel gÃ©nÃ©rÃ© avec succÃ¨s: ${filename}\n${data.length} parcelles exportÃ©es`
+                    `Fichier Excel généré avec succès: ${filename}\n${data.length} parcelles exportées`
                 );
             }
 
@@ -535,7 +535,7 @@
 
         } catch (error) {
             BoundouUtils.hideLoading('loadingIndicator');
-            BoundouUtils.showError(`Erreur lors de la gÃ©nÃ©ration collective: ${error.message}`);
+            BoundouUtils.showError(`Erreur lors de la génération collective: ${error.message}`);
             throw error;
         }
     };
@@ -544,7 +544,7 @@
     const exportPreviewData = (entityType, data) => {
         try {
             if (!data || data.length === 0) {
-                throw new Error('Aucune donnÃ©e de prÃ©visualisation');
+                throw new Error('Aucune donnée de prévisualisation');
             }
 
             const wb = XLSX.utils.book_new();
@@ -559,7 +559,7 @@
             const filename = `preview_${entityType}_${Date.now()}.xlsx`;
             XLSX.writeFile(wb, filename);
             
-            BoundouUtils.showSuccess(`PrÃ©visualisation exportÃ©e: ${filename}`);
+            BoundouUtils.showSuccess(`Prévisualisation exportée: ${filename}`);
             
         } catch (error) {
             BoundouUtils.showError(`Erreur d'export: ${error.message}`);
@@ -572,12 +572,12 @@
             const data = window.BoundouDashboard.processedIndividualData;
             const advancedOptions = window.BoundouDashboard.advancedOptions || {};
             
-            console.log('ðŸ” Enhanced generation called with data:', data);
-            console.log('ðŸ”§ Advanced options:', advancedOptions);
+            console.log('[DBG] Enhanced generation called with data:', data);
+            console.log('[CFG] Advanced options:', advancedOptions);
             
             // Diagnostic: Show all document types in the data
             if (data && typeof data === 'object') {
-                console.log('ðŸ” DIAGNOSTIC: Document types in your data:');
+                console.log('[DBG] DIAGNOSTIC: Document types in your data:');
                 Object.keys(data).forEach(entityType => {
                     const entityData = data[entityType] || [];
                     if (entityData.length > 0) {
@@ -589,15 +589,15 @@
             }
             
             if (!data || typeof data !== 'object') {
-                throw new Error('Aucune donnÃ©e catÃ©gorisÃ©e Ã  exporter');
+                throw new Error('Aucune donnée catégorisée à exporter');
             }
 
-            BoundouUtils.showLoading('loadingIndicator', 'GÃ©nÃ©ration de liste avec options avancÃ©es...');
+            BoundouUtils.showLoading('loadingIndicator', 'Génération de liste avec options avancées...');
 
             // Debug: Show which options are enabled
-            console.log('ðŸ“‹ Options status:');
-            console.log(`   - Dual Lists: ${advancedOptions.enableDualLists ? 'âœ…' : 'âŒ'}`);
-            console.log(`   - Mandataire Separation: ${advancedOptions.enableMandataireSeparation ? 'âœ…' : 'âŒ'}`);
+            console.log('[LIST] Options status:');
+            console.log(`   - Dual Lists: ${advancedOptions.enableDualLists ? '[OK]' : '[ERR]'}`);
+            console.log(`   - Mandataire Separation: ${advancedOptions.enableMandataireSeparation ? '[OK]' : '[ERR]'}`);
             console.log(`   - Age Threshold: ${advancedOptions.ageThreshold || 15}`);
 
             // Check if dual lists (Habitat/Agricole) are enabled
@@ -605,7 +605,7 @@
                 return await generateDualLists(data, advancedOptions);
             } else if (advancedOptions.enableMandataireSeparation) {
                 // Even without dual lists, we can still do mandataire separation
-                console.log('ðŸŽ¯ Mandataire separation without dual lists');
+                console.log('[TGT] Mandataire separation without dual lists');
                 return await generateMandataireSeparatedLists(data, advancedOptions);
             } else {
                 // Use standard generation
@@ -614,7 +614,7 @@
 
         } catch (error) {
             BoundouUtils.hideLoading('loadingIndicator');
-            BoundouUtils.showError(`Erreur gÃ©nÃ©ration avancÃ©e: ${error.message}`);
+            BoundouUtils.showError(`Erreur génération avancée: ${error.message}`);
             throw error;
         }
     };
@@ -780,7 +780,7 @@
         
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showSuccess(
-            `Listes Habitat/Agricole gÃ©nÃ©rÃ©es: ${filename}\n${totalExported} entrÃ©es exportÃ©es`
+            `Listes Habitat/Agricole générées: ${filename}\n${totalExported} entrées exportées`
         );
 
         // Enable statistics generation
@@ -796,7 +796,7 @@
         const wb = XLSX.utils.book_new();
         let totalExported = 0;
 
-        console.log('ðŸ“‹ Generating mandataire-separated lists without dual categories');
+        console.log('[LIST] Generating mandataire-separated lists without dual categories');
 
         // Process each entity type
         const entityTypes = ['personne_physique', 'personne_morale', 'groupement'];
@@ -861,9 +861,9 @@
                 );
             } else {
                 // Use collective processing for collective data (personne_morale, groupement)
-                console.log(`🏗️ Using collective processing for ${entityType}`);
-                console.log(`🏗️ Data sample for ${entityType}:`, entityData.slice(0, 2));
-                console.log(`🏗️ Columns for ${entityType}:`, columns);
+                console.log(`[BUILD] Using collective processing for ${entityType}`);
+                console.log(`[BUILD] Data sample for ${entityType}:`, entityData.slice(0, 2));
+                console.log(`[BUILD] Columns for ${entityType}:`, columns);
                 
                 // Debug superficie specifically
                 if (entityData.length > 0) {
@@ -872,7 +872,7 @@
                         getValue: getValue(row, 'superficie'),
                         allKeys: Object.keys(row).filter(k => k.toLowerCase().includes('superficie'))
                     }));
-                    console.log(`🏗️ ${entityType} superficie debug before collective processing:`, superficieValues);
+                    console.log(`[BUILD] ${entityType} superficie debug before collective processing:`, superficieValues);
                 }
                 
                 entitySheets = await generateEntitySheets(
@@ -898,7 +898,7 @@
         
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showSuccess(
-            `Listes avec sÃ©paration mandataire gÃ©nÃ©rÃ©es: ${filename}\n${totalExported} entrÃ©es exportÃ©es`
+            `Listes avec séparation mandataire générées: ${filename}\n${totalExported} entrées exportées`
         );
 
         // Enable statistics generation
@@ -913,31 +913,31 @@
     const generateCollectivePhysicalPersonSheets = async (data, usageType, columns, options) => {
         const sheets = [];
         
-        console.log(`ðŸŽ¯ Generating collective physical person sheets for ${data.length} records`);
-        console.log(`ðŸ”§ Options:`, options);
+        console.log(`[TGT] Generating collective physical person sheets for ${data.length} records`);
+        console.log(`[CFG] Options:`, options);
         
         // Debug: Show sample data fields to verify field names
         if (data.length > 0) {
             const sampleRecord = data[0];
-            console.log(`ðŸ“ Sample collective record fields:`, Object.keys(sampleRecord));
-            console.log(`ðŸ“ Sample type_usa:`, sampleRecord.type_usa);
-            console.log(`ðŸ“ Sample Type_piec:`, sampleRecord.Type_piec);
-            console.log(`ðŸ“ Sample Date_nai:`, sampleRecord.Date_nai);
+            console.log(`[NOTE] Sample collective record fields:`, Object.keys(sampleRecord));
+            console.log(`[NOTE] Sample type_usa:`, sampleRecord.type_usa);
+            console.log(`[NOTE] Sample Type_piec:`, sampleRecord.Type_piec);
+            console.log(`[NOTE] Sample Date_nai:`, sampleRecord.Date_nai);
             
             // Show all unique usage types in the data (case-insensitive)
             const allUsageTypes = data.map(row => getValue(row, 'type_usa')).filter(Boolean);
             const uniqueUsageTypes = [...new Set(allUsageTypes)];
-            console.log(`ðŸ“ All unique usage types found:`, uniqueUsageTypes);
+            console.log(`[NOTE] All unique usage types found:`, uniqueUsageTypes);
             
             // Show all unique document types in the data (case-insensitive)
             const allDocTypes = data.map(row => getValue(row, 'Type_piec')).filter(Boolean);
             const uniqueDocTypes = [...new Set(allDocTypes)];
-            console.log(`ðŸ“ All unique document types found:`, uniqueDocTypes);
+            console.log(`[NOTE] All unique document types found:`, uniqueDocTypes);
         }
         
         // Check if dual lists (Habitat/Agricole) separation is enabled
         if (options.enableDualLists) {
-            console.log('ðŸ ðŸŒ¾ Dual lists separation enabled for collective data');
+            console.log('[HOME][FIELD] Dual lists separation enabled for collective data');
             
             // Separate records by usage type using type_usa field
             const habitatRecords = data.filter(record => {
@@ -950,8 +950,8 @@
                 return usage === 'agriculture_pluviale' || usage === 'agriculture_traditionnelle';
             });
             
-            console.log(`ðŸ  Habitat records: ${habitatRecords.length}`);
-            console.log(`ðŸŒ¾ Agricole records: ${agricoleRecords.length}`);
+            console.log(`[HOME] Habitat records: ${habitatRecords.length}`);
+            console.log(`[FIELD] Agricole records: ${agricoleRecords.length}`);
             
             // Process Habitat records
             if (habitatRecords.length > 0) {
@@ -997,7 +997,7 @@
         if (options.enableMandataireSeparation) {
             const ageThreshold = options.ageThreshold || 15;
             
-            console.log(`ðŸŽ¯ Collective mandataire separation enabled for ${usageType} with age threshold: ${ageThreshold}`);
+            console.log(`[TGT] Collective mandataire separation enabled for ${usageType} with age threshold: ${ageThreshold}`);
             
             // For collective data, classify entire records into categories
             const standardRecords = [];
@@ -1023,10 +1023,10 @@
                 }
             });
             
-            console.log(`ðŸ“Š ${usageType} separation results:`);
-            console.log(`   ðŸŽ¯ Standard (all ages): ${standardRecords.length}`);
-            console.log(`   ï¿½ Extrait Major: ${extraitMajorRecords.length}`);
-            console.log(`   ðŸ‘¶ Extrait Minor: ${extraitMinorRecords.length}`);
+            console.log(`[STAT] ${usageType} separation results:`);
+            console.log(`   [TGT] Standard (all ages): ${standardRecords.length}`);
+            console.log(`    Extrait Major: ${extraitMajorRecords.length}`);
+            console.log(`   [CHILD] Extrait Minor: ${extraitMinorRecords.length}`);
             
             // Generate separate sheets for each category
             // VALIDATION: Ensure no data loss in collective processing
@@ -1044,7 +1044,7 @@
                     name: truncateSheetName(`${usageType}_Standard_Mandataire`),
                     count: standardRecords.length
                 });
-                console.log(`âœ… Created sheet for ${usageType} standard mandataires (all ages): ${standardRecords.length} records`);
+                console.log(`[OK] Created sheet for ${usageType} standard mandataires (all ages): ${standardRecords.length} records`);
             }
             
             if (extraitMajorRecords.length > 0) {
@@ -1054,7 +1054,7 @@
                     name: truncateSheetName(`${usageType}_Extrait_MAJ_Mandataire`),
                     count: extraitMajorRecords.length
                 });
-                console.log(`âœ… Created sheet for ${usageType} extrait major mandataires: ${extraitMajorRecords.length} records`);
+                console.log(`[OK] Created sheet for ${usageType} extrait major mandataires: ${extraitMajorRecords.length} records`);
             }
 
             if (extraitMinorRecords.length > 0) {
@@ -1064,7 +1064,7 @@
                     name: truncateSheetName(`${usageType}_Extrait_MIN_Mandataire`),
                     count: extraitMinorRecords.length
                 });
-                console.log(`âœ… Created sheet for ${usageType} extrait minor mandataires: ${extraitMinorRecords.length} records`);
+                console.log(`[OK] Created sheet for ${usageType} extrait minor mandataires: ${extraitMinorRecords.length} records`);
             }
             
         } else {
@@ -1075,7 +1075,7 @@
                 name: truncateSheetName(`${usageType}_Physique`),
                 count: data.length
             });
-            console.log(`âœ… Created simple sheet for ${usageType}: ${data.length} records`);
+            console.log(`[OK] Created simple sheet for ${usageType}: ${data.length} records`);
         }
         
         return sheets;
@@ -1106,29 +1106,29 @@
         }
         
         // Classification logic:
-        // 1. Minor with extrait document â†’ extrait_minor
-        // 2. Adult with extrait document â†’ extrait_major  
-        // 3. Any age with standard document â†’ standard (no age separation)
+        // 1. Minor with extrait document → extrait_minor
+        // 2. Adult with extrait document → extrait_major  
+        // 3. Any age with standard document → standard (no age separation)
         
         if (hasExtraitDocument) {
             if (age !== null && age <= ageThreshold) {
-                console.log(`ðŸŽ¯ Collective record: extrait document, age ${age} â‰¤ ${ageThreshold} â†’ MINOR: ${record.Nom || 'Unknown'}`);
+                console.log(`[TGT] Collective record: extrait document, age ${age} ≤ ${ageThreshold} → MINOR: ${record.Nom || 'Unknown'}`);
                 return 'extrait_minor';
             } else if (age !== null && age > ageThreshold) {
-                console.log(`ðŸŽ¯ Collective record: extrait document, age ${age} > ${ageThreshold} â†’ MAJOR: ${record.Nom || 'Unknown'}`);
+                console.log(`[TGT] Collective record: extrait document, age ${age} > ${ageThreshold} → MAJOR: ${record.Nom || 'Unknown'}`);
                 return 'extrait_major';
             } else {
-                console.log(`ðŸŽ¯ Collective record: extrait document, no age â†’ MINOR (default): ${record.Nom || 'Unknown'}`);
+                console.log(`[TGT] Collective record: extrait document, no age → MINOR (default): ${record.Nom || 'Unknown'}`);
                 return 'extrait_minor';
             }
         } else if (hasStandardDocument || !hasExtraitDocument) {
             // Standard documents or unknown documents - no age separation needed
-            console.log(`âœ… Collective record: standard document â†’ STANDARD (no age check): ${record.Nom || 'Unknown'}`);
+            console.log(`[OK] Collective record: standard document → STANDARD (no age check): ${record.Nom || 'Unknown'}`);
             return 'standard';
         }
         
         // Default fallback
-        console.log(`âœ… Collective record: fallback â†’ STANDARD: ${record.Nom || 'Unknown'}`);
+        console.log(`[OK] Collective record: fallback → STANDARD: ${record.Nom || 'Unknown'}`);
         return 'standard';
     };
     
@@ -1144,7 +1144,7 @@
                                    (docTypeStr.includes('extrait') && docTypeStr.includes('naissance'));
         
         if (hasExtraitDocument) {
-            console.log(`ðŸŽ¯ Person with extrait document (non-mandataire): ${person.prenom} ${person.nom}`);
+            console.log(`[TGT] Person with extrait document (non-mandataire): ${person.prenom} ${person.nom}`);
             return false;
         }
         
@@ -1152,7 +1152,7 @@
         if (person.date_naissance) {
             const age = calculateAge(person.date_naissance);
             if (age !== null && age < ageThreshold) {
-                console.log(`ðŸŽ¯ Person under ${ageThreshold} years (non-mandataire): ${person.prenom} ${person.nom}, age: ${age}`);
+                console.log(`[TGT] Person under ${ageThreshold} years (non-mandataire): ${person.prenom} ${person.nom}, age: ${age}`);
                 return false;
             }
         }
@@ -1169,21 +1169,21 @@
         if (options.enableMandataireSeparation) {
             const ageThreshold = options.ageThreshold || 15;
             
-            console.log(`🔍 Individual Mandataire separation enabled for ${entityType} with age threshold: ${ageThreshold}`);
-            console.log(`📊 Processing ${data.length} individual records for separation`);
+            console.log(`[DBG] Individual Mandataire separation enabled for ${entityType} with age threshold: ${ageThreshold}`);
+            console.log(`[STAT] Processing ${data.length} individual records for separation`);
             
             // Debug: Show sample individual data fields
             if (data.length > 0) {
                 const sampleRecord = data[0];
-                console.log(`🔍 Sample individual record fields:`, Object.keys(sampleRecord));
-                console.log(`🔍 Sample Type_piece:`, sampleRecord.Type_piece);
-                console.log(`🔍 Sample Date_naiss:`, sampleRecord.Date_naiss);
-                console.log(`🔍 Sample Age:`, sampleRecord.Age);
+                console.log(`[DBG] Sample individual record fields:`, Object.keys(sampleRecord));
+                console.log(`[DBG] Sample Type_piece:`, sampleRecord.Type_piece);
+                console.log(`[DBG] Sample Date_naiss:`, sampleRecord.Date_naiss);
+                console.log(`[DBG] Sample Age:`, sampleRecord.Age);
                 
                 // Show all unique document types in the individual data
                 const allDocTypes = data.map(row => getValue(row, 'Type_piece')).filter(Boolean);
                 const uniqueDocTypes = [...new Set(allDocTypes)];
-                console.log(`🔍 All unique individual document types found:`, uniqueDocTypes);
+                console.log(`[DBG] All unique individual document types found:`, uniqueDocTypes);
             }
             
             // Helper function to check if individual record has extrait document
@@ -1199,7 +1199,7 @@
                                   fieldStr.includes('extrait') && fieldStr.includes('naissance');
                 
                 if (hasExtrait) {
-                    console.log(`🎯 Found individual extrait document: "${docField}"`);
+                    console.log(`[TGT] Found individual extrait document: "${docField}"`);
                 }
                 
                 return hasExtrait;
@@ -1230,13 +1230,13 @@
                 const dateField = getValue(row, 'Date_naiss');
                 
                 if (!dateField) {
-                    console.log(`⚠️ Individual record missing Date_naiss field:`, row);
+                    console.log(`[WARN] Individual record missing Date_naiss field:`, row);
                     return null;
                 }
                 
                 const age = calculateAge(dateField);
                 if (age === null) {
-                    console.log(`⚠️ Could not calculate age for individual record with Date_naiss: "${dateField}"`);
+                    console.log(`[WARN] Could not calculate age for individual record with Date_naiss: "${dateField}"`);
                 }
                 
                 return age;
@@ -1259,34 +1259,34 @@
                 const hasStandard = hasStandardDocumentIndividual(row);
                 
                 if (age === null) {
-                    console.log(`⚠️ Individual record without age, defaulting to MAJOR category:`, row.prenom, row.nom);
+                    console.log(`[WARN] Individual record without age, defaulting to MAJOR category:`, row.prenom, row.nom);
                 }
                 
                 if (hasExtrait) {
                     if (isMajor) {
                         majorExtraitRecords.push(row);
-                        console.log(`📋 Added individual to major extrait: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
+                        console.log(`[LIST] Added individual to major extrait: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
                     } else {
                         minorExtraitRecords.push(row);
-                        console.log(`📋 Added individual to minor extrait: age ${age}, doc: ${row.Type_piece}`);
+                        console.log(`[LIST] Added individual to minor extrait: age ${age}, doc: ${row.Type_piece}`);
                     }
                 } else if (hasStandard) {
                     if (isMajor) {
                         majorStandardRecords.push(row);
-                        console.log(`📋 Added individual to major standard: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
+                        console.log(`[LIST] Added individual to major standard: age ${age || 'N/A'}, doc: ${row.Type_piece}`);
                     } else {
                         minorStandardRecords.push(row);
-                        console.log(`📋 Added individual to minor standard: age ${age}, doc: ${row.Type_piece}`);
+                        console.log(`[LIST] Added individual to minor standard: age ${age}, doc: ${row.Type_piece}`);
                     }
                 } else {
                     // Default: Records with unknown/missing document types go to major standard category
                     // This ensures ALL records are included in the output
                     majorStandardRecords.push(row);
-                    console.log(`❓ Individual record with unknown document type added to MAJOR STANDARD: ${row.Type_piece}, age: ${age || 'N/A'}`);
+                    console.log(`[?] Individual record with unknown document type added to MAJOR STANDARD: ${row.Type_piece}, age: ${age || 'N/A'}`);
                 }
             });
             
-            console.log(`📊 Individual separation results:`);
+            console.log(`[STAT] Individual separation results:`);
             console.log(`   - Major extrait: ${majorExtraitRecords.length}`);
             console.log(`   - Minor extrait: ${minorExtraitRecords.length}`);
             console.log(`   - Major standard: ${majorStandardRecords.length}`);
@@ -1295,19 +1295,19 @@
             // VALIDATION: Ensure all records are accounted for
             const totalProcessed = majorExtraitRecords.length + minorExtraitRecords.length + 
                                    majorStandardRecords.length + minorStandardRecords.length;
-            console.log(`✅ VALIDATION: Input records: ${data.length}, Output records: ${totalProcessed}`);
+            console.log(`[OK] VALIDATION: Input records: ${data.length}, Output records: ${totalProcessed}`);
             
             if (totalProcessed !== data.length) {
-                console.error(`❌ MISSING RECORDS: ${data.length - totalProcessed} records were not categorized!`);
+                console.error(`[ERR] MISSING RECORDS: ${data.length - totalProcessed} records were not categorized!`);
                 BoundouUtils.showError(`Attention: ${data.length - totalProcessed} enregistrements n'ont pas été catégorisés`);
             } else {
-                console.log(`✅ All ${data.length} records successfully categorized - NO MISSING DATA`);
+                console.log(`[OK] All ${data.length} records successfully categorized - NO MISSING DATA`);
             }
             
             // Create separate sheets for each category
             if (majorExtraitRecords.length > 0) {
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_Extrait`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${majorExtraitRecords.length} records`);
+                console.log(`[DOC] Creating individual sheet: ${sheetName} with ${majorExtraitRecords.length} records`);
                 
                 const sheetData = majorExtraitRecords.map(row => {
                     const filteredRow = {};
@@ -1337,7 +1337,7 @@
             
             if (minorExtraitRecords.length > 0) {
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_Extrait`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${minorExtraitRecords.length} records`);
+                console.log(`[DOC] Creating individual sheet: ${sheetName} with ${minorExtraitRecords.length} records`);
                 
                 const sheetData = minorExtraitRecords.map(row => {
                     const filteredRow = {};
@@ -1367,7 +1367,7 @@
             
             if (majorStandardRecords.length > 0) {
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Majeurs_CNI`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${majorStandardRecords.length} records`);
+                console.log(`[DOC] Creating individual sheet: ${sheetName} with ${majorStandardRecords.length} records`);
                 
                 const sheetData = majorStandardRecords.map(row => {
                     const filteredRow = {};
@@ -1397,7 +1397,7 @@
             
             if (minorStandardRecords.length > 0) {
                 const sheetName = truncateSheetName(`${entityType}_${usageType}_Mineurs_CNI`);
-                console.log(`📄 Creating individual sheet: ${sheetName} with ${minorStandardRecords.length} records`);
+                console.log(`[DOC] Creating individual sheet: ${sheetName} with ${minorStandardRecords.length} records`);
                 
                 const sheetData = minorStandardRecords.map(row => {
                     const filteredRow = {};
@@ -1428,7 +1428,7 @@
         } else {
             // No mandataire separation - create single sheet for individual data
             const sheetName = truncateSheetName(`${entityType}_${usageType}`);
-            console.log(`📄 Creating individual sheet without separation: ${sheetName} with ${data.length} records`);
+            console.log(`[DOC] Creating individual sheet without separation: ${sheetName} with ${data.length} records`);
             
             const sheetData = data.map(row => {
                 const filteredRow = {};
@@ -1467,22 +1467,22 @@
         if (options.enableMandataireSeparation) {
             const ageThreshold = options.ageThreshold || 15;
             
-            console.log(`ðŸ” Mandataire separation enabled for ${entityType} with age threshold: ${ageThreshold}`);
-            console.log(`ðŸ“Š Processing ${data.length} records for separation`);
+            console.log(`[DBG] Mandataire separation enabled for ${entityType} with age threshold: ${ageThreshold}`);
+            console.log(`[STAT] Processing ${data.length} records for separation`);
             
             // Debug: Show sample data fields to verify field names
             if (data.length > 0) {
                 const sampleRecord = data[0];
-                console.log(`ðŸ“ Sample record fields:`, Object.keys(sampleRecord));
-                console.log(`ðŸ“ Sample Type_piece:`, sampleRecord.Type_piece);
-                console.log(`ðŸ“ Sample Date_naiss:`, sampleRecord.Date_naiss);
-                console.log(`ðŸ“ Sample Type_piec:`, sampleRecord.Type_piec);
-                console.log(`ðŸ“ Sample Age:`, sampleRecord.Age);
+                console.log(`[NOTE] Sample record fields:`, Object.keys(sampleRecord));
+                console.log(`[NOTE] Sample Type_piece:`, sampleRecord.Type_piece);
+                console.log(`[NOTE] Sample Date_naiss:`, sampleRecord.Date_naiss);
+                console.log(`[NOTE] Sample Type_piec:`, sampleRecord.Type_piec);
+                console.log(`[NOTE] Sample Age:`, sampleRecord.Age);
                 
                 // Show all unique document types in the data
                 const allDocTypes = data.map(row => row.Type_piec).filter(Boolean);
                 const uniqueDocTypes = [...new Set(allDocTypes)];
-                console.log(`ðŸ“ All unique document types found:`, uniqueDocTypes);
+                console.log(`[NOTE] All unique document types found:`, uniqueDocTypes);
             }
             
             // Helper function to check if collective record has extrait document
@@ -1499,7 +1499,7 @@
                                   fieldStr.includes('extrait') && fieldStr.includes('naissance');
                 
                 if (hasExtrait) {
-                    console.log(`ðŸŽ¯ Found collective extrait document: "${docField}"`);
+                    console.log(`[TGT] Found collective extrait document: "${docField}"`);
                 }
                 
                 return hasExtrait;
@@ -1522,7 +1522,7 @@
                                   fieldStr === 'carte d\'identite';
                 
                 if (isStandard && !hasExtraitDocument(row)) {
-                    console.log(`ðŸŽ¯ Found collective standard document: "${docField}"`);
+                    console.log(`[TGT] Found collective standard document: "${docField}"`);
                     return true;
                 }
                 
@@ -1541,7 +1541,7 @@
                 if (row.Type_piece) {
                     const isOther = fieldStr === 'autres' || fieldStr.includes('autre');
                     if (isOther) {
-                        console.log(`ðŸŽ¯ Found other individual document: "${docField}"`);
+                        console.log(`[TGT] Found other individual document: "${docField}"`);
                     }
                     return isOther;
                 }
@@ -1550,7 +1550,7 @@
                 if (row.Type_piec) {
                     const isOther = fieldStr === 'option_7' || fieldStr.includes('option');
                     if (isOther) {
-                        console.log(`ðŸŽ¯ Found other collective document: "${docField}"`);
+                        console.log(`[TGT] Found other collective document: "${docField}"`);
                     }
                     return isOther;
                 }
@@ -1560,29 +1560,29 @@
             
             // Helper function to get age from record
             const getRecordAge = (row) => {
-                console.log(`ðŸ” Getting age for record with fields:`, Object.keys(row));
+                console.log(`[DBG] Getting age for record with fields:`, Object.keys(row));
                 
                 // For collective data, use Date_nai field (not Date_naiss which is for individual data)
                 const collectiveDateField = row.Date_nai;
                 
                 if (collectiveDateField) {
-                    console.log(`   ðŸŽ¯ Using collective birth date (Date_nai): ${collectiveDateField}`);
+                    console.log(`   [TGT] Using collective birth date (Date_nai): ${collectiveDateField}`);
                     const calculatedAge = calculateAge(collectiveDateField);
                     if (calculatedAge !== null) {
-                        console.log(`   âœ… Calculated mandataire age: ${calculatedAge}`);
+                        console.log(`   [OK] Calculated mandataire age: ${calculatedAge}`);
                         return calculatedAge;
                     }
                 } else {
-                    console.log(`   âŒ No Date_nai field found for mandataire`);
+                    console.log(`   [ERR] No Date_nai field found for mandataire`);
                 }
                 
                 // Fallback: try direct Age field if Date_nai is not available
                 if (row.Age && typeof row.Age === 'number' && row.Age < 150) {
-                    console.log(`   âœ… Using direct age field: ${row.Age}`);
+                    console.log(`   [OK] Using direct age field: ${row.Age}`);
                     return row.Age;
                 }
                 
-                console.log(`   âŒ No valid mandataire age found for record`);
+                console.log(`   [ERR] No valid mandataire age found for record`);
                 return null;
             };
 
@@ -1594,16 +1594,16 @@
                 // Minor mandataires: Records with extrait documents and age <= threshold
                 const isUnderage = hasExtrait && age !== null && age <= ageThreshold;
                 
-                console.log(`ðŸ” MINOR check: hasExtrait=${hasExtrait}, age=${age}, threshold=${ageThreshold}, isUnderage=${isUnderage}`);
+                console.log(`[DBG] MINOR check: hasExtrait=${hasExtrait}, age=${age}, threshold=${ageThreshold}, isUnderage=${isUnderage}`);
                 console.log(`   - Doc type: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 console.log(`   - Birth date field: ${row.Date_naiss || row.Date_nai || 'N/A'}`);
                 
                 if (hasExtrait) {
-                    console.log(`ðŸ” Age check - Date_naiss: ${row.Date_naiss}, Date_nai: ${row.Date_nai}, Age: ${age}, Threshold: ${ageThreshold}, IsUnderage: ${isUnderage}`);
+                    console.log(`[DBG] Age check - Date_naiss: ${row.Date_naiss}, Date_nai: ${row.Date_nai}, Age: ${age}, Threshold: ${ageThreshold}, IsUnderage: ${isUnderage}`);
                 }
                 
                 if (isUnderage) {
-                    console.log(`ðŸ‘¶ Found underage mandataire: age ${age}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
+                    console.log(`[CHILD] Found underage mandataire: age ${age}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 }
                 
                 return isUnderage;
@@ -1618,14 +1618,14 @@
                 const isMajor = (hasStandard && age !== null && age > ageThreshold) || 
                                (hasExtrait && age !== null && age > ageThreshold);
                 
-                console.log(`ðŸ” MAJOR check: hasExtrait=${hasExtrait}, hasStandard=${hasStandard}, age=${age}, threshold=${ageThreshold}, isMajor=${isMajor}`);
+                console.log(`[DBG] MAJOR check: hasExtrait=${hasExtrait}, hasStandard=${hasStandard}, age=${age}, threshold=${ageThreshold}, isMajor=${isMajor}`);
                 console.log(`   - Doc type: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 console.log(`   - Date_nai: ${row.Date_nai}`);
                 console.log(`   - Standard doc check: ${hasStandard && age !== null && age > ageThreshold}`);
                 console.log(`   - Adult extrait check: ${hasExtrait && age !== null && age > ageThreshold}`);
                 
                 if (isMajor) {
-                    console.log(`ðŸ‘¨ Found major mandataire: age ${age || 'unknown'}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
+                    console.log(`[MAN] Found major mandataire: age ${age || 'unknown'}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 }
                 
                 return isMajor;
@@ -1636,7 +1636,7 @@
                 const hasStandard = hasStandardDocument(row);
                 
                 if (hasStandard) {
-                    console.log(`ðŸ“„ Found standard document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
+                    console.log(`[DOC] Found standard document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 }
                 
                 return hasStandard;
@@ -1647,7 +1647,7 @@
                 const hasOther = hasOtherDocument(row);
                 
                 if (hasOther) {
-                    console.log(`ï¿½ Found other document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
+                    console.log(` Found other document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
                 }
                 
                 return hasOther;
@@ -1662,15 +1662,15 @@
                 
                 if (hasNoDocInfo) {
                     const docField = row.Type_piece || row.Type_piec || 'NO_DOC';
-                    console.log(`â“ Found record with unknown/missing document: "${docField}" (original value)`);
+                    console.log(`[?]“ Found record with unknown/missing document: "${docField}" (original value)`);
                     console.log(`   - Row data:`, {Type_piece: row.Type_piece, Type_piec: row.Type_piec, Date_naiss: row.Date_naiss, Age: row.Age});
                 }
                 
                 return hasNoDocInfo;
             });
 
-            console.log(`ðŸ“‹ Separation results for ${entityType}:`);
-            console.log(`   - Underage mandataires (extrait_de_naissance + â‰¤${ageThreshold}): ${underageMandataires.length}`);
+            console.log(`[LIST] Separation results for ${entityType}:`);
+            console.log(`   - Underage mandataires (extrait_de_naissance + ≤${ageThreshold}): ${underageMandataires.length}`);
             console.log(`   - Major mandataires (extrait_de_naissance + >${ageThreshold}): ${majorMandataires.length}`);
             console.log(`   - Standard documents (CNI, passeport, etc.): ${standardDocuments.length}`);
             console.log(`   - Other documents (Autres/option_7): ${otherDocuments.length}`);
@@ -1685,7 +1685,7 @@
                     name: truncateSheetName(`${usageType}_Extrait_MIN_Mandataire`),
                     count: underageMandataires.length
                 });
-                console.log(`âœ… Created sheet for underage mandataires: ${underageMandataires.length} records`);
+                console.log(`[OK] Created sheet for underage mandataires: ${underageMandataires.length} records`);
             }
 
             if (majorMandataires.length > 0) {
@@ -1695,7 +1695,7 @@
                     name: truncateSheetName(`${usageType}_Extrait_MAJ_Mandataire`),
                     count: majorMandataires.length
                 });
-                console.log(`âœ… Created sheet for major mandataires: ${majorMandataires.length} records`);
+                console.log(`[OK] Created sheet for major mandataires: ${majorMandataires.length} records`);
             }
 
             if (standardDocuments.length > 0) {
@@ -1705,7 +1705,7 @@
                     name: truncateSheetName(`${usageType}_Standard_Mandataire`),
                     count: standardDocuments.length
                 });
-                console.log(`âœ… Created sheet for standard documents (CNI, passeport): ${standardDocuments.length} records`);
+                console.log(`[OK] Created sheet for standard documents (CNI, passeport): ${standardDocuments.length} records`);
             }
 
             if (otherDocuments.length > 0) {
@@ -1715,7 +1715,7 @@
                     name: truncateSheetName(`${usageType}_Autres_Mandataire`),
                     count: otherDocuments.length
                 });
-                console.log(`âœ… Created sheet for other documents (Autres/option_7): ${otherDocuments.length} records`);
+                console.log(`[OK] Created sheet for other documents (Autres/option_7): ${otherDocuments.length} records`);
             }
 
             if (unknownDocuments.length > 0) {
@@ -1725,7 +1725,7 @@
                     name: truncateSheetName(`${usageType}_Inconnus_Mandataire`),
                     count: unknownDocuments.length
                 });
-                console.log(`âœ… Created sheet for unknown documents: ${unknownDocuments.length} records`);
+                console.log(`[OK] Created sheet for unknown documents: ${unknownDocuments.length} records`);
             }
 
         } else {
@@ -1828,7 +1828,7 @@
         
         // Handle Excel serial dates first (numbers like 31279, 18853, etc.)
         const birthDateStr = String(birthDate).trim();
-        console.log(`ðŸ” Processing birth date: "${birthDateStr}" (type: ${typeof birthDate})`);
+        console.log(`[DBG] Processing birth date: "${birthDateStr}" (type: ${typeof birthDate})`);
         
         if (/^\d+$/.test(birthDateStr) && parseInt(birthDateStr) > 0 && parseInt(birthDateStr) < 100000) {
             // This is an Excel serial date - convert it first
@@ -1843,15 +1843,15 @@
             }
             
             date = new Date(excelEpoch.getTime() + (adjustedSerial - 1) * millisecondsPerDay);
-            console.log(`ðŸ“… Converted Excel serial ${serialNumber} to date: ${date.toDateString()} (${date.getFullYear()})`);
+            console.log(`[DATE] Converted Excel serial ${serialNumber} to date: ${date.toDateString()} (${date.getFullYear()})`);
         } else if (/^\d{4}$/.test(birthDateStr)) {
             // Handle year-only format (like "1972") - treat as January 1st of that year
             const year = parseInt(birthDateStr);
             if (year >= 1900 && year <= new Date().getFullYear()) {
                 date = new Date(year, 0, 1); // January 1st of the given year
-                console.log(`ðŸ“… Converted year-only "${birthDateStr}" to date: ${date.toDateString()}`);
+                console.log(`[DATE] Converted year-only "${birthDateStr}" to date: ${date.toDateString()}`);
             } else {
-                console.log(`âŒ Invalid year: ${year}`);
+                console.log(`[ERR] Invalid year: ${year}`);
                 return null;
             }
         } else {
@@ -1862,20 +1862,20 @@
                     if (parts.length === 3) {
                         // Assume DD/MM/YYYY format
                         date = new Date(parts[2], parts[1] - 1, parts[0]);
-                        console.log(`ðŸ“… Converted DD/MM/YYYY "${birthDateStr}" to date: ${date.toDateString()}`);
+                        console.log(`[DATE] Converted DD/MM/YYYY "${birthDateStr}" to date: ${date.toDateString()}`);
                     }
                 } else {
                     date = new Date(birthDate);
-                    console.log(`ðŸ“… Converted string "${birthDateStr}" to date: ${date.toDateString()}`);
+                    console.log(`[DATE] Converted string "${birthDateStr}" to date: ${date.toDateString()}`);
                 }
             } else {
                 date = new Date(birthDate);
-                console.log(`ðŸ“… Converted object to date: ${date.toDateString()}`);
+                console.log(`[DATE] Converted object to date: ${date.toDateString()}`);
             }
         }
         
         if (!date || isNaN(date)) {
-            console.log(`âŒ Invalid date conversion for: "${birthDate}"`);
+            console.log(`[ERR] Invalid date conversion for: "${birthDate}"`);
             return null;
         }
         
@@ -1888,24 +1888,24 @@
         }
         
         const calculatedAge = Math.max(0, age);
-        console.log(`ðŸŽ‚ Calculated age: ${calculatedAge} years (from birth date: ${date.toDateString()}, original input: "${birthDate}")`);
+        console.log(`[AGE] Calculated age: ${calculatedAge} years (from birth date: ${date.toDateString()}, original input: "${birthDate}")`);
         return calculatedAge;
     };
 
     // Test function to verify document detection (for debugging)
     const testDocumentDetection = (sampleData) => {
-        console.log('ðŸ§ª Testing document detection logic...');
-        console.log('ðŸ“‹ Expected document types:');
+        console.log('[TEST] Testing document detection logic...');
+        console.log('[LIST] Expected document types:');
         console.log('   Individual (Type_piece): attestation_cni_1, Autres, carte residence, CNI, extrait_de_naissance, passeport');
         console.log('   Collective (Type_piec): acni, extrait_de_naissance, option_7 (=Autres), passeport, Recepisse_CNI');
         
         if (!sampleData || sampleData.length === 0) {
-            console.log('âŒ No sample data provided');
+            console.log('[ERR] No sample data provided');
             return;
         }
 
         sampleData.forEach((record, index) => {
-            console.log(`\nðŸ“‹ Record ${index + 1}:`);
+            console.log(`\n[LIST] Record ${index + 1}:`);
             console.log(`   Type_piece: "${record.Type_piece || 'N/A'}"`);
             console.log(`   Type_piec: "${record.Type_piec || 'N/A'}"`);
             console.log(`   Date_naiss: "${record.Date_naiss || 'N/A'}"`);
@@ -1949,10 +1949,10 @@
                 }
             }
             
-            console.log(`   ðŸ” Detection Results:`);
-            console.log(`      Has Extrait de Naissance: ${hasExtrait ? 'âœ…' : 'âŒ'}`);
-            console.log(`      Has Standard Doc (CNI/passeport): ${hasStandard ? 'âœ…' : 'âŒ'}`);
-            console.log(`      Has Other Doc (Autres/option_7): ${hasOther ? 'âœ…' : 'âŒ'}`);
+            console.log(`   [DBG] Detection Results:`);
+            console.log(`      Has Extrait de Naissance: ${hasExtrait ? '[OK]' : '[ERR]'}`);
+            console.log(`      Has Standard Doc (CNI/passeport): ${hasStandard ? '[OK]' : '[ERR]'}`);
+            console.log(`      Has Other Doc (Autres/option_7): ${hasOther ? '[OK]' : '[ERR]'}`);
             console.log(`      Calculated Age: ${age !== null ? age : 'N/A'}`);
             
             let category;
@@ -1965,7 +1965,7 @@
             } else {
                 category = 'Unknown Documents';
             }
-            console.log(`      ðŸ“‚ Category: ${category}`);
+            console.log(`      [FOLDER] Category: ${category}`);
         });
     };
 
@@ -1977,27 +1977,27 @@
         // 1. EXECUTIVE SUMMARY SHEET
         const summaryData = [
             ['RAPPORT DE STATISTIQUES PORTAIL BOUNDOU'],
-            ['Date de gÃ©nÃ©ration:', stats.summary.processingDate],
+            ['Date de génération:', stats.summary.processingDate],
             [''],
-            ['=== RÃ‰SUMÃ‰ EXÃ‰CUTIF ==='],
+            ['=== RÉSUMÉ EXÉCUTIF ==='],
             ['Total parcelles individuelles:', stats.summary.totalIndividualParcels],
             ['Total parcelles collectives:', stats.summary.totalCollectiveParcels],
-            ['TOTAL GÃ‰NÃ‰RAL:', stats.summary.totalRecords],
+            ['TOTAL GÉNÉRAL:', stats.summary.totalRecords],
             [''],
-            ['=== RÃ‰PARTITION PAR SOURCE ==='],
-            ['DonnÃ©es individuelles:', stats.summary.totalIndividualParcels, `${((stats.summary.totalIndividualParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`],
-            ['DonnÃ©es collectives:', stats.summary.totalCollectiveParcels, `${((stats.summary.totalCollectiveParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`]
+            ['=== RÉPARTITION PAR SOURCE ==='],
+            ['Données individuelles:', stats.summary.totalIndividualParcels, `${((stats.summary.totalIndividualParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`],
+            ['Données collectives:', stats.summary.totalCollectiveParcels, `${((stats.summary.totalCollectiveParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`]
         ];
 
         const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, wsSummary, 'RÃ©sumÃ© ExÃ©cutif');
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé Exécutif');
 
         // 2. INDIVIDUAL DATA STATISTICS SHEET
         if (stats.individual && Object.keys(stats.individual).length > 0) {
             const individualData = [
-                ['STATISTIQUES DONNÃ‰ES INDIVIDUELLES'],
+                ['STATISTIQUES DONNÉES INDIVIDUELLES'],
                 [''],
-                ['=== RÃ‰PARTITION PAR TYPE DE PERSONNE (Typ_pers) ==='],
+                ['=== RÉPARTITION PAR TYPE DE PERSONNE (Typ_pers) ==='],
                 ['Type de Personne', 'Nombre', 'Pourcentage']
             ];
 
@@ -2008,7 +2008,7 @@
                 individualData.push([type, count, `${percentage}%`]);
             });
 
-            individualData.push([''], ['=== RÃ‰PARTITION PAR USAGE (type_usag) ==='], ['Type d\'Usage', 'Nombre', 'Pourcentage']);
+            individualData.push([''], ['=== RÉPARTITION PAR USAGE (type_usag) ==='], ['Type d\'Usage', 'Nombre', 'Pourcentage']);
             
             // Add usage type statistics
             Object.entries(stats.individual.byUsageType || {}).forEach(([usage, count]) => {
@@ -2016,7 +2016,7 @@
                 individualData.push([usage, count, `${percentage}%`]);
             });
 
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TRANCHE D\'Ã‚GE ==='], ['Tranche d\'Ã‚ge', 'Nombre', 'Pourcentage']);
+            individualData.push([''], ['=== RÉPARTITION PAR TRANCHE D\'ÂGE ==='], ['Tranche d\'Âge', 'Nombre', 'Pourcentage']);
             
             // Add age group statistics
             Object.entries(stats.individual.byAgeGroup || {}).forEach(([age, count]) => {
@@ -2024,7 +2024,7 @@
                 individualData.push([age, count, `${percentage}%`]);
             });
 
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE DOCUMENT (Type_piece) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
+            individualData.push([''], ['=== RÉPARTITION PAR TYPE DE DOCUMENT (Type_piece) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
             
             // Add document type statistics
             Object.entries(stats.individual.byDocumentType || {}).forEach(([doc, count]) => {
@@ -2032,7 +2032,7 @@
                 individualData.push([doc, count, `${percentage}%`]);
             });
 
-            individualData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE PERSONNE MORALE (Typ_pers_m) ==='], ['Type Personne Morale', 'Nombre', 'Pourcentage']);
+            individualData.push([''], ['=== RÉPARTITION PAR TYPE DE PERSONNE MORALE (Typ_pers_m) ==='], ['Type Personne Morale', 'Nombre', 'Pourcentage']);
             
             // Add morale person type statistics
             Object.entries(stats.individual.byMoraleType || {}).forEach(([moraleType, count]) => {
@@ -2040,7 +2040,7 @@
                 individualData.push([moraleType, count, `${percentage}%`]);
             });
 
-            individualData.push([''], ['=== RÃ‰PARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
+            individualData.push([''], ['=== RÉPARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
             
             // Add NICAD status statistics
             Object.entries(stats.individual.byNicad || {}).forEach(([nicadStatus, count]) => {
@@ -2055,12 +2055,12 @@
         // 3. COLLECTIVE DATA STATISTICS SHEET
         if (stats.collective && Object.keys(stats.collective).length > 0) {
             const collectiveData = [
-                ['STATISTIQUES DONNÃ‰ES COLLECTIVES'],
+                ['STATISTIQUES DONNÉES COLLECTIVES'],
                 [''],
                 ['Total parcelles collectives:', stats.collective.totalParcels],
                 ['Total affectataires:', stats.collective.totalAffectataires],
                 [''],
-                ['=== RÃ‰PARTITION PAR USAGE (type_usa/type_usag) ==='],
+                ['=== RÉPARTITION PAR USAGE (type_usa/type_usag) ==='],
                 ['Type d\'Usage', 'Nombre', 'Pourcentage']
             ];
 
@@ -2071,7 +2071,7 @@
                 collectiveData.push([usage, count, `${percentage}%`]);
             });
 
-            collectiveData.push([''], ['=== RÃ‰PARTITION PAR TYPE DE DOCUMENT (Type_piec) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
+            collectiveData.push([''], ['=== RÉPARTITION PAR TYPE DE DOCUMENT (Type_piec) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
             
             // Add document type statistics
             Object.entries(stats.collective.byDocumentType || {}).forEach(([doc, count]) => {
@@ -2079,7 +2079,7 @@
                 collectiveData.push([doc, count, `${percentage}%`]);
             });
 
-            collectiveData.push([''], ['=== RÃ‰PARTITION PAR TRANCHE D\'Ã‚GE ==='], ['Tranche d\'Ã‚ge', 'Nombre', 'Pourcentage']);
+            collectiveData.push([''], ['=== RÉPARTITION PAR TRANCHE D\'ÂGE ==='], ['Tranche d\'Âge', 'Nombre', 'Pourcentage']);
             
             // Add age group statistics
             Object.entries(stats.collective.byAgeGroup || {}).forEach(([age, count]) => {
@@ -2087,7 +2087,7 @@
                 collectiveData.push([age, count, `${percentage}%`]);
             });
 
-            collectiveData.push([''], ['=== RÃ‰PARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
+            collectiveData.push([''], ['=== RÉPARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
             
             // Add NICAD status statistics
             Object.entries(stats.collective.byNicad || {}).forEach(([nicadStatus, count]) => {
