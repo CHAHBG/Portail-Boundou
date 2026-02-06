@@ -585,32 +585,31 @@
             this._highlightLayer = null;
         },
 
-        /* ── Commune click: highlight contour, then 2 s delay → stats ── */
+        /* ── Commune click: highlight contour, then 2 s delay → stats bubble ── */
         _onCommuneClick(name, feature) {
             // Cancel any pending stats reveal
             clearTimeout(this._statsDelayTimer);
 
-            // 1. Immediately hide the old panel (if visible)
-            const panel = document.getElementById('stats-panel');
-            if (panel) panel.classList.add('hidden');
+            // 1. Close any existing stats popup
+            if (this._statsPopup) {
+                AppState.map.closePopup(this._statsPopup);
+                this._statsPopup = null;
+            }
 
             // 2. Highlight contour + fly to actual geometry bounds
             this._highlightCommune(name, { duration: 1 });
 
-            // 3. After 2 s reveal the stats panel
+            // 3. After 2 s reveal the stats bubble at top of commune
             this._statsDelayTimer = setTimeout(() => {
                 this._showCommuneStats(name);
             }, 2000);
         },
 
-        /* ── Populate & reveal stats panel ── */
+        /* ── Build & open stats as Leaflet info-bulle at top of commune ── */
         _showCommuneStats(name) {
-            const panel = document.getElementById('stats-panel');
-            if (!panel) return;
+            if (!this._highlightLayer) return;
 
-            document.getElementById('selected-commune').textContent = name;
-
-            // Calculate stats (case-insensitive commune match)
+            // Calculate stats
             const nameUp = name.toUpperCase();
             const parcels = AppState.parcelsData
                 ? AppState.parcelsData.filter(p => {
@@ -623,17 +622,72 @@
             const superficie = parcels.reduce((s, p) => s + (parseFloat(p.superficie) || 0), 0);
             const nicad = parcels.filter(p => p.nicad && p.nicad.trim() !== '').length;
             const deliberees = parcels.filter(p => p.deliberee === true || p.deliberee === 'Oui').length;
+            const pctNicad = total ? Math.round((nicad / total) * 100) + '%' : '0%';
+            const pctDelib = total ? Math.round((deliberees / total) * 100) + '%' : '0%';
 
-            document.getElementById('total-parcelles').textContent = total.toLocaleString('fr-FR');
-            document.getElementById('superficie-totale').textContent = Math.round(superficie).toLocaleString('fr-FR');
-            document.getElementById('pourcentage-nicad').textContent = total ? Math.round((nicad / total) * 100) + '%' : '0%';
-            document.getElementById('pourcentage-deliberees').textContent = total ? Math.round((deliberees / total) * 100) + '%' : '0%';
+            // Build HTML
+            const html = `
+                <div class="stats-bubble">
+                    <div class="stats-bubble-header">
+                        <h3>${name}</h3>
+                        <button class="stats-bubble-close" onclick="MAP._closeStatsPopup()">&times;</button>
+                    </div>
+                    <div class="kpi-grid">
+                        <div class="kpi-item highlight"><span class="val">${total.toLocaleString('fr-FR')}</span><span class="lbl">Parcelles</span></div>
+                        <div class="kpi-item"><span class="val">${Math.round(superficie).toLocaleString('fr-FR')}</span><span class="lbl">M² Total</span></div>
+                        <div class="kpi-item"><span class="val">${pctNicad}</span><span class="lbl">NICAD</span></div>
+                        <div class="kpi-item"><span class="val">${pctDelib}</span><span class="lbl">Délibérées</span></div>
+                    </div>
+                    <div class="charts-row">
+                        <div class="chart-cell"><canvas id="usage-chart"></canvas></div>
+                        <div class="chart-cell"><canvas id="status-chart"></canvas></div>
+                    </div>
+                </div>
+            `;
 
-            // Charts
-            this._renderCommuneCharts(parcels);
+            // Position at the top-center of the commune bounds
+            const bounds = this._highlightLayer.getBounds();
+            const topCenter = L.latLng(bounds.getNorth(), bounds.getCenter().lng);
 
-            // Reveal with animation
-            panel.classList.remove('hidden');
+            // Close existing popup
+            if (this._statsPopup) {
+                AppState.map.closePopup(this._statsPopup);
+            }
+
+            this._statsPopup = L.popup({
+                className: 'commune-stats-popup',
+                maxWidth: 460,
+                minWidth: 420,
+                closeButton: false,
+                autoClose: false,
+                closeOnClick: false,
+                offset: [0, -5]
+            })
+                .setLatLng(topCenter)
+                .setContent(html)
+                .openOn(AppState.map);
+
+            // Render charts after popup is in the DOM
+            requestAnimationFrame(() => {
+                this._renderCommuneCharts(parcels);
+            });
+        },
+
+        /* ── Close the stats popup and reset map ── */
+        _closeStatsPopup() {
+            clearTimeout(this._statsDelayTimer);
+            if (this._statsPopup) {
+                AppState.map.closePopup(this._statsPopup);
+                this._statsPopup = null;
+            }
+            this._resetHighlight();
+            // Destroy existing charts
+            Object.keys(AppState.charts).forEach(k => {
+                if (AppState.charts[k]) { AppState.charts[k].destroy(); delete AppState.charts[k]; }
+            });
+            // Reset commune filter dropdown
+            const cf = document.getElementById('commune-filter');
+            if (cf) cf.value = '';
         },
 
         _renderCommuneCharts(parcels) {
@@ -673,7 +727,7 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { font: { family: 'Public Sans', size: 11 }, padding: 12 } }
+                        legend: { position: 'bottom', labels: { font: { family: 'Public Sans', size: 9 }, padding: 6, boxWidth: 10 } }
                     }
                 }
             });
@@ -687,17 +741,19 @@
             clearTimeout(this._statsDelayTimer);
 
             if (!commune) {
-                this._resetHighlight();
+                this._closeStatsPopup();
                 AppState.map.fitBounds(AppState.geoLayer.getBounds(), { padding: [20, 20] });
-                document.getElementById('stats-panel')?.classList.add('hidden');
                 return;
             }
 
-            // 1. Highlight contour + fly to actual geometry bounds
-            this._highlightCommune(commune, { duration: 1.2 });
+            // 1. Close existing popup
+            if (this._statsPopup) {
+                AppState.map.closePopup(this._statsPopup);
+                this._statsPopup = null;
+            }
 
-            // 2. Hide stats temporarily
-            document.getElementById('stats-panel')?.classList.add('hidden');
+            // 2. Highlight contour + fly to actual geometry bounds
+            this._highlightCommune(commune, { duration: 1.2 });
 
             // 3. Reveal stats after 2 s delay
             this._statsDelayTimer = setTimeout(() => {
@@ -1289,17 +1345,7 @@
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) themeBtn.addEventListener('click', () => UI.toggleTheme());
 
-        // Close stats panel + reset map highlight
-        const closeStats = document.getElementById('close-stats');
-        if (closeStats) closeStats.addEventListener('click', () => {
-            clearTimeout(MAP._statsDelayTimer);
-            document.getElementById('stats-panel')?.classList.add('hidden');
-            MAP._resetHighlight();
-            // Also reset commune filter dropdown
-            const cf = document.getElementById('commune-filter');
-            if (cf) cf.value = '';
-            AppState.communeFilter = '';
-        });
+        // Close stats popup (no longer a static element — handled by MAP._closeStatsPopup)
 
         // Search
         UI.initSearch();
