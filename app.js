@@ -388,6 +388,9 @@
        MAP ENGINE
        ================================================================ */
     const MAP = {
+        _highlightLayer: null,     // currently highlighted GeoJSON layer
+        _statsDelayTimer: null,    // 2-second delay timer for stats reveal
+
         init() {
             if (typeof L === 'undefined') { console.warn('Leaflet not loaded yet'); return; }
             const mapEl = document.getElementById('map');
@@ -517,12 +520,86 @@
             legend.innerHTML = html;
         },
 
+        /* ── Highlight a commune contour on the map ── */
+        _highlightCommune(name) {
+            if (!AppState.geoLayer) return;
+            const cfg = COMMUNES_CONFIG[name];
+            const highlightColor = cfg ? cfg.color : '#52B788';
+
+            // Reset every layer, then highlight the match
+            AppState.geoLayer.eachLayer(layer => {
+                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                const resolved = resolveCommune(raw) || raw;
+
+                if (resolved === name) {
+                    layer.setStyle({
+                        weight: 4,
+                        color: highlightColor,
+                        opacity: 1,
+                        fillOpacity: 0.55,
+                        dashArray: ''
+                    });
+                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                        layer.bringToFront();
+                    }
+                    this._highlightLayer = layer;
+                } else {
+                    layer.setStyle({
+                        weight: 2,
+                        color: '#fff',
+                        opacity: 0.8,
+                        fillOpacity: 0.15
+                    });
+                }
+            });
+        },
+
+        /* ── Reset highlight to default ── */
+        _resetHighlight() {
+            if (!AppState.geoLayer) return;
+            AppState.geoLayer.eachLayer(layer => {
+                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                const resolved = resolveCommune(raw);
+                const cfg = resolved ? COMMUNES_CONFIG[resolved] : null;
+                layer.setStyle({
+                    fillColor: cfg ? cfg.color : '#999',
+                    weight: 2,
+                    color: '#fff',
+                    opacity: 0.8,
+                    fillOpacity: 0.45
+                });
+            });
+            this._highlightLayer = null;
+        },
+
+        /* ── Commune click: highlight contour, then 2 s delay → stats ── */
         _onCommuneClick(name, feature) {
+            // Cancel any pending stats reveal
+            clearTimeout(this._statsDelayTimer);
+
+            // 1. Immediately hide the old panel (if visible)
+            const panel = document.getElementById('stats-panel');
+            if (panel) panel.classList.add('hidden');
+
+            // 2. Highlight the commune contour
+            this._highlightCommune(name);
+
+            // 3. Fly to commune
+            const cfg = COMMUNES_CONFIG[name];
+            if (cfg) AppState.map.flyTo(cfg.center, cfg.zoom, { duration: 1 });
+
+            // 4. After 2 s reveal the stats panel
+            this._statsDelayTimer = setTimeout(() => {
+                this._showCommuneStats(name);
+            }, 2000);
+        },
+
+        /* ── Populate & reveal stats panel ── */
+        _showCommuneStats(name) {
             const panel = document.getElementById('stats-panel');
             if (!panel) return;
 
             document.getElementById('selected-commune').textContent = name;
-            panel.classList.remove('hidden');
 
             // Calculate stats (case-insensitive commune match)
             const nameUp = name.toUpperCase();
@@ -545,6 +622,9 @@
 
             // Charts
             this._renderCommuneCharts(parcels);
+
+            // Reveal with animation
+            panel.classList.remove('hidden');
         },
 
         _renderCommuneCharts(parcels) {
@@ -594,28 +674,30 @@
             AppState.communeFilter = commune;
             if (!AppState.geoLayer) return;
 
+            // Cancel pending stats reveal
+            clearTimeout(this._statsDelayTimer);
+
             if (!commune) {
+                this._resetHighlight();
                 AppState.map.fitBounds(AppState.geoLayer.getBounds(), { padding: [20, 20] });
-                AppState.geoLayer.setStyle(() => ({ fillOpacity: 0.45 }));
                 document.getElementById('stats-panel')?.classList.add('hidden');
                 return;
             }
 
+            // 1. Highlight the commune contour
+            this._highlightCommune(commune);
+
+            // 2. Fly to commune
             const cfg = COMMUNES_CONFIG[commune];
             if (cfg) AppState.map.flyTo(cfg.center, cfg.zoom, { duration: 1.2 });
 
-            AppState.geoLayer.eachLayer(layer => {
-                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
-                const resolved = resolveCommune(raw) || raw;
-                layer.setStyle({ fillOpacity: resolved === commune ? 0.6 : 0.1 });
-            });
+            // 3. Hide stats temporarily
+            document.getElementById('stats-panel')?.classList.add('hidden');
 
-            // Simulate click for stats
-            AppState.geoLayer.eachLayer(layer => {
-                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
-                const resolved = resolveCommune(raw) || raw;
-                if (resolved === commune) this._onCommuneClick(commune, layer.feature);
-            });
+            // 4. Reveal stats after 2 s delay
+            this._statsDelayTimer = setTimeout(() => {
+                this._showCommuneStats(commune);
+            }, 2000);
         },
 
         filterByUsage(usage) {
@@ -1202,10 +1284,16 @@
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) themeBtn.addEventListener('click', () => UI.toggleTheme());
 
-        // Close stats panel
+        // Close stats panel + reset map highlight
         const closeStats = document.getElementById('close-stats');
         if (closeStats) closeStats.addEventListener('click', () => {
+            clearTimeout(MAP._statsDelayTimer);
             document.getElementById('stats-panel')?.classList.add('hidden');
+            MAP._resetHighlight();
+            // Also reset commune filter dropdown
+            const cf = document.getElementById('commune-filter');
+            if (cf) cf.value = '';
+            AppState.communeFilter = '';
         });
 
         // Search

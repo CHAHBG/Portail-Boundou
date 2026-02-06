@@ -376,11 +376,27 @@ img, svg { max-width: 100%; }
 .legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
 /* Commune Panel */
-.commune-panel { margin-top: 1.25rem; padding: 1.25rem; animation: slideReveal 0.45s var(--ease); }
+.commune-panel {
+    margin-top: 1.25rem; padding: 1.25rem;
+    animation: statsReveal 0.6s var(--ease) both;
+}
 .commune-panel.hidden { display: none; }
-@keyframes slideReveal {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
+@keyframes statsReveal {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    60%  { transform: translateY(-4px) scale(1.005); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* ── Commune tooltip (Leaflet) ── */
+.commune-tooltip {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    box-shadow: var(--shadow-md);
+    background: var(--bg-surface);
+    color: var(--primary);
 }
 .commune-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
 .commune-panel-header h3 { font-family: var(--font-heading); color: var(--primary); }
