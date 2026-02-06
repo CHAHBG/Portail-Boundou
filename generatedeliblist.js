@@ -177,16 +177,7 @@ function setupDragAndDrop() {
     }
 }
 
-    uploadSectionIndividual.addEventListener('drop', (e) => handleDrop(e, 'individual'), false);
-    uploadSectionCollective.addEventListener('drop', (e) => handleDrop(e, 'collective'), false);
-
-    function handleDrop(e, type) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files, type);
-    }
-
-    // Gestion des fichiers via input
+// Gestion des fichiers via input
 // Setup file input handlers with validation
 function setupFileInputHandlers() {
     const fileInputs = [

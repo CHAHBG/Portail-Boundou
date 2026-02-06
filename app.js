@@ -1,1816 +1,1253 @@
-// === Boundou Dashboard Application ===
-// Initialize BoundouDashboard
-window.BoundouDashboard = window.BoundouDashboard || {};
+/* ================================================================
+   PROCASEF Boundou – Main Application v2
+   Top-Tab SPA · Leaflet · Chart.js · SheetJS
+   ================================================================ */
+(() => {
+    'use strict';
 
-// Global variables - declare first to avoid hoisting issues
-let map;
-let communesLayer;
-let parcellesData = [];
-let communesData = null;
-let currentCharts = {};
-let fontScale = 1;
-let collectiveParcelErrors = [];
-let filteredParcellesData = [];
-let lastSelectedCommune = null;
-
-// Initialize BoundouDashboard state
-window.BoundouDashboard.processedIndividualData = [];
-window.BoundouDashboard.processedCollectiveData = [];
-window.BoundouDashboard.isProcessingFile = false;
-window.BoundouDashboard.originalIndividualData = null;
-window.BoundouDashboard.originalCollectiveData = null;
-
-// Function to reset all application state on page load
-function resetApplicationState() {
-    // Reset global variables
-    parcellesData = [];
-    communesData = null;
-    currentCharts = {};
-    collectiveParcelErrors = [];
-    filteredParcellesData = [];
-    lastSelectedCommune = null;
-
-    // Only reset BoundouDashboard state if not currently processing a file
-    if (!window.BoundouDashboard.isProcessingFile) {
-        window.BoundouDashboard.processedIndividualData = [];
-        window.BoundouDashboard.processedCollectiveData = [];
-        window.BoundouDashboard.originalIndividualData = null;
-        window.BoundouDashboard.originalCollectiveData = null;
-    }
-    window.BoundouDashboard.isProcessingFile = false;
-
-    // Reset UI elements when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', resetUIElements);
-    } else {
-        resetUIElements();
-    }
-
-    console.log('Application state reset for fresh page load');
-}
-
-function resetUIElements() {
-    try {
-        // Reset file upload displays
-        const fileNameIndividual = document.getElementById('fileNameIndividual');
-        const fileNameCollective = document.getElementById('fileNameCollective');
-        if (fileNameIndividual) fileNameIndividual.textContent = '';
-        if (fileNameCollective) fileNameCollective.textContent = '';
-
-        // Reset info displays
-        const fileInfoIndividual = document.getElementById('fileInfoIndividual');
-        const fileInfoCollective = document.getElementById('fileInfoCollective');
-        if (fileInfoIndividual) fileInfoIndividual.style.display = 'none';
-        if (fileInfoCollective) fileInfoCollective.style.display = 'none';
-
-        // Reset results displays
-        const resultsIndividual = document.getElementById('resultsIndividual');
-        const resultsCollective = document.getElementById('resultsCollective');
-        if (resultsIndividual) resultsIndividual.style.display = 'none';
-        if (resultsCollective) resultsCollective.style.display = 'none';
-
-        // Reset preview displays
-        const previewIndividual = document.getElementById('previewIndividual');
-        const previewCollective = document.getElementById('previewCollective');
-        if (previewIndividual) previewIndividual.style.display = 'none';
-        if (previewCollective) previewCollective.style.display = 'none';
-
-        // Reset buttons
-        const generateIndividual = document.getElementById('generate-individual');
-        const generateCollective = document.getElementById('generate-collective');
-        if (generateIndividual) generateIndividual.disabled = true;
-        if (generateCollective) generateCollective.disabled = true;
-
-        console.log('UI elements reset for fresh page load');
-    } catch (e) {
-        console.warn('Could not reset all UI elements:', e);
-    }
-}
-
-// Call state reset immediately
-resetApplicationState();
-
-// Initialize BoundouDashboard state values that need to be set after reset
-window.BoundouDashboard.processedIndividualData = [];
-window.BoundouDashboard.processedCollectiveData = [];
-window.BoundouDashboard.isProcessingFile = false;
-window.BoundouDashboard.originalIndividualData = null;
-window.BoundouDashboard.originalCollectiveData = null;
-
-// Configuration des communes avec statut d'opération
-const communesConfig = {
-    'NDOGA BABACAR': { status: 'active', hasOperations: true },
-    'MISSIRAH': { status: 'active', hasOperations: true },
-    'BANDAFASSI': { status: 'completed', hasOperations: true },
-    'NETTEBOULOU': { status: 'active', hasOperations: true },
-    'FONGOLEMBI': { status: 'completed', hasOperations: true },
-    'DIMBOLI': { status: 'completed', hasOperations: true },
-    'GABOU': { status: 'active', hasOperations: true },
-    'BEMBOU': { status: 'active', hasOperations: true },
-    'DINDEFELLO': { status: 'active', hasOperations: true },
-    'TOMBORONKOTO': { status: 'active', hasOperations: true },
-    'BALLOU': { status: 'active', hasOperations: true },
-    'MOUDERY': { status: 'active', hasOperations: true },
-    'BALA': { status: 'active', hasOperations: true },
-    'KOAR': { status: 'active', hasOperations: true },
-    'SABODALA': { status: 'pending', hasOperations: false },
-    'MEDINA BAFFE': { status: 'pending', hasOperations: false },
-    'SINTHIOU MALEME': { status: 'active', hasOperations: true }
-};
-
-// Colors palette
-const colors = {
-    primary: '#1B3B59',
-    secondary: '#D2691E',
-    accent: '#4A7C59',
-    warning: '#F4A460',
-    background: '#F5E6D3',
-    operationsActive: '#2E8B57',
-    operationsCompleted: '#4682B4',
-    operationsPending: '#D3D3D3',
-    operationsActiveHover: '#228B22',
-    operationsCompletedHover: '#3A6B9C',
-    operationsPendingHover: '#A9A9A9',
-    chartColors: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5', '#5D878F', '#DB4545', '#D2BA4C', '#964325', '#944454', '#13343B']
-};
-
-// === Utility Functions ===
-function showToast(message, type = 'info') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    const icons = {
-        success: '✓',
-        error: '✕',
-        warning: '⚠',
-        info: 'ℹ'
+    /* ── Communes Configuration ── */
+    /* Commune names must match CCRCA field in GeoJSON (uppercase)
+       and 'commune' field in parcelles.json (mixed case).
+       We store a normalized lookup map for case-insensitive matching. */
+    const COMMUNES_CONFIG = {
+        "Bala":             { center: [13.35, -12.30], zoom: 12, color: "#2D6A4F" },
+        "Ballou":           { center: [13.42, -12.08], zoom: 12, color: "#40916C" },
+        "Bandafassi":       { center: [12.45, -12.52], zoom: 12, color: "#52B788" },
+        "Bembou":           { center: [12.55, -12.20], zoom: 12, color: "#74C69D" },
+        "Dimboli":          { center: [12.60, -12.05], zoom: 12, color: "#95D5B2" },
+        "Dindefello":       { center: [12.37, -12.30], zoom: 12, color: "#38A3A5" },
+        "Fongolembi":       { center: [12.52, -12.13], zoom: 12, color: "#57CC99" },
+        "Gabou":            { center: [13.38, -12.18], zoom: 12, color: "#22577A" },
+        "Koar":             { center: [13.50, -12.35], zoom: 12, color: "#80ED99" },
+        "Medina Baffe":     { center: [13.68, -12.40], zoom: 12, color: "#0A9396" },
+        "Missirah":         { center: [13.60, -12.25], zoom: 12, color: "#E9D8A6" },
+        "Moudery":          { center: [13.85, -12.25], zoom: 12, color: "#94D2BD" },
+        "Ndoga Babacar":    { center: [13.98, -12.10], zoom: 12, color: "#FFB703" },
+        "Netteboulou":      { center: [14.08, -12.18], zoom: 12, color: "#8338EC" },
+        "Sabodala":         { center: [12.80, -12.30], zoom: 12, color: "#3A86FF" },
+        "Sinthiou Maleme":  { center: [14.18, -12.00], zoom: 12, color: "#FB5607" },
+        "Tomboronkoto":     { center: [12.65, -12.50], zoom: 12, color: "#FF006E" }
     };
 
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${icons[type] || icons.info}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-    `;
-    container.appendChild(toast);
+    /* Case-insensitive lookup helper: "BALA" → "Bala", "sinthiou maleme" → "Sinthiou Maleme" */
+    const _communeLookup = {};
+    Object.keys(COMMUNES_CONFIG).forEach(k => { _communeLookup[k.toUpperCase()] = k; });
+    function resolveCommune(raw) {
+        if (!raw) return null;
+        const up = String(raw).toUpperCase().trim();
+        return _communeLookup[up] || null;
+    }
 
-    setTimeout(() => {
-        if (container.contains(toast)) {
-            toast.style.animation = 'slideInRight 0.3s ease reverse';
-            setTimeout(() => container.contains(toast) && container.removeChild(toast), 300);
+    /* ── Global State ── */
+    const AppState = {
+        activeSection:  'map',
+        theme:          localStorage.getItem('boundou_theme') || 'light',
+        map:            null,
+        geoLayer:       null,
+        parcelsData:    null,
+        communeFilter:  '',
+        usageFilter:    '',
+        charts:         {},
+        dashLoaded:     {},
+        // Deliberation wizard state
+        individualWizardStep: 1,
+        collectiveWizardStep: 1,
+        individualFile: null,
+        collectiveFile: null,
+        selectedIndividualConfig: null,
+        selectedCollectiveConfig: null
+    };
+
+    // Initialize global dashboard object used by supporting modules
+    window.BoundouDashboard = window.BoundouDashboard || {
+        processedIndividualData: null,
+        processedCollectiveData: null,
+        originalIndividualData: null,
+        originalCollectiveData: null,
+        selectedColumns: {},
+        advancedOptionsIndividual: { ageThreshold: 18 },
+        advancedOptionsCollective: {},
+        collectiveParcelErrors: []
+    };
+
+    /* ================================================================
+       UI CONTROLLER
+       ================================================================ */
+    const UI = {
+        /* ── Skeleton ── */
+        hideSkeleton() {
+            const sk = document.getElementById('skeleton-screen');
+            if (sk) { sk.classList.add('hidden'); setTimeout(() => sk.remove(), 800); }
+        },
+
+        /* ── Theme ── */
+        initTheme() {
+            document.documentElement.setAttribute('data-theme', AppState.theme);
+            this._updateThemeIcon();
+        },
+        toggleTheme() {
+            AppState.theme = AppState.theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', AppState.theme);
+            localStorage.setItem('boundou_theme', AppState.theme);
+            this._updateThemeIcon();
+        },
+        _updateThemeIcon() {
+            const moon = document.getElementById('theme-icon-moon');
+            const sun  = document.getElementById('theme-icon-sun');
+            if (moon && sun) {
+                moon.style.display = AppState.theme === 'dark' ? 'none' : 'block';
+                sun.style.display  = AppState.theme === 'dark' ? 'block' : 'none';
+            }
+        },
+
+        /* ── Tab Navigation ── */
+        switchSection(sectionId) {
+            if (sectionId === AppState.activeSection) return;
+            AppState.activeSection = sectionId;
+
+            // Update tab buttons
+            document.querySelectorAll('.tab-item').forEach(btn => {
+                const isActive = btn.dataset.section === sectionId;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive);
+            });
+
+            // Show/hide sections
+            document.querySelectorAll('.section').forEach(s => {
+                s.classList.toggle('active', s.id === `section-${sectionId}`);
+            });
+
+            // Lazy-load actions per section
+            if (sectionId === 'map' && AppState.map) {
+                setTimeout(() => AppState.map.invalidateSize(), 200);
+            }
+            if (sectionId === 'stats') STATS.render();
+            if (sectionId === 'dashboards') this._loadDashboard();
+            if (sectionId === 'suivi') this._loadSuivi();
+            if (sectionId === 'sif') this._loadSIF();
+        },
+
+        /* ── Search ── */
+        initSearch() {
+            const input = document.getElementById('search-input');
+            const results = document.getElementById('search-results');
+            if (!input || !results) return;
+
+            const debouncedSearch = this._debounce((query) => {
+                if (!query || query.length < 2) { results.classList.remove('show'); return; }
+                const matches = this._searchParcels(query);
+                if (matches.length === 0) {
+                    results.innerHTML = '<div class="search-no-results">Aucun résultat</div>';
+                } else {
+                    results.innerHTML = matches.slice(0, 10).map(m =>
+                        `<div class="search-result-item" data-commune="${m.commune}" data-nicad="${m.nicad}">
+                            <div class="search-result-title">${m.nicad || m.numParcel}</div>
+                            <div class="search-result-details">${m.commune} · ${m.village || ''}</div>
+                        </div>`
+                    ).join('');
+                }
+                results.classList.add('show');
+            }, 250);
+
+            input.addEventListener('input', () => debouncedSearch(input.value.trim()));
+
+            results.addEventListener('click', e => {
+                const item = e.target.closest('.search-result-item');
+                if (!item) return;
+                const commune = item.dataset.commune;
+                if (commune) {
+                    const filter = document.getElementById('commune-filter');
+                    if (filter) { filter.value = commune; MAP.filterByCommune(commune); }
+                    this.switchSection('map');
+                }
+                results.classList.remove('show');
+                input.value = '';
+            });
+
+            // Close on outside click
+            document.addEventListener('click', e => {
+                if (!e.target.closest('#search-box')) results.classList.remove('show');
+            });
+        },
+        _searchParcels(query) {
+            if (!AppState.parcelsData) return [];
+            const q = query.toLowerCase();
+            return AppState.parcelsData.filter(p =>
+                (p.nicad && p.nicad.toLowerCase().includes(q)) ||
+                (p.Num_parcel && p.Num_parcel.toLowerCase().includes(q)) ||
+                (p.Village && p.Village.toLowerCase().includes(q)) ||
+                (p.Nom && p.Nom.toLowerCase().includes(q)) ||
+                (p.Prenom && p.Prenom.toLowerCase().includes(q))
+            ).slice(0, 30).map(p => ({
+                commune: p.commune || p.Commune || '',
+                village: p.Village || '',
+                nicad: p.nicad || '',
+                numParcel: p.Num_parcel || ''
+            }));
+        },
+
+        /* ── Mobile Search ── */
+        initMobileSearch() {
+            const btn = document.getElementById('mobile-search-btn');
+            const overlay = document.getElementById('mobile-search-overlay');
+            const input = document.getElementById('mobile-search-input');
+            const results = document.getElementById('mobile-search-results');
+            const closeBtn = document.getElementById('mobile-search-close');
+            if (!btn || !overlay) return;
+
+            btn.addEventListener('click', () => {
+                overlay.style.display = 'flex';
+                setTimeout(() => input?.focus(), 100);
+            });
+
+            closeBtn?.addEventListener('click', () => {
+                overlay.style.display = 'none';
+                if (input) input.value = '';
+                if (results) results.innerHTML = '';
+            });
+
+            const debouncedSearch = this._debounce((query) => {
+                if (!results) return;
+                if (!query || query.length < 2) { results.innerHTML = ''; return; }
+                const matches = this._searchParcels(query);
+                if (matches.length === 0) {
+                    results.innerHTML = '<div class="search-no-results">Aucun résultat pour « ' + query + ' »</div>';
+                } else {
+                    results.innerHTML = matches.slice(0, 20).map(m =>
+                        `<div class="search-result-item" data-commune="${m.commune}" data-nicad="${m.nicad}">
+                            <div class="search-result-title">${m.nicad || m.numParcel}</div>
+                            <div class="search-result-details">${m.commune} · ${m.village || ''}</div>
+                        </div>`
+                    ).join('');
+                }
+            }, 250);
+
+            input?.addEventListener('input', () => debouncedSearch(input.value.trim()));
+
+            results?.addEventListener('click', e => {
+                const item = e.target.closest('.search-result-item');
+                if (!item) return;
+                const commune = item.dataset.commune;
+                if (commune) {
+                    const filter = document.getElementById('commune-filter');
+                    if (filter) { filter.value = commune; MAP.filterByCommune(commune); }
+                    this.switchSection('map');
+                }
+                overlay.style.display = 'none';
+                if (input) input.value = '';
+                if (results) results.innerHTML = '';
+            });
+
+            // Close on escape
+            overlay.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    overlay.style.display = 'none';
+                    if (input) input.value = '';
+                }
+            });
+        },
+
+        /* ── Date Label ── */
+        setDateLabel() {
+            const el = document.getElementById('last-updated-label');
+            if (el) {
+                const d = new Date();
+                el.textContent = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+        },
+
+        /* ── Dashboard & Suivi ── */
+        _loadDashboard() {
+            const frame = document.getElementById('dashboard-frame');
+            const loader = document.getElementById('dashboard-loading');
+            if (!frame) return;
+
+            const url = 'https://boundoudash.netlify.app/';
+            if (!frame.src || frame.src === '' || frame.src === 'about:blank' || !frame.src.includes('boundoudash')) {
+                if (loader) loader.style.display = 'flex';
+                frame.src = url;
+                frame.onload = () => { if (loader) loader.style.display = 'none'; };
+                frame.onerror = () => { if (loader) loader.innerHTML = '<span>Impossible de charger le dashboard</span>'; };
+            }
+        },
+        _loadSuivi() {
+            const frame = document.getElementById('suivi-frame');
+            const loader = document.getElementById('suivi-loading');
+            if (!frame) return;
+
+            const url = 'https://suivioperation.netlify.app/';
+            if (!frame.src || frame.src === '' || frame.src === 'about:blank' || !frame.src.includes('suivioperation')) {
+                if (loader) loader.style.display = 'flex';
+                frame.src = url;
+
+                let loaded = false;
+                frame.onload = () => {
+                    loaded = true;
+                    if (loader) loader.style.display = 'none';
+                    frame.style.display = 'block';
+                };
+                frame.onerror = () => { loaded = true; this._showSuiviFallback(frame, loader, url); };
+
+                // CSP blocks don't fire onerror — use timeout fallback
+                setTimeout(() => {
+                    if (!loaded) this._showSuiviFallback(frame, loader, url);
+                }, 3000);
+            }
+        },
+        _showSuiviFallback(frame, loader, url) {
+            if (loader) loader.style.display = 'none';
+            const container = frame.parentElement;
+            if (container && !container.querySelector('.suivi-fallback')) {
+                const fallback = document.createElement('div');
+                fallback.className = 'sif-fallback suivi-fallback';
+                fallback.style.display = 'flex';
+                fallback.innerHTML = `<span style="font-size:2rem;margin-bottom:0.5rem">🔗</span>
+                    <h3>Ce site bloque l'intégration</h3>
+                    <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.88rem">Le serveur bloque l'affichage en iframe (politique CSP)</p>
+                    <a href="${url}" target="_blank" class="btn btn-primary btn-lg">Ouvrir Suivi Opération ↗</a>`;
+                container.appendChild(fallback);
+            }
+        },
+        _loadSIF() {
+            const frame = document.getElementById('sif-frame');
+            const fallback = document.getElementById('sif-fallback');
+            const loader = document.getElementById('sif-loading');
+            if (!frame) return;
+            const url = 'https://sifboundou.netlify.app/';
+            if (!frame.src || frame.src === '' || frame.src === 'about:blank') {
+                if (loader) loader.style.display = 'flex';
+                frame.src = url;
+                let loaded = false;
+                frame.onload = () => {
+                    loaded = true;
+                    if (loader) loader.style.display = 'none';
+                    if (fallback) fallback.style.display = 'none';
+                };
+                frame.onerror = () => {
+                    loaded = true;
+                    if (loader) loader.style.display = 'none';
+                    if (fallback) { fallback.style.display = 'flex'; frame.style.display = 'none'; }
+                };
+                // CSP blocks don't fire onerror — use timeout fallback
+                setTimeout(() => {
+                    if (!loaded) {
+                        if (loader) loader.style.display = 'none';
+                        if (fallback) { fallback.style.display = 'flex'; frame.style.display = 'none'; }
+                    }
+                }, 6000);
+            }
+        },
+
+        /* ── Export Button ── */
+        initExportButton() {
+            const btn = document.getElementById('export-data');
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                if (AppState.activeSection === 'map' && AppState.parcelsData) {
+                    this._exportParcelData();
+                } else {
+                    this._toast('Naviguez vers la carte pour exporter', 'info');
+                }
+            });
+        },
+        _exportParcelData() {
+            if (!AppState.parcelsData || !window.XLSX) return;
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(AppState.parcelsData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Parcelles');
+                XLSX.writeFile(wb, 'parcelles_boundou.xlsx');
+                this._toast('Export réussi !', 'success');
+            } catch (e) {
+                this._toast('Erreur lors de l\'export', 'error');
+                console.error(e);
+            }
+        },
+
+        /* ── Toast ── */
+        _toast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>
+                <span class="toast-message">${msg}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
+            container.appendChild(toast);
+            setTimeout(() => { if (toast.parentElement) { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); } }, 4500);
+        },
+
+        /* ── Debounce ── */
+        _debounce(fn, ms) {
+            let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
         }
-    }, 4000);
-}
+    };
 
-function cleanValue(value) {
-    if (value === null || value === undefined || value === '' ||
-        (typeof value === 'number' && isNaN(value))) {
-        return "-";
-    }
-    let strValue = String(value);
-    if (strValue.endsWith('.0')) {
-        strValue = strValue.slice(0, -2);
-    }
-    return strValue.trim();
-}
+    /* ================================================================
+       MAP ENGINE
+       ================================================================ */
+    const MAP = {
+        init() {
+            if (typeof L === 'undefined') { console.warn('Leaflet not loaded yet'); return; }
+            const mapEl = document.getElementById('map');
+            if (!mapEl || AppState.map) return;
 
-function animateValue(element, start, end, duration = 1000) {
-    if (!element) return;
+            AppState.map = L.map('map', {
+                center: [13.0, -12.25],
+                zoom: 9,
+                zoomControl: true,
+                attributionControl: false
+            });
 
-    const startTime = performance.now();
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const current = start + (end - start) * progress;
-        element.textContent = typeof end === 'number' ?
-            (end % 1 === 0 ? Math.floor(current) : current.toFixed(1)) : end;
-        if (progress < 1) requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
-}
+            // Tile layers
+            const osmLight = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 });
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 });
+            osmLight.addTo(AppState.map);
 
-function blinkLayer(layer, duration = 2000, interval = 300) {
-    if (!layer) return;
-    let isVisible = true;
-    const start = performance.now();
+            L.control.layers({ 'OSM': osmLight, 'Satellite': satellite }, null, { position: 'topright' }).addTo(AppState.map);
+            L.control.attribution({ prefix: '© PROCASEF Boundou' }).addTo(AppState.map);
 
-    function blink(currentTime) {
-        if (currentTime - start > duration) {
-            layer.setStyle({ fillOpacity: 0.7 });
-            return;
+            this._loadGeoJSON();
+            this._loadParcels();
+        },
+
+        async _loadGeoJSON() {
+            try {
+                const resp = await fetch('data/communes_boundou.geojson');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                AppState.geoLayer = L.geoJSON(data, {
+                    style: feature => {
+                        const raw = feature.properties.CCRCA || feature.properties.CCRCA_1 || feature.properties.nom || '';
+                        const resolved = resolveCommune(raw);
+                        const cfg = resolved ? COMMUNES_CONFIG[resolved] : null;
+                        return {
+                            fillColor: cfg ? cfg.color : '#999',
+                            weight: 2,
+                            opacity: 0.8,
+                            color: '#fff',
+                            fillOpacity: 0.45
+                        };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        const raw = feature.properties.CCRCA || feature.properties.CCRCA_1 || feature.properties.nom || 'Inconnu';
+                        const resolved = resolveCommune(raw) || raw;
+                        layer.bindTooltip(resolved, { sticky: true, className: 'commune-tooltip' });
+                        layer.on('click', () => this._onCommuneClick(resolved, feature));
+                    }
+                }).addTo(AppState.map);
+
+                // Fit bounds
+                AppState.map.fitBounds(AppState.geoLayer.getBounds(), { padding: [20, 20] });
+
+                // Populate commune filter
+                this._populateCommuneFilter(data);
+                this._buildLegend(data);
+
+                console.log('✅ GeoJSON loaded:', data.features.length, 'features');
+            } catch (e) {
+                console.warn('⚠️ GeoJSON load failed:', e);
+            }
+        },
+
+        async _loadParcels() {
+            try {
+                const resp = await fetch('data/parcelles.json');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                AppState.parcelsData = await resp.json();
+                console.log('✅ Parcelles loaded:', AppState.parcelsData.length);
+                this._populateUsageFilter();
+            } catch (e) {
+                console.warn('⚠️ Parcelles load failed:', e);
+            }
+        },
+
+        _populateUsageFilter() {
+            const sel = document.getElementById('usage-filter');
+            if (!sel || !AppState.parcelsData) return;
+
+            // Extract unique usage types
+            const usages = new Set();
+            AppState.parcelsData.forEach(p => {
+                const u = p.type_usag || p.Vocation || '';
+                if (u && u.trim()) usages.add(u.trim());
+            });
+
+            // Sort and add as options
+            const sorted = [...usages].sort((a, b) => a.localeCompare(b, 'fr'));
+            sorted.forEach(u => {
+                const o = document.createElement('option');
+                o.value = u;
+                // Format label: replace underscores with spaces and capitalize
+                o.textContent = u.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                sel.appendChild(o);
+            });
+            console.log('✅ Usage filter populated:', sorted.length, 'types');
+        },
+
+        _populateCommuneFilter(geojson) {
+            const sel = document.getElementById('commune-filter');
+            if (!sel) return;
+            const names = geojson.features
+                .map(f => {
+                    const raw = f.properties.CCRCA || f.properties.CCRCA_1 || f.properties.nom || '';
+                    return resolveCommune(raw) || raw;
+                })
+                .filter(Boolean).sort();
+            names.forEach(n => {
+                const o = document.createElement('option'); o.value = n; o.textContent = n;
+                sel.appendChild(o);
+            });
+        },
+
+        _buildLegend(geojson) {
+            const legend = document.getElementById('map-legend');
+            if (!legend) return;
+            let html = '<h4>Communes</h4>';
+            const names = geojson.features.map(f => {
+                const raw = f.properties.CCRCA || f.properties.CCRCA_1 || f.properties.nom || '';
+                return resolveCommune(raw) || raw;
+            }).filter(Boolean).sort();
+            names.forEach(n => {
+                const c = COMMUNES_CONFIG[n]?.color || '#999';
+                html += `<div class="legend-item"><span class="legend-color" style="background:${c}"></span><span>${n}</span></div>`;
+            });
+            legend.innerHTML = html;
+        },
+
+        _onCommuneClick(name, feature) {
+            const panel = document.getElementById('stats-panel');
+            if (!panel) return;
+
+            document.getElementById('selected-commune').textContent = name;
+            panel.classList.remove('hidden');
+
+            // Calculate stats (case-insensitive commune match)
+            const nameUp = name.toUpperCase();
+            const parcels = AppState.parcelsData
+                ? AppState.parcelsData.filter(p => {
+                    const c = (p.commune || p.Commune || '').toUpperCase().trim();
+                    return c === nameUp;
+                })
+                : [];
+
+            const total = parcels.length;
+            const superficie = parcels.reduce((s, p) => s + (parseFloat(p.superficie) || 0), 0);
+            const nicad = parcels.filter(p => p.nicad && p.nicad.trim() !== '').length;
+            const deliberees = parcels.filter(p => p.deliberee === true || p.deliberee === 'Oui').length;
+
+            document.getElementById('total-parcelles').textContent = total.toLocaleString('fr-FR');
+            document.getElementById('superficie-totale').textContent = Math.round(superficie).toLocaleString('fr-FR');
+            document.getElementById('pourcentage-nicad').textContent = total ? Math.round((nicad / total) * 100) + '%' : '0%';
+            document.getElementById('pourcentage-deliberees').textContent = total ? Math.round((deliberees / total) * 100) + '%' : '0%';
+
+            // Charts
+            this._renderCommuneCharts(parcels);
+        },
+
+        _renderCommuneCharts(parcels) {
+            // Usage chart
+            this._renderChart('usage-chart', 'doughnut', () => {
+                const usage = {};
+                parcels.forEach(p => { const u = p.type_usag || p.Vocation || 'Autre'; usage[u] = (usage[u] || 0) + 1; });
+                return { labels: Object.keys(usage), data: Object.values(usage) };
+            });
+
+            // Status chart
+            this._renderChart('status-chart', 'doughnut', () => {
+                const status = { 'Délibéré': 0, 'Non délibéré': 0 };
+                parcels.forEach(p => {
+                    if (p.deliberee === true || p.deliberee === 'Oui') status['Délibéré']++;
+                    else status['Non délibéré']++;
+                });
+                return { labels: Object.keys(status), data: Object.values(status) };
+            });
+        },
+
+        _renderChart(canvasId, type, dataFn) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            if (AppState.charts[canvasId]) AppState.charts[canvasId].destroy();
+
+            const { labels, data } = dataFn();
+            const colors = ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7',
+                           '#D8F3DC', '#FFB703', '#FB5607', '#FF006E', '#8338EC', '#3A86FF'];
+
+            AppState.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+                type,
+                data: {
+                    labels,
+                    datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Public Sans', size: 11 }, padding: 12 } }
+                    }
+                }
+            });
+        },
+
+        filterByCommune(commune) {
+            AppState.communeFilter = commune;
+            if (!AppState.geoLayer) return;
+
+            if (!commune) {
+                AppState.map.fitBounds(AppState.geoLayer.getBounds(), { padding: [20, 20] });
+                AppState.geoLayer.setStyle(() => ({ fillOpacity: 0.45 }));
+                document.getElementById('stats-panel')?.classList.add('hidden');
+                return;
+            }
+
+            const cfg = COMMUNES_CONFIG[commune];
+            if (cfg) AppState.map.flyTo(cfg.center, cfg.zoom, { duration: 1.2 });
+
+            AppState.geoLayer.eachLayer(layer => {
+                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                const resolved = resolveCommune(raw) || raw;
+                layer.setStyle({ fillOpacity: resolved === commune ? 0.6 : 0.1 });
+            });
+
+            // Simulate click for stats
+            AppState.geoLayer.eachLayer(layer => {
+                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                const resolved = resolveCommune(raw) || raw;
+                if (resolved === commune) this._onCommuneClick(commune, layer.feature);
+            });
+        },
+
+        filterByUsage(usage) {
+            AppState.usageFilter = usage;
+            if (!AppState.geoLayer || !AppState.parcelsData) return;
+
+            if (!usage) {
+                // Reset: show all communes equally
+                AppState.geoLayer.eachLayer(layer => {
+                    const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                    const resolved = resolveCommune(raw);
+                    const cfg = resolved ? COMMUNES_CONFIG[resolved] : null;
+                    layer.setStyle({ fillColor: cfg ? cfg.color : '#999', fillOpacity: 0.45 });
+                });
+                return;
+            }
+
+            // Find which communes have parcels with this usage
+            const communeUsageCounts = {};
+            let maxCount = 0;
+            AppState.parcelsData.forEach(p => {
+                const u = p.type_usag || p.Vocation || '';
+                if (u !== usage) return;
+                const raw = p.commune || p.Commune || '';
+                const c = resolveCommune(raw) || raw;
+                communeUsageCounts[c] = (communeUsageCounts[c] || 0) + 1;
+                if (communeUsageCounts[c] > maxCount) maxCount = communeUsageCounts[c];
+            });
+
+            // Highlight communes proportionally
+            AppState.geoLayer.eachLayer(layer => {
+                const raw = layer.feature?.properties?.CCRCA || layer.feature?.properties?.CCRCA_1 || '';
+                const resolved = resolveCommune(raw) || raw;
+                const count = communeUsageCounts[resolved] || 0;
+                const cfg = COMMUNES_CONFIG[resolved];
+                layer.setStyle({
+                    fillColor: cfg ? cfg.color : '#999',
+                    fillOpacity: count > 0 ? 0.3 + (count / maxCount) * 0.5 : 0.08
+                });
+            });
+
+            // Show toast with count
+            const total = Object.values(communeUsageCounts).reduce((s, c) => s + c, 0);
+            const label = usage.replace(/_/g, ' ');
+            UI._toast(`${label}: ${total.toLocaleString('fr-FR')} parcelles dans ${Object.keys(communeUsageCounts).length} communes`, 'info');
         }
-        layer.setStyle({ fillOpacity: isVisible ? 0.7 : 0.2 });
-        isVisible = !isVisible;
-        setTimeout(() => requestAnimationFrame(blink), interval);
-    }
-    requestAnimationFrame(blink);
-}
-
-function validateData(communesData, parcellesData) {
-    const errors = [];
-    if (!communesData || !communesData.features || !Array.isArray(communesData.features)) {
-        errors.push('Structure GeoJSON invalide');
-    }
-    if (!Array.isArray(parcellesData)) {
-        errors.push('Le fichier parcelles.json doit contenir un array');
-    }
-    return errors;
-}
-
-function debugData() {
-    console.log('=== DEBUG BOUNDOU DASHBOARD ===');
-    console.log('Communes dans GeoJSON:', communesData?.features?.map(f => getCommuneName(f.properties)));
-    console.log('Communes dans parcelles:', [...new Set(parcellesData.map(p => p.commune).filter(Boolean))]);
-    console.log('Configuration communes:', Object.keys(communesConfig));
-}
-
-// === Data Loading Functions ===
-async function loadExternalData() {
-    try {
-        showToast('Chargement des données...', 'info');
-        const cacheBuster = `cb=${Date.now()}`;
-        const [communesResponse, parcellesResponse] = await Promise.all([
-            fetch(`data/communes_boundou.geojson?${cacheBuster}`),
-            fetch(`data/parcelles.json?${cacheBuster}`)
-        ]);
-
-        if (!communesResponse.ok) throw new Error(`Erreur GeoJSON: ${communesResponse.status}`);
-        if (!parcellesResponse.ok) throw new Error(`Erreur parcelles: ${parcellesResponse.status}`);
-
-        communesData = await communesResponse.json();
-        parcellesData = await parcellesResponse.json();
-        filteredParcellesData = [...parcellesData];
-
-        // Mettre à jour la date de dernière mise à jour (en-tête Last-Modified sinon date du jour)
-        try {
-            const lastMod1 = communesResponse.headers.get('Last-Modified');
-            const lastMod2 = parcellesResponse.headers.get('Last-Modified');
-            const dates = [lastMod1, lastMod2].filter(Boolean).map(d => new Date(d));
-            const recent = dates.length ? new Date(Math.max(...dates)) : new Date();
-            updateLastUpdatedLabel(recent);
-        } catch (e) { console.warn('Impossible de déterminer la date de mise à jour', e); updateLastUpdatedLabel(new Date()); }
-
-        const validationErrors = validateData(communesData, parcellesData);
-        if (validationErrors.length > 0) throw new Error(`Erreurs de validation: ${validationErrors.join(', ')}`);
-
-        debugData();
-        showToast('Données chargées avec succès!', 'success');
-        return true;
-    } catch (error) {
-        console.error('Erreur de chargement:', error);
-        showToast(`Erreur: ${error.message}`, 'error');
-        communesData = getSampleGeoJSON();
-        parcellesData = getSampleParcelles();
-        filteredParcellesData = [...parcellesData];
-        updateLastUpdatedLabel(new Date());
-        debugData();
-        initializeMap(); // Reinitialize map with sample data
-        return false;
-    }
-}
-
-function getSampleGeoJSON() {
-    return {
-        type: 'FeatureCollection',
-        features: [{
-            type: 'Feature',
-            properties: { REG: 'Tambacounda', DEPT: 'Goudiry', CCRCA_1: 'KOUSSAN', CODE: '23301' },
-            geometry: { type: 'Polygon', coordinates: [[[-12.1, 14.2], [-12.0, 14.2], [-12.0, 14.3], [-12.1, 14.3], [-12.1, 14.2]]] }
-        }]
     };
-}
 
-function getSampleParcelles() {
-    return [{
-        id_parcelle: '0522030300264',
-        commune: 'KOUSSAN',
-        village: 'koulare',
-        nicad: 'Non',
-        superficie: 2.5,
-        type_usag: 'Agriculture_irriguée',
-        deliberee: 'Non',
-        autorite_delib: 'Non spécifié',
-        numero_cadastrale: null
-    }];
-}
+    /* ================================================================
+       STATS ENGINE
+       ================================================================ */
+    const STATS = {
+        rendered: false,
 
-// === Data Processing Functions ===
-function calculateCommuneStats(commune, dataSource = parcellesData) {
-    const communeParcelles = dataSource.filter(p => p.commune === commune);
-    return {
-        totalParcelles: communeParcelles.length,
-        superficieTotale: communeParcelles.reduce((sum, p) => sum + (parseFloat(p.superficie) || 0), 0),
-        nicadCount: communeParcelles.filter(p => p.nicad === 'Oui').length,
-        delibereesCount: communeParcelles.filter(p => p.deliberee === 'Oui').length,
-        typesUsage: communeParcelles.reduce((acc, p) => {
-            if (p.type_usag) acc[p.type_usag] = (acc[p.type_usag] || 0) + 1;
-            return acc;
-        }, {})
+        render() {
+            if (this.rendered || typeof Chart === 'undefined') return;
+            this.rendered = true;
+
+            // Global KPIs
+            const communes = Object.keys(COMMUNES_CONFIG).length;
+            const parcels = AppState.parcelsData ? AppState.parcelsData.length : 0;
+            const hectares = AppState.parcelsData
+                ? Math.round(AppState.parcelsData.reduce((s, p) => s + (parseFloat(p.superficie) || 0), 0) / 10000)
+                : 0;
+
+            const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val.toLocaleString('fr-FR'); };
+            setKpi('total-communes', communes);
+            setKpi('total-parcelles-global', parcels);
+            setKpi('superficie-globale', hectares);
+
+            // Communes bar chart
+            this._renderCommunesChart();
+            this._renderGlobalUsageChart();
+        },
+
+        _renderCommunesChart() {
+            if (!AppState.parcelsData) return;
+            const canvas = document.getElementById('communes-chart');
+            if (!canvas) return;
+
+            const counts = {};
+            AppState.parcelsData.forEach(p => {
+                const raw = p.commune || p.Commune || 'Autre';
+                const c = resolveCommune(raw) || raw;
+                counts[c] = (counts[c] || 0) + 1;
+            });
+
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            const labels = sorted.map(e => e[0]);
+            const data = sorted.map(e => e[1]);
+            const colors = labels.map(l => COMMUNES_CONFIG[l]?.color || '#999');
+
+            if (AppState.charts['communes-chart']) AppState.charts['communes-chart'].destroy();
+            AppState.charts['communes-chart'] = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'Parcelles', data, backgroundColor: colors, borderRadius: 6 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Public Sans', size: 11 } } },
+                        y: { grid: { display: false }, ticks: { font: { family: 'Public Sans', size: 11 } } }
+                    }
+                }
+            });
+        },
+
+        _renderGlobalUsageChart() {
+            if (!AppState.parcelsData) return;
+            const canvas = document.getElementById('global-usage-chart');
+            if (!canvas) return;
+
+            const usage = {};
+            AppState.parcelsData.forEach(p => {
+                const u = p.type_usag || p.Vocation || 'Autre';
+                usage[u] = (usage[u] || 0) + 1;
+            });
+
+            const labels = Object.keys(usage);
+            const data = Object.values(usage);
+            const colors = ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#FFB703', '#FB5607', '#FF006E', '#8338EC'];
+
+            if (AppState.charts['global-usage-chart']) AppState.charts['global-usage-chart'].destroy();
+            AppState.charts['global-usage-chart'] = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2, borderColor: 'var(--bg-surface)' }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Public Sans', size: 11 }, padding: 14, usePointStyle: true } }
+                    }
+                }
+            });
+        }
     };
-}
 
-function getColorByOperationStatus(communeName, parcelleCount) {
-    if (!communeName || typeof communeName !== 'string') return '#F0F0F0';
-    const config = communesConfig[communeName.toUpperCase()];
-    if (!config) return '#F0F0F0';
-    if (config.status === 'pending') return colors.operationsPending;
-    if (config.status === 'completed') return colors.operationsCompleted;
-    return colors.operationsActive;
-}
+    /* ================================================================
+       DELIBERATION WIZARD CONTROLLER
+       ================================================================ */
+    const DELIB = {
+        init() {
+            this._initToggle();
+            this._initWizard('individual', 4);
+            this._initWizard('collective', 3);
+            this._initDropZones();
+            this._initModeCards();
+            this._initGenerateButtons();
+        },
 
-function getCommuneName(properties) {
-    return properties?.CCRCA_1 || properties?.CCRCA || properties?.NOM || 'Commune inconnue';
-}
+        /* Toggle between individual / collective */
+        _initToggle() {
+            document.querySelectorAll('.delib-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.delib-toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const mode = btn.dataset.delib;
+                    document.getElementById('wizard-individual').classList.toggle('active', mode === 'individual');
+                    document.getElementById('wizard-collective').classList.toggle('active', mode === 'collective');
+                });
+            });
+        },
 
-// === Map Functions ===
-function initializeMap() {
-    const mapElement = document.getElementById('map');
-    if (!mapElement) {
-        console.warn('Element map non trouvé');
-        showToast('Erreur : conteneur de la carte non trouvé', 'error');
-        return;
-    }
+        /* Wizard navigation */
+        _initWizard(type, totalSteps) {
+            const container = document.getElementById(`wizard-${type}`);
+            if (!container) return;
 
-    map = L.map('map').setView([12.5, -12.0], 8);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-    }).addTo(map);
+            const prevBtn = document.getElementById(`wizard-prev-${type}`);
+            const nextBtn = document.getElementById(`wizard-next-${type}`);
+            const resetBtn = document.getElementById(`wizard-reset-${type}`);
 
-    loadCommunesLayer();
-    updateMapLegend();
-}
+            const updateWizard = () => {
+                const step = type === 'individual' ? AppState.individualWizardStep : AppState.collectiveWizardStep;
 
-function loadCommunesLayer() {
-    if (!map || !communesData) return;
-    if (communesLayer) map.removeLayer(communesLayer);
+                // Update step indicators
+                container.querySelectorAll('.wizard-step-indicator').forEach(ind => {
+                    const s = parseInt(ind.dataset.step);
+                    ind.classList.toggle('active', s === step);
+                    ind.classList.toggle('completed', s < step);
+                });
+                container.querySelectorAll('.wizard-step-line').forEach((line, i) => {
+                    line.classList.toggle('active', i + 1 < step);
+                });
 
-    communesLayer = L.geoJSON(communesData, {
-        style: function (feature) {
-            const communeName = getCommuneName(feature.properties);
-            const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
-            const config = communesConfig[communeName.toUpperCase()];
-            return {
-                fillColor: getColorByOperationStatus(communeName, communeStats.totalParcelles),
-                weight: 2,
-                opacity: 1,
-                color: '#2C2C2C',
-                dashArray: config ? '0' : '5,5',
-                fillOpacity: config ? 0.7 : 0.3
+                // Show/hide panes
+                container.querySelectorAll('.wizard-pane').forEach(pane => {
+                    pane.classList.toggle('active', parseInt(pane.dataset.wizardStep) === step);
+                });
+
+                // Button visibility
+                if (prevBtn) prevBtn.style.display = step > 1 ? 'inline-flex' : 'none';
+                if (nextBtn) {
+                    const canAdvance = this._canAdvanceWizard(type, step);
+                    nextBtn.style.display = step < totalSteps ? 'inline-flex' : 'none';
+                    nextBtn.disabled = !canAdvance;
+                }
             };
-        },
-        onEachFeature: function (feature, layer) {
-            const communeName = getCommuneName(feature.properties);
-            const communeStats = calculateCommuneStats(communeName, filteredParcellesData);
-            const config = communesConfig[communeName.toUpperCase()];
 
-            let statusText = config
-                ? (config.status === 'active' ? 'Opérations foncières en cours' :
-                    config.status === 'completed' ? 'Opérations foncières terminées' : 'Opérations foncières non démarrées')
-                : 'Hors zone PROCASEF';
-
-            const buttonHtml = config && config.hasOperations && communeStats.totalParcelles > 0
-                ? `<button onclick="showCommuneDetails('${communeName}')" class="btn btn--primary btn--sm">Voir les détails</button>`
-                : '';
-
-            const popupContent = `
-                <div class="popup-content">
-                    <h3>${communeName}</h3>
-                    <p><strong>Région:</strong> ${feature.properties.REG || 'N/A'}</p>
-                    <p><strong>Département:</strong> ${feature.properties.DEPT || 'N/A'}</p>
-                    <p><strong>Statut:</strong> <span class="status-${config?.status || 'none'}">${statusText}</span></p>
-                    <p><strong>Parcelles levées:</strong> ${communeStats.totalParcelles}</p>
-                    <p><strong>Superficie totale:</strong> ${communeStats.superficieTotale.toFixed(1)} m²</p>
-                    ${buttonHtml}
-                </div>
-            `;
-
-            layer.bindPopup(popupContent);
-            layer.on({
-                mouseover: function (e) {
-                    e.target.setStyle({
-                        weight: 3,
-                        fillOpacity: config ? 0.9 : 0.5
-                    });
-                },
-                mouseout: function (e) {
-                    communesLayer.resetStyle(e.target);
-                },
-                click: function (e) {
-                    if (config && config.hasOperations && communeStats.totalParcelles > 0) {
-                        zoomToCommune(communeName, e.target);
-                        showCommuneDetails(communeName);
-                    }
-                }
+            if (prevBtn) prevBtn.addEventListener('click', () => {
+                if (type === 'individual') AppState.individualWizardStep = Math.max(1, AppState.individualWizardStep - 1);
+                else AppState.collectiveWizardStep = Math.max(1, AppState.collectiveWizardStep - 1);
+                updateWizard();
             });
-        }
-    }).addTo(map);
 
-    if (!lastSelectedCommune && communesData.features?.length > 0) {
-        map.fitBounds(communesLayer.getBounds());
-    }
-}
-
-function zoomToCommune(communeName, layer) {
-    const feature = communesData.features.find(f => getCommuneName(f.properties) === communeName);
-    if (!feature || !layer) return;
-
-    const bounds = L.geoJSON(feature).getBounds();
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-    blinkLayer(layer);
-}
-
-function updateMapLegend() {
-    let legendElement = document.querySelector('.map-legend');
-
-    if (!legendElement) {
-        console.warn('Élément .map-legend non trouvé, création dynamique...');
-        legendElement = document.createElement('div');
-        legendElement.className = 'map-legend';
-        const mapContainer = document.getElementById('map');
-        if (mapContainer) {
-            mapContainer.appendChild(legendElement);
-        } else {
-            console.error('Conteneur de la carte non trouvé pour ajouter la légende');
-            showToast('Erreur : impossible d\'afficher la légende', 'error');
-            return;
-        }
-    }
-
-    legendElement.innerHTML = `
-        <h4>Légende</h4>
-        <div class="legend-item">
-            <span class="legend-color" style="background: ${colors.operationsActive};"></span>
-            <span>Opérations foncières en cours</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background: ${colors.operationsCompleted};"></span>
-            <span>Opérations foncières terminées</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background: ${colors.operationsPending};"></span>
-            <span>Opérations foncières non démarrées</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background: #F0F0F0; border: 1px dashed #999;"></span>
-            <span>Hors zone PROCASEF</span>
-        </div>
-    `;
-
-    legendElement.style.display = 'block';
-    console.log('Légende mise à jour avec succès');
-}
-
-function showCommuneDetails(communeName) {
-    const stats = calculateCommuneStats(communeName, filteredParcellesData);
-    const panel = document.getElementById('stats-panel');
-    if (!panel) return;
-
-    lastSelectedCommune = communeName;
-    document.getElementById('selected-commune').textContent = `Commune de ${communeName}`;
-    animateValue(document.getElementById('total-parcelles'), 0, stats.totalParcelles);
-    animateValue(document.getElementById('superficie-totale'), 0, stats.superficieTotale);
-
-    const nicadPercentage = stats.totalParcelles > 0 ? Math.round((stats.nicadCount / stats.totalParcelles) * 100) : 0;
-    const delibereesPercentage = stats.totalParcelles > 0 ? Math.round((stats.delibereesCount / stats.totalParcelles) * 100) : 0;
-
-    setTimeout(() => {
-        document.getElementById('pourcentage-nicad').textContent = `${nicadPercentage}%`;
-        document.getElementById('pourcentage-deliberees').textContent = `${delibereesPercentage}%`;
-    }, 500);
-
-    panel.classList.remove('hidden');
-    panel.scrollIntoView({ behavior: 'smooth' });
-    setTimeout(() => {
-        createUsageChart(stats.typesUsage);
-        createStatusChart(stats.nicadCount, stats.delibereesCount, stats.totalParcelles);
-    }, 600);
-
-    const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeName);
-    if (layer) zoomToCommune(communeName, layer);
-
-    showToast(`Détails chargés pour ${communeName}`, 'success');
-}
-
-// === Chart Functions ===
-function createUsageChart(typesUsage) {
-    const ctx = document.getElementById('usage-chart');
-    if (!ctx) return;
-
-    if (currentCharts.usage) currentCharts.usage.destroy();
-
-    const labels = Object.keys(typesUsage).length ? Object.keys(typesUsage) : ['Aucune donnée'];
-    const data = Object.values(typesUsage).length ? Object.values(typesUsage) : [1];
-
-    currentCharts.usage = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels.map(label => label.replace(/_/g, ' ')),
-            datasets: [{
-                data,
-                backgroundColor: colors.chartColors.slice(0, labels.length),
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 15, usePointStyle: true } },
-                title: { display: true, text: 'Types d\'Usage', font: { size: 14, weight: 'bold' } }
-            },
-            animation: { animateRotate: true, duration: 1000 }
-        }
-    });
-}
-
-function createStatusChart(nicadCount, delibereesCount, total) {
-    const ctx = document.getElementById('status-chart');
-    if (!ctx) return;
-
-    if (currentCharts.status) currentCharts.status.destroy();
-
-    currentCharts.status = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['NICAD', 'Délibérées'],
-            datasets: [
-                { label: 'Oui', data: [nicadCount, delibereesCount], backgroundColor: [colors.accent, colors.secondary], borderRadius: 4 },
-                { label: 'Non', data: [total - nicadCount, total - delibereesCount], backgroundColor: ['#E5E5E5', '#E5E5E5'], borderRadius: 4 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
-            plugins: { legend: { position: 'top' }, title: { display: true, text: 'Statuts des Parcelles', font: { size: 14, weight: 'bold' } } },
-            animation: { duration: 1000, easing: 'easeInOutQuart' }
-        }
-    });
-}
-
-function createCommunesChart() {
-    const ctx = document.getElementById('communes-chart');
-    if (!ctx || !communesData?.features) return;
-
-    const communeNames = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))].sort();
-    const parcelleCounts = communeNames.map(name => calculateCommuneStats(name, filteredParcellesData).totalParcelles);
-    const backgroundColors = communeNames.map(name => {
-        const config = communesConfig[name.toUpperCase()];
-        if (!config) return '#F0F0F0';
-        return config.status === 'active' ? colors.operationsActive :
-            config.status === 'completed' ? colors.operationsCompleted : colors.operationsPending;
-    });
-
-    if (currentCharts.communes) currentCharts.communes.destroy();
-
-    currentCharts.communes = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: communeNames,
-            datasets: [{
-                label: 'Nombre de parcelles levées',
-                data: parcelleCounts,
-                backgroundColor: backgroundColors,
-                borderRadius: 4,
-                borderWidth: 1,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { autoSkip: true, maxTicksLimit: 10 } }, x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true } } },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const communeName = context.label;
-                            const config = communesConfig[communeName.toUpperCase()];
-                            let status = config ?
-                                (config.status === 'active' ? 'Opérations en cours' :
-                                    config.status === 'completed' ? 'Opérations terminées' : 'Opérations non démarrées') :
-                                'Hors zone PROCASEF';
-                            return [
-                                `${communeName}: ${context.parsed.y} parcelle${context.parsed.y > 1 ? 's' : ''} levée${context.parsed.y > 1 ? 's' : ''}`,
-                                `Statut: ${status}`
-                            ];
-                        }
+            if (nextBtn) nextBtn.addEventListener('click', () => {
+                if (type === 'individual') {
+                    if (AppState.individualWizardStep < totalSteps) {
+                        AppState.individualWizardStep++;
+                        if (AppState.individualWizardStep === 3) this._renderPreview('individual');
+                        if (AppState.individualWizardStep === 4) this._enableGenerate('individual');
+                    }
+                } else {
+                    if (AppState.collectiveWizardStep < totalSteps) {
+                        AppState.collectiveWizardStep++;
+                        if (AppState.collectiveWizardStep === 2) this._renderPreview('collective');
+                        if (AppState.collectiveWizardStep === 3) this._enableGenerate('collective');
                     }
                 }
-            },
-            animation: { duration: 1500, easing: 'easeInOutQuart' }
-        }
-    });
-}
+                updateWizard();
+            });
 
-function createGlobalUsageChart() {
-    const ctx = document.getElementById('global-usage-chart');
-    if (!ctx) return;
+            if (resetBtn) resetBtn.addEventListener('click', () => {
+                this._resetWizard(type);
+                updateWizard();
+            });
 
-    const usageStats = filteredParcellesData.reduce((acc, p) => {
-        if (p.type_usag) acc[p.type_usag] = (acc[p.type_usag] || 0) + 1;
-        return acc;
-    }, {});
-
-    const labels = Object.keys(usageStats).length ? Object.keys(usageStats) : ['Aucune donnée'];
-    const data = Object.values(usageStats).length ? Object.values(usageStats) : [1];
-
-    if (currentCharts.globalUsage) currentCharts.globalUsage.destroy();
-
-    currentCharts.globalUsage = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels.map(label => label.replace(/_/g, ' ')),
-            datasets: [{
-                data,
-                backgroundColor: colors.chartColors.slice(0, labels.length),
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
+            // Initial state
+            updateWizard();
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        font: { size: 11 },
-                        padding: 10,
-                        usePointStyle: true,
-                        generateLabels: function (chart) {
-                            const data = chart.data;
-                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            return data.labels.map((label, i) => {
-                                const value = data.datasets[0].data[i];
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                                return { text: `${label} (${percentage}%)`, fillStyle: data.datasets[0].backgroundColor[i], hidden: false, index: i };
-                            });
-                        }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                            return `${context.label}: ${context.parsed} (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            animation: { animateRotate: true, duration: 1500 }
-        }
-    });
-}
 
-// === Event Handlers ===
-function initializeEventHandlers() {
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => switchSection(button.dataset.section));
-    });
-
-    document.querySelectorAll('.dashboard-tab').forEach(button => {
-        button.addEventListener('click', () => switchDashboard(button.dataset.dashboard));
-    });
-
-    const closeStats = document.getElementById('close-stats');
-    if (closeStats) closeStats.addEventListener('click', () => {
-        document.getElementById('stats-panel')?.classList.add('hidden');
-        lastSelectedCommune = null;
-        if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
-    });
-
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-
-    const fontIncrease = document.getElementById('font-increase');
-    const fontDecrease = document.getElementById('font-decrease');
-    if (fontIncrease) fontIncrease.addEventListener('click', () => adjustFontSize(0.1));
-    if (fontDecrease) fontDecrease.addEventListener('click', () => adjustFontSize(-0.1));
-
-    const communeFilter = document.getElementById('commune-filter');
-    const usageFilter = document.getElementById('usage-filter');
-    if (communeFilter) communeFilter.addEventListener('change', applyFilters);
-    if (usageFilter) usageFilter.addEventListener('change', applyFilters);
-
-    const exportData = document.getElementById('export-data');
-    if (exportData) exportData.addEventListener('click', exportDataHandler);
-
-    const generateIndividualBtn = document.getElementById('generate-individual');
-    const generateCollectiveBtn = document.getElementById('generate-collective');
-    if (generateIndividualBtn) generateIndividualBtn.addEventListener('click', () => generateDeliberationList('individual'));
-    if (generateCollectiveBtn) generateCollectiveBtn.addEventListener('click', () => generateDeliberationList('collective'));
-
-    const resetBtn = document.getElementById('reset-deliberation');
-    if (resetBtn) resetBtn.addEventListener('click', () => {
-        resetDeliberationData('individual');
-        // Reset workflow to step 1
-        if (window.WorkflowManager && window.WorkflowManager.showStep) {
-            window.WorkflowManager.showStep(1);
-        }
-    });
-
-    const resetCollectiveBtn = document.getElementById('reset-collective');
-    if (resetCollectiveBtn) resetCollectiveBtn.addEventListener('click', () => {
-        resetDeliberationData('collective');
-        // Reset workflow to step 1
-        if (window.WorkflowManager && window.WorkflowManager.showCollectiveStep) {
-            window.WorkflowManager.showCollectiveStep(1);
-        }
-    });
-
-    if (window.DeliberationListUI) {
-        window.DeliberationListUI.initializeDeliberationHandlers();
-    } else {
-        console.warn('Module DeliberationListUI non chargé');
-        showToast('Erreur : module de gestion des délibérations non disponible', 'error');
-    }
-
-    // Handle SIF iframe load to force map resize
-    const sifFrame = document.getElementById('sif-frame');
-    if (sifFrame) {
-        sifFrame.addEventListener('load', () => {
-            // Wait for iframe content to initialize, then trigger window resize
-            setTimeout(() => {
-                // Dispatch resize event on window to force embedded map to recalculate
-                window.dispatchEvent(new Event('resize'));
-                
-                // Try sending postMessage to iframe
-                try {
-                    sifFrame.contentWindow.postMessage({ 
-                        type: 'resize',
-                        width: sifFrame.offsetWidth,
-                        height: sifFrame.offsetHeight 
-                    }, '*');
-                } catch (e) {
-                    console.log('Could not send resize message to iframe');
-                }
-            }, 1000);
-        });
-    }
-}
-
-function initializeSubTabs() {
-    const subTabButtons = document.querySelectorAll('.sub-tab-button');
-    const subContentSections = document.querySelectorAll('.sub-content-section');
-
-    subTabButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const subsection = this.dataset.subsection;
-
-            // Remove active class from all sub-tabs and sub-sections
-            subTabButtons.forEach(btn => btn.classList.remove('active'));
-            subContentSections.forEach(section => section.classList.remove('active'));
-
-            // Add active class to clicked tab and corresponding section
-            this.classList.add('active');
-            document.getElementById(`${subsection}-subsection`).classList.add('active');
-
-            // Update file info and preview based on active subsection
-            if (subsection === 'individual') {
-                // Only display preview if there's processed data
-                if (window.BoundouDashboard.processedIndividualData &&
-                    Array.isArray(window.BoundouDashboard.processedIndividualData) &&
-                    window.BoundouDashboard.processedIndividualData.length > 0) {
-                    window.DeliberationListUI.displayIndividualPreview();
-                }
+        _canAdvanceWizard(type, step) {
+            if (type === 'individual') {
+                if (step === 1) return !!AppState.individualFile;
+                if (step === 2) return !!AppState.selectedIndividualConfig;
+                return true;
             } else {
-                // Only display preview if there's processed data
-                if (window.BoundouDashboard.processedCollectiveData &&
-                    Array.isArray(window.BoundouDashboard.processedCollectiveData) &&
-                    window.BoundouDashboard.processedCollectiveData.length > 0) {
-                    window.DeliberationListUI.displayCollectivePreview();
-                }
+                if (step === 1) return !!AppState.collectiveFile;
+                if (step === 2) return !!AppState.selectedCollectiveConfig;
+                return true;
             }
-        });
-    });
+        },
 
-    // Ajout des attributs ARIA pour l'accessibilité
-    subTabButtons.forEach((tab, index, tabs) => {
-        tab.setAttribute('tabindex', index === 0 ? '0' : '-1');
-        tab.setAttribute('role', 'tab');
-        tab.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => {
-                t.setAttribute('aria-selected', 'false');
-                t.setAttribute('tabindex', '-1');
+        _resetWizard(type) {
+            if (type === 'individual') {
+                AppState.individualWizardStep = 1;
+                AppState.individualFile = null;
+                AppState.selectedIndividualConfig = null;
+                window.BoundouDashboard.processedIndividualData = null;
+                const fileInfo = document.getElementById('fileInfoIndividual');
+                if (fileInfo) fileInfo.style.display = 'none';
+                const fileInput = document.getElementById('individual-file');
+                if (fileInput) fileInput.value = '';
+                document.querySelectorAll('#wizard-individual .mode-card').forEach(c => c.classList.remove('selected'));
+                const validate = document.getElementById('file-validation-individual');
+                if (validate) validate.textContent = '';
+                const preview = document.getElementById('previewIndividual');
+                if (preview) preview.innerHTML = '';
+                const genBtn = document.getElementById('generate-individual');
+                if (genBtn) genBtn.disabled = true;
+            } else {
+                AppState.collectiveWizardStep = 1;
+                AppState.collectiveFile = null;
+                AppState.selectedCollectiveConfig = null;
+                window.BoundouDashboard.processedCollectiveData = null;
+                const fileInfo = document.getElementById('fileInfoCollective');
+                if (fileInfo) fileInfo.style.display = 'none';
+                const fileInput = document.getElementById('collective-file');
+                if (fileInput) fileInput.value = '';
+                document.querySelectorAll('#wizard-collective .mode-card').forEach(c => c.classList.remove('selected'));
+                const validate = document.getElementById('file-validation-collective');
+                if (validate) validate.textContent = '';
+                const preview = document.getElementById('previewCollective');
+                if (preview) preview.innerHTML = '';
+                const genBtn = document.getElementById('generate-collective');
+                if (genBtn) genBtn.disabled = true;
+            }
+        },
+
+        /* Drop zones & file handling */
+        _initDropZones() {
+            this._setupDropZone('individual');
+            this._setupDropZone('collective');
+        },
+
+        _setupDropZone(type) {
+            const zone = document.getElementById(`dropzone-${type}`);
+            const input = document.getElementById(`${type}-file`);
+            const clearBtn = document.getElementById(`clearFile${type.charAt(0).toUpperCase() + type.slice(1)}`);
+
+            if (!zone || !input) return;
+
+            // Drag & drop
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault(); zone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) this._handleFile(file, type);
             });
-            tab.setAttribute('aria-selected', 'true');
-            tab.setAttribute('tabindex', '0');
-        });
-        tab.addEventListener('keydown', (e) => {
-            let nextIndex;
-            switch (e.key) {
-                case 'ArrowRight': nextIndex = (index + 1) % tabs.length; break;
-                case 'ArrowLeft': nextIndex = (index - 1 + tabs.length) % tabs.length; break;
-                case 'Home': nextIndex = 0; break;
-                case 'End': nextIndex = tabs.length - 1; break;
-                default: return;
+
+            // Click to browse
+            zone.addEventListener('click', e => {
+                if (!e.target.closest('.drop-zone-info') && !e.target.closest('.link-btn')) {
+                    input.click();
+                }
+            });
+            input.addEventListener('change', () => { if (input.files[0]) this._handleFile(input.files[0], type); });
+
+            // Clear button
+            if (clearBtn) {
+                clearBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    this._resetWizard(type);
+                    // Re-trigger wizard update
+                    const container = document.getElementById(`wizard-${type}`);
+                    if (container) {
+                        container.querySelectorAll('.wizard-step-indicator').forEach(ind => {
+                            ind.classList.toggle('active', parseInt(ind.dataset.step) === 1);
+                            ind.classList.remove('completed');
+                        });
+                        container.querySelectorAll('.wizard-step-line').forEach(line => line.classList.remove('active'));
+                        container.querySelectorAll('.wizard-pane').forEach(pane => {
+                            pane.classList.toggle('active', parseInt(pane.dataset.wizardStep) === 1);
+                        });
+                    }
+                });
             }
-            e.preventDefault();
-            tabs[nextIndex].focus();
-            tabs[nextIndex].click();
+        },
+
+        async _handleFile(file, type) {
+            // Validate
+            if (typeof BoundouUtils !== 'undefined') {
+                const errors = BoundouUtils.validateFile(file);
+                const validateEl = document.getElementById(`file-validation-${type}`);
+                if (errors.length > 0) {
+                    if (validateEl) { validateEl.textContent = errors.join(', '); validateEl.className = 'validation-msg error'; }
+                    return;
+                }
+                if (validateEl) { validateEl.textContent = ''; validateEl.className = 'validation-msg'; }
+            }
+
+            // Show file info
+            const capType = type.charAt(0).toUpperCase() + type.slice(1);
+            const fileInfo = document.getElementById(`fileInfo${capType}`);
+            const fileName = document.getElementById(`fileName${capType}`);
+            const fileMeta = document.getElementById(`fileMeta${capType}`);
+
+            if (fileInfo) fileInfo.style.display = 'flex';
+            if (fileName) fileName.textContent = file.name;
+            if (fileMeta) fileMeta.textContent = this._formatSize(file.size);
+
+            // Store
+            if (type === 'individual') AppState.individualFile = file;
+            else AppState.collectiveFile = file;
+
+            // Process file
+            try {
+                const data = await this._readExcelFile(file);
+                if (type === 'individual') {
+                    if (typeof BoundouDataProcessor !== 'undefined') {
+                        await BoundouDataProcessor.processIndividualData(data);
+                    }
+                } else {
+                    if (typeof BoundouDataProcessor !== 'undefined') {
+                        const processed = BoundouDataProcessor.processCollectiveData(data);
+                        window.BoundouDashboard.processedCollectiveData = processed;
+                        window.BoundouDashboard.originalCollectiveData = data;
+                    }
+                }
+                const validateEl = document.getElementById(`file-validation-${type}`);
+                if (validateEl) { validateEl.textContent = '✅ Fichier chargé avec succès'; validateEl.className = 'validation-msg success'; }
+
+                // Enable next button
+                this._refreshWizardButtons(type);
+
+            } catch (err) {
+                console.error('File processing error:', err);
+                const validateEl = document.getElementById(`file-validation-${type}`);
+                if (validateEl) { validateEl.textContent = `❌ Erreur: ${err.message}`; validateEl.className = 'validation-msg error'; }
+            }
+        },
+
+        _readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const wb = XLSX.read(e.target.result, { type: 'array' });
+                        const sheet = wb.Sheets[wb.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                        resolve(data);
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+                reader.readAsArrayBuffer(file);
+            });
+        },
+
+        _refreshWizardButtons(type) {
+            const totalSteps = type === 'individual' ? 4 : 3;
+            const step = type === 'individual' ? AppState.individualWizardStep : AppState.collectiveWizardStep;
+            const nextBtn = document.getElementById(`wizard-next-${type}`);
+            if (nextBtn && step < totalSteps) {
+                nextBtn.style.display = 'inline-flex';
+                nextBtn.disabled = !this._canAdvanceWizard(type, step);
+            }
+        },
+
+        /* Mode cards */
+        _initModeCards() {
+            document.querySelectorAll('.mode-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const type = card.dataset.type;
+                    const config = card.dataset.config;
+
+                    // Deselect siblings
+                    const container = card.closest('.wizard-container');
+                    if (container) container.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+
+                    if (type === 'individual') AppState.selectedIndividualConfig = config;
+                    else AppState.selectedCollectiveConfig = config;
+
+                    this._refreshWizardButtons(type);
+                });
+            });
+        },
+
+        /* Preview */
+        _renderPreview(type) {
+            const containerId = type === 'individual' ? 'previewIndividual' : 'previewCollective';
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (type === 'individual' && window.BoundouDashboard.processedIndividualData) {
+                const data = window.BoundouDashboard.processedIndividualData;
+                let html = '';
+                ['personne_physique', 'personne_morale', 'groupement'].forEach(entityType => {
+                    const items = data[entityType] || [];
+                    if (items.length === 0) return;
+                    const headers = Object.keys(items[0]).filter(h => h !== 'Typ_pers' && h !== 'Typ_pers_m');
+                    const displayRows = items.slice(0, 5);
+
+                    const labels = { personne_physique: 'Personnes Physiques', personne_morale: 'Personnes Morales', groupement: 'Groupements' };
+                    html += `<div style="margin-bottom:1.5rem">
+                        <div class="preview-stats"><span><strong>${items.length}</strong> ${labels[entityType]}</span></div>
+                        <div style="overflow-x:auto"><table class="preview-table"><thead><tr><th>#</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                        <tbody>${displayRows.map((row, i) => `<tr><td class="row-number">${i + 1}</td>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+                        ${items.length > 5 ? `<p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.3rem">… et ${items.length - 5} de plus</p>` : ''}</div>`;
+                });
+                container.innerHTML = html || '<p style="color:var(--text-muted)">Aucune donnée à afficher</p>';
+            } else if (type === 'collective' && window.BoundouDashboard.processedCollectiveData) {
+                const items = window.BoundouDashboard.processedCollectiveData;
+                if (items.length === 0) { container.innerHTML = '<p style="color:var(--text-muted)">Aucune donnée collective</p>'; return; }
+                const headers = Object.keys(items[0]).slice(0, 10);
+                const displayRows = items.slice(0, 5);
+                container.innerHTML = `<div class="preview-stats"><span><strong>${items.length}</strong> parcelles collectives</span></div>
+                    <div style="overflow-x:auto"><table class="preview-table"><thead><tr><th>#</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>${displayRows.map((row, i) => `<tr><td class="row-number">${i + 1}</td>${headers.map(h => `<td>${String(row[h] || '').substring(0, 50)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+                    ${items.length > 5 ? `<p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.3rem">… et ${items.length - 5} de plus</p>` : ''}`;
+            } else {
+                container.innerHTML = '<p style="color:var(--text-muted)">Aucune donnée disponible</p>';
+            }
+        },
+
+        /* Enable generate buttons */
+        _enableGenerate(type) {
+            const btn = document.getElementById(`generate-${type}`);
+            if (btn) btn.disabled = false;
+        },
+
+        /* Generate buttons */
+        _initGenerateButtons() {
+            const genInd = document.getElementById('generate-individual');
+            const genCol = document.getElementById('generate-collective');
+
+            if (genInd) {
+                genInd.addEventListener('click', async () => {
+                    if (!window.BoundouDashboard.processedIndividualData) { UI._toast('Aucune donnée', 'error'); return; }
+                    genInd.disabled = true;
+                    const progress = document.getElementById('export-progress-individual');
+                    const fill = document.getElementById('progress-fill-individual');
+                    const label = document.getElementById('progress-label-individual');
+                    if (progress) progress.style.display = 'block';
+
+                    try {
+                        // Animate progress
+                        this._animateProgress(fill, label, 'Génération en cours…');
+
+                        if (typeof BoundouExcelGenerator !== 'undefined') {
+                            const config = AppState.selectedIndividualConfig || 'basic';
+                            if (config === 'mandataire' || config === 'complete') {
+                                await BoundouExcelGenerator.generateEnhancedDelibList(window.BoundouDashboard.originalIndividualData);
+                            } else {
+                                await BoundouExcelGenerator.generateDelibList(window.BoundouDashboard.originalIndividualData);
+                            }
+                        }
+
+                        if (fill) fill.style.width = '100%';
+                        if (label) label.textContent = '✅ Terminé !';
+                        UI._toast('Liste individuelle générée !', 'success');
+                    } catch (err) {
+                        console.error(err);
+                        UI._toast('Erreur lors de la génération', 'error');
+                        if (label) label.textContent = '❌ Erreur';
+                    }
+                    setTimeout(() => { genInd.disabled = false; }, 2000);
+                });
+            }
+
+            if (genCol) {
+                genCol.addEventListener('click', async () => {
+                    if (!window.BoundouDashboard.processedCollectiveData) { UI._toast('Aucune donnée', 'error'); return; }
+                    genCol.disabled = true;
+                    const progress = document.getElementById('export-progress-collective');
+                    const fill = document.getElementById('progress-fill-collective');
+                    const label = document.getElementById('progress-label-collective');
+                    if (progress) progress.style.display = 'block';
+
+                    try {
+                        this._animateProgress(fill, label, 'Génération en cours…');
+
+                        if (typeof BoundouExcelGenerator !== 'undefined') {
+                            await BoundouExcelGenerator.generateCollectiveDelibList(window.BoundouDashboard.originalCollectiveData);
+                        }
+
+                        if (fill) fill.style.width = '100%';
+                        if (label) label.textContent = '✅ Terminé !';
+                        UI._toast('Liste collective générée !', 'success');
+                    } catch (err) {
+                        console.error(err);
+                        UI._toast('Erreur lors de la génération', 'error');
+                        if (label) label.textContent = '❌ Erreur';
+                    }
+                    setTimeout(() => { genCol.disabled = false; }, 2000);
+                });
+            }
+        },
+
+        _animateProgress(fillEl, labelEl, msg) {
+            if (!fillEl) return;
+            fillEl.style.width = '0%';
+            if (labelEl) labelEl.textContent = msg;
+            let w = 0;
+            const interval = setInterval(() => {
+                w += Math.random() * 15;
+                if (w >= 90) { clearInterval(interval); w = 90; }
+                fillEl.style.width = w + '%';
+            }, 200);
+            // Store interval for cleanup
+            fillEl._progressInterval = interval;
+        },
+
+        _formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+    };
+
+    /* ================================================================
+       BOOTSTRAP — Wire everything when DOM is ready
+       ================================================================ */
+    function boot() {
+        console.log('🚀 PROCASEF Boundou v2 — Starting...');
+
+        // Theme
+        UI.initTheme();
+        UI.setDateLabel();
+
+        // Tab navigation
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => UI.switchSection(tab.dataset.section));
         });
-    });
-}
 
-function switchSection(sectionName) {
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    const activeTab = document.querySelector(`[data-section="${sectionName}"]`);
-    if (activeTab) activeTab.classList.add('active');
+        // Filter listeners
+        const communeFilter = document.getElementById('commune-filter');
+        if (communeFilter) communeFilter.addEventListener('change', e => MAP.filterByCommune(e.target.value));
+        const usageFilter = document.getElementById('usage-filter');
+        if (usageFilter) usageFilter.addEventListener('change', e => MAP.filterByUsage(e.target.value));
 
-    // Hide all sections first
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
-        section.style.display = 'none';
-    });
-    
-    // Show only the selected section
-    const targetSection = document.getElementById(`${sectionName}-section`);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        targetSection.style.display = 'block';
-    }
+        // Theme toggle
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) themeBtn.addEventListener('click', () => UI.toggleTheme());
 
-    // Scroll to top of page for better UX
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Close stats panel
+        const closeStats = document.getElementById('close-stats');
+        if (closeStats) closeStats.addEventListener('click', () => {
+            document.getElementById('stats-panel')?.classList.add('hidden');
+        });
 
-    // Section-specific initialization
-    if (sectionName === 'stats') {
-        createGlobalCharts();
-    } else if (sectionName === 'map') {
-        setTimeout(() => map?.invalidateSize(), 100);
-        updateMapLegend();
-        if (lastSelectedCommune && communesLayer) {
-            const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
-            if (layer) zoomToCommune(lastSelectedCommune, layer);
-        }
-    } else if (sectionName === 'sif') {
-        // Handle SIF iframe loading
-        const frame = document.getElementById('sif-frame');
-        if (frame && !frame.src) {
-            frame.src = "https://sifboundou.netlify.app/";
-        }
-    } else if (sectionName === 'dashboards') {
-        // Ensure dashboard is visible
-        setTimeout(() => {
-            const iframe = document.getElementById('dashboard-frame');
-            if (iframe && !iframe.src) {
-                iframe.src = 'https://boundoudash.netlify.app/';
+        // Search
+        UI.initSearch();
+        UI.initMobileSearch();
+
+        // Export button
+        UI.initExportButton();
+
+        // Deliberation wizard
+        DELIB.init();
+
+        // Handle window resize — invalidate map
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (AppState.map) AppState.map.invalidateSize();
+            }, 200);
+        });
+
+        // Wait for libraries to load, then initialize map
+        const waitForLibs = setInterval(() => {
+            if (typeof L !== 'undefined') {
+                clearInterval(waitForLibs);
+                MAP.init();
+
+                // Hide skeleton after map init
+                setTimeout(() => UI.hideSkeleton(), 600);
             }
         }, 100);
+
+        // Fallback: hide skeleton after 4s regardless
+        setTimeout(() => UI.hideSkeleton(), 4000);
+
+        console.log('✅ Boot sequence complete');
     }
-}
 
-function switchDashboard(dashboardName) {
-    document.querySelectorAll('.dashboard-tab').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-dashboard="${dashboardName}"]`)?.classList.add('active');
-
-    const iframe = document.getElementById('dashboard-frame');
-    const loading = document.querySelector('.dashboard-loading');
-    const blocked = document.getElementById('dashboard-blocked');
-    if (!iframe) return;
-
-    const urls = {
-        'boundou': 'https://boundoudash.netlify.app/',
-        'edl': 'https://suivioperation.netlify.app/'
-    };
-
-    if (loading) loading.style.display = 'block';
-    if (blocked) blocked.style.display = 'none';
-    const targetUrl = urls[dashboardName] || '';
-    iframe.src = targetUrl;
-
-    // Enable "Open in new tab" link in case of block
-    const openLink = document.getElementById('dashboard-open-link');
-    if (openLink) openLink.href = targetUrl;
-
-    let loaded = false;
-    iframe.onload = () => {
-        loaded = true;
-        if (loading) loading.style.display = 'none';
-        const name = dashboardName === 'edl' ? 'Suivi Opération' : 'Dashboard Principal';
-        showToast(`${name} chargé`, 'success');
-    };
-
-    // After a short delay, if not loaded, likely blocked by X-Frame-Options
-    setTimeout(() => {
-        if (!loaded) {
-            if (loading) loading.style.display = 'none';
-            if (blocked) blocked.style.display = 'flex';
-        }
-    }, 2000);
-}
-
-function toggleTheme() {
-    const currentTheme = document.documentElement.dataset.colorScheme || 'light';
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    document.documentElement.dataset.colorScheme = newTheme;
-    const themeIcon = document.querySelector('.theme-icon');
-    if (themeIcon) {
-        themeIcon.textContent = newTheme === 'light' ? '🌙' : '☀️';
-    }
-    localStorage.setItem('theme', newTheme);
-    showToast(`Mode ${newTheme === 'dark' ? 'sombre' : 'clair'} activé`, 'success');
-}
-
-function adjustFontSize(delta) {
-    fontScale = Math.max(0.8, Math.min(1.4, fontScale + delta));
-    document.documentElement.style.setProperty('--font-scale', fontScale);
-    showToast(`Taille du texte: ${Math.round(fontScale * 100)}%`, 'info');
-}
-
-function applyFilters() {
-    const communeFilter = document.getElementById('commune-filter');
-    const usageFilter = document.getElementById('usage-filter');
-    if (!communeFilter || !usageFilter) return;
-
-    const communeValue = communeFilter.value;
-    const usageValue = usageFilter.value;
-
-    filteredParcellesData = parcellesData.filter(p => {
-        const communeMatch = !communeValue || p.commune === communeValue;
-        const usageMatch = !usageValue || p.type_usag === usageValue;
-        return communeMatch && usageMatch;
-    });
-
-    updateGlobalStats();
-    if (communesLayer) loadCommunesLayer();
-    createGlobalCharts();
-
-    if (communeValue) {
-        lastSelectedCommune = communeValue;
-        const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === communeValue);
-        if (layer) {
-            zoomToCommune(communeValue, layer);
-            showCommuneDetails(communeValue);
-        }
+    // Start
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
     } else {
-        lastSelectedCommune = null;
-        if (communesData.features?.length > 0) map.fitBounds(communesLayer.getBounds());
+        boot();
     }
-
-    showToast(`${filteredParcellesData.length} parcelles trouvées`, 'info');
-}
-
-function exportDataHandler() {
-    const ws = XLSX.utils.json_to_sheet(filteredParcellesData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Parcelles');
-    XLSX.writeFile(wb, 'parcelles_boundou.xlsx');
-    showToast('Données exportées avec succès en XLSX', 'success');
-}
-
-function initializeFilters() {
-    const communeSelect = document.getElementById('commune-filter');
-    const usageSelect = document.getElementById('usage-filter');
-    if (!communeSelect || !usageSelect) return;
-
-    communeSelect.innerHTML = '<option value="">Toutes les communes</option>';
-    usageSelect.innerHTML = '<option value="">Tous les usages</option>';
-
-    const communes = [...new Set(parcellesData.map(p => p.commune).filter(Boolean))].sort();
-    communes.forEach(commune => {
-        const option = document.createElement('option');
-        option.value = commune;
-        option.textContent = commune;
-        communeSelect.appendChild(option);
-    });
-
-    const usages = [...new Set(parcellesData.map(p => p.type_usag).filter(Boolean))].sort();
-    usages.forEach(usage => {
-        const option = document.createElement('option');
-        option.value = usage;
-        option.textContent = usage.replace(/_/g, ' ');
-        usageSelect.appendChild(option);
-    });
-}
-
-function updateGlobalStats() {
-    const dataToUse = filteredParcellesData.length > 0 ? filteredParcellesData : parcellesData;
-    const communesAvecParcelles = new Set(dataToUse.map(p => p.commune).filter(Boolean)).size;
-    const totalParcelles = dataToUse.length;
-    const superficieGlobale = dataToUse.reduce((sum, p) => sum + (parseFloat(p.superficie) || 0), 0);
-    const nicadCount = dataToUse.filter(p => p.nicad === 'Oui').length;
-    const delibereesCount = dataToUse.filter(p => p.deliberee === 'Oui').length;
-
-    const totalCommunesEl = document.getElementById('total-communes');
-    const totalParcellesEl = document.getElementById('total-parcelles-global');
-    const superficieEl = document.getElementById('superficie-globale');
-    const nicadPercentageEl = document.getElementById('nicad-percentage-global');
-    const delibereesPercentageEl = document.getElementById('deliberees-percentage-global');
-
-    if (totalCommunesEl) totalCommunesEl.textContent = communesAvecParcelles;
-    if (totalParcellesEl) totalParcellesEl.textContent = totalParcelles;
-    if (superficieEl) superficieEl.textContent = superficieGlobale.toFixed(1);
-    if (nicadPercentageEl && totalParcelles > 0) {
-        nicadPercentageEl.textContent = `${Math.round((nicadCount / totalParcelles) * 100)}%`;
-    }
-    if (delibereesPercentageEl && totalParcelles > 0) {
-        delibereesPercentageEl.textContent = `${Math.round((delibereesCount / totalParcelles) * 100)}%`;
-    }
-}
-
-function createGlobalCharts() {
-    setTimeout(() => {
-        createCommunesChart();
-        createGlobalUsageChart();
-    }, 300);
-}
-
-function initializeTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.dataset.colorScheme = savedTheme;
-    const themeIcon = document.querySelector('.theme-icon');
-    if (themeIcon) themeIcon.textContent = savedTheme === 'light' ? '🌙' : '☀️';
-}
-
-function updateLastUpdatedLabel(dateObj) {
-    const label = document.getElementById('last-updated-label');
-    if (!label || !dateObj) return;
-    const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    const jour = String(dateObj.getDate()).padStart(2, '0');
-    const moisTxt = mois[dateObj.getMonth()];
-    const annee = dateObj.getFullYear();
-    label.innerHTML = `<span class="update-icon">📅</span> Données mises à jour le ${jour} ${moisTxt} ${annee}`;
-}
-
-function handleResize() {
-    if (map) setTimeout(() => map.invalidateSize(), 100);
-    Object.values(currentCharts).forEach(chart => chart?.resize?.());
-}
-
-function initializeAccessibility() {
-    document.querySelectorAll('.tab-button').forEach((tab, index, tabs) => {
-        tab.setAttribute('tabindex', index === 0 ? '0' : '-1');
-        tab.setAttribute('role', 'tab');
-        tab.addEventListener('keydown', (e) => {
-            let nextIndex;
-            switch (e.key) {
-                case 'ArrowRight': nextIndex = (index + 1) % tabs.length; break;
-                case 'ArrowLeft': nextIndex = (index - 1 + tabs.length) % tabs.length; break;
-                case 'Home': nextIndex = 0; break;
-                case 'End': nextIndex = tabs.length - 1; break;
-                default: return;
-            }
-            e.preventDefault();
-            tabs[nextIndex].focus();
-            tabs[nextIndex].click();
-        });
-    });
-}
-
-async function retryDataLoad(maxRetries = 3) {
-    let attempts = 0;
-    async function attempt() {
-        attempts++;
-        try {
-            return await loadExternalData();
-        } catch (error) {
-            if (attempts < maxRetries) {
-                showToast(`Tentative ${attempts}/${maxRetries} échouée, nouvel essai...`, 'warning');
-                await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
-                return await attempt();
-            }
-            throw error;
-        }
-    }
-    return attempt();
-}
-
-function initializePerformanceMonitoring() {
-    if (window.performance?.mark) {
-        window.performance.mark('app-start');
-        window.addEventListener('load', () => {
-            window.performance.mark('app-loaded');
-            window.performance.measure('app-load-time', 'app-start', 'app-loaded');
-            console.log(`Application loaded in ${window.performance.getEntriesByName('app-load-time')[0].duration.toFixed(2)}ms`);
-        });
-    }
-}
-
-function clearBrowserCaches() {
-    try {
-        // Clear application data (excluding theme preference and other user settings we want to keep)
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            // Keep theme and essential user preferences, remove data caches
-            if (key && !['theme', 'userPreferences'].includes(key)) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        // Clear all session storage except what we need
-        const sessionKeysToKeep = ['theme'];
-        const sessionKeysToRemove = [];
-        for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (key && !sessionKeysToKeep.includes(key)) {
-                sessionKeysToRemove.push(key);
-            }
-        }
-        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
-
-        console.log('Browser caches cleared for fresh page load');
-    } catch (e) {
-        console.warn('Could not clear browser caches:', e);
-    }
-}
-
-function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker registered:', reg))
-            .catch(err => console.warn('Service Worker registration failed:', err));
-
-        // Clear caches on every page load to ensure non-persistent cache
-        try {
-            navigator.serviceWorker.ready.then(swReg => {
-                if (swReg.active) {
-                    swReg.active.postMessage('CLEAR_CACHES_FOR_NEW_PAGE_LOAD');
-                    console.log('Demande de purge des caches envoyée (nouveau chargement de page).');
-                }
-            });
-
-            // Also clear browser caches on every page load
-            clearBrowserCaches();
-        } catch (e) { console.warn('Service worker message non disponible', e); }
-    }
-}
-
-function initializeSearch() {
-    const searchInput = document.getElementById('search-input');
-    const searchResults = document.getElementById('search-results');
-    if (!searchInput) return;
-
-    let searchTimeout;
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim().toLowerCase();
-        clearTimeout(searchTimeout);
-        if (query.length < 2) {
-            if (searchResults) searchResults.innerHTML = '';
-            return;
-        }
-        searchTimeout = setTimeout(() => performSearch(query), 300);
-    });
-}
-
-function performSearch(query) {
-    const results = parcellesData.filter(parcelle =>
-        Object.values(parcelle).some(value => value && value.toString().toLowerCase().includes(query))
-    );
-    displaySearchResults(results.slice(0, 10));
-}
-
-function displaySearchResults(results) {
-    const searchResults = document.getElementById('search-results');
-    if (!searchResults) return;
-
-    if (results.length === 0) {
-        searchResults.innerHTML = '<div class="search-no-results">Aucun résultat trouvé</div>';
-        return;
-    }
-
-    searchResults.innerHTML = results.map(parcelle => `
-        <div class="search-result-item" onclick="highlightParcelle('${parcelle.id_parcelle}')">
-            <div class="search-result-title">${parcelle.id_parcelle}</div>
-            <div class="search-result-details">
-                ${parcelle.commune} - ${parcelle.village || 'Village non spécifié'}<br>
-                Superficie: ${parcelle.superficie || 'N/A'} ha
-            </div>
-        </div>
-    `).join('');
-}
-
-function highlightParcelle(parcelleId) {
-    const parcelle = parcellesData.find(p => p.id_parcelle === parcelleId);
-    if (!parcelle) return;
-
-    lastSelectedCommune = parcelle.commune;
-    switchSection('map');
-    showCommuneDetails(parcelle.commune);
-    document.getElementById('search-results').innerHTML = '';
-    showToast(`Parcelle ${parcelleId} sélectionnée`, 'success');
-}
-
-function initializePrint() {
-    const printButton = document.getElementById('print-button');
-    if (printButton) printButton.addEventListener('click', handlePrint);
-}
-
-function handlePrint() {
-    document.body.classList.add('printing');
-    window.print();
-    setTimeout(() => document.body.classList.remove('printing'), 1000);
-}
-
-function exportToGeoJSON() {
-    const features = filteredParcellesData.map(parcelle => ({
-        type: 'Feature',
-        properties: { ...parcelle },
-        geometry: { type: 'Point', coordinates: [0, 0] }
-    }));
-    const geoJSON = { type: 'FeatureCollection', features };
-    const blob = new Blob([JSON.stringify(geoJSON, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'parcelles_boundou.geojson';
-    link.click();
-    window.URL.revokeObjectURL(url);
-}
-
-function fadeIn(element, duration = 300) {
-    if (!element) return;
-    element.style.opacity = '0';
-    element.style.display = 'block';
-    const start = performance.now();
-    function animate(currentTime) {
-        const elapsed = currentTime - start;
-        element.style.opacity = Math.min(elapsed / duration, 1);
-        if (elapsed < duration) requestAnimationFrame(animate);
-    }
-    requestAnimationFrame(animate);
-}
-
-function validateFileType(data, expectedType) {
-    if (!data || data.length === 0) return { valid: false, message: 'Aucune donnée dans le fichier' };
-
-    const headers = data[0] || [];
-    const collectiveColumns = ['Prenom_1', 'Nom_1', 'Prenom_M', 'Nom_M'];
-    const individualColumns = ['Prenom', 'Nom'];
-
-    if (expectedType === 'collective') {
-        // Un fichier collectif doit avoir au moins une colonne spécifique aux affectataires multiples
-        const hasCollectiveColumns = collectiveColumns.some(col => headers.includes(col));
-        if (!hasCollectiveColumns) {
-            return { valid: false, message: 'Ce fichier ne contient pas de données collectives (manque de colonnes comme Prenom_1, Nom_1, Prenom_M, etc.)' };
-        }
-        return { valid: true, message: 'Fichier collectif valide' };
-    } else if (expectedType === 'individual') {
-        // Un fichier individuel doit avoir les colonnes Prenom et Nom
-        const hasIndividualColumns = individualColumns.every(col => headers.includes(col));
-        const hasCollectiveColumns = collectiveColumns.some(col => headers.includes(col));
-        if (!hasIndividualColumns) {
-            return { valid: false, message: 'Ce fichier ne contient pas de données individuelles (manque de colonnes Prenom ou Nom)' };
-        }
-        if (hasCollectiveColumns) {
-            return { valid: false, message: 'Ce fichier semble être un fichier collectif, non individuel' };
-        }
-        return { valid: true, message: 'Fichier individuel valide' };
-    }
-    return { valid: false, message: 'Type de fichier inconnu' };
-}
-
-function slideDown(element, duration = 300) {
-    if (!element) return;
-    element.style.height = '0';
-    element.style.overflow = 'hidden';
-    element.style.display = 'block';
-    const targetHeight = element.scrollHeight;
-    const start = performance.now();
-    function animate(currentTime) {
-        const elapsed = currentTime - start;
-        element.style.height = (targetHeight * Math.min(elapsed / duration, 1)) + 'px';
-        if (elapsed >= duration) {
-            element.style.height = 'auto';
-            element.style.overflow = 'visible';
-        } else {
-            requestAnimationFrame(animate);
-        }
-    }
-    requestAnimationFrame(animate);
-}
-
-// === Deliberation Processing Functions ===
-async function loadExcelFile(file, type) {
-    try {
-        if (!['individual', 'collective'].includes(type)) {
-            throw new Error('Type de fichier invalide');
-        }
-        window.BoundouDashboard.isProcessingFile = true;
-        window.BoundouDashboard.showToast('Chargement du fichier...', 'info');
-        const data = await readExcelFile(file);
-
-        // Valider le type de fichier
-        const validation = validateFileType(data, type);
-        if (!validation.valid) {
-            throw new Error(`${validation.message}. Colonnes détectées : ${data[0] ? data[0].join(', ') : 'aucune'}`);
-        }
-
-        if (type === 'individual') {
-            window.BoundouDashboard.originalIndividualData = data;
-        } else {
-            window.BoundouDashboard.originalCollectiveData = data;
-        }
-        // Display file info using new UI module  
-        BoundouUtils.showSuccess(`Fichier chargé: ${data.length} entrées`);
-        window.BoundouDashboard.showToast('Fichier chargé avec succès', 'success');
-        document.getElementById(`generate-${type}`).disabled = false;
-    } catch (error) {
-        console.error('Erreur lors du chargement du fichier:', error);
-        window.BoundouDashboard.showToast(`Erreur : ${error.message}`, 'error');
-        document.getElementById(`fileName${type.charAt(0).toUpperCase() + type.slice(1)}`).textContent = '';
-        document.getElementById(`generate-${type}`).disabled = true;
-    } finally {
-        window.BoundouDashboard.isProcessingFile = false;
-    }
-}
-
-async function readExcelFile(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const firstSheet = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheet];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-    return data;
-}
-
-function processIndividualData(data) {
-    // Use the enhanced data processor for better performance and error handling
-    try {
-        return BoundouDataProcessor.processIndividualData(data);
-    } catch (error) {
-        console.error('Erreur dans processIndividualData:', error);
-        BoundouUtils.showError(`Erreur de traitement: ${error.message}`);
-        return [];
-    }
-}
-
-function processCollectiveData(data) {
-    if (!data || data.length <= 1) return [];
-    collectiveParcelErrors = []; // Réinitialiser les erreurs
-    const headers = data[0];
-    const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
-
-    const results = rows.map(row => formatParcelData(row, headers)).filter(row => row !== null);
-    return results;
-}
-
-
-function formatParcelData(row, headers) {
-    function getValue(columnName) {
-        const index = headers.indexOf(columnName);
-        return index !== -1 ? row[index] : undefined;
-    }
-
-    const prenoms = [];
-    const noms = [];
-    const sexes = [];
-    const pieces = [];
-    const telephones = [];
-    const datesNaissance = [];
-    const residences = [];
-
-    const prenomM = getValue('Prenom_M');
-    const nomM = getValue('Nom_M');
-
-    if (prenomM && nomM && prenomM !== '' && nomM !== '') {
-        prenoms.push(cleanValue(prenomM));
-        noms.push(cleanValue(nomM));
-        const sexeMndt = getValue('Sexe_Mndt') || getValue('Sexe_M') || getValue('Sexe');
-        sexes.push(cleanValue(sexeMndt));
-        pieces.push(cleanValue(getValue('Num_piec') || getValue('Num_piece')));
-        const tel1 = getValue('Telephon1');
-        const tel2 = getValue('Telephon2');
-        const telephone = getValue('Telephone');
-        if (tel1 && tel1 !== '') {
-            telephones.push(cleanValue(tel1));
-        } else if (tel2 && tel2 !== '') {
-            telephones.push(cleanValue(tel2));
-        } else if (telephone && telephone !== '') {
-            telephones.push(cleanValue(telephone));
-        } else {
-            telephones.push('-');
-        }
-        datesNaissance.push(cleanValue(getValue('Date_nai') || getValue('Date_nais') || getValue('Date_naissance')));
-        residences.push(cleanValue(getValue('Residence_M') || getValue('Residence')));
-    }
-
-    const affectataires = new Map();
-    headers.forEach((col, index) => {
-        if (!col) return;
-        let affectataireId = null;
-        let fieldType = null;
-
-        if (col === 'Prenom' || (col.startsWith('Prenom_') && col !== 'Prenom_M')) {
-            fieldType = 'prenom';
-            affectataireId = col === 'Prenom' ? '1' : col.replace('Prenom_', '');
-        } else if (col === 'Nom' || (col.startsWith('Nom_') && col !== 'Nom_M')) {
-            fieldType = 'nom';
-            affectataireId = col === 'Nom' ? '1' : col.replace('Nom_', '');
-        } else if ((col === 'Sexe' || col.startsWith('Sexe_')) && !['Sexe_Mndt', 'Sexe_M'].includes(col)) {
-            fieldType = 'sexe';
-            affectataireId = col === 'Sexe' ? '1' : col.replace('Sexe_', '');
-        } else if (col.startsWith('Num_piece') && !['Num_piec', 'Num_piece'].includes(col)) {
-            fieldType = 'numero_piece';
-            affectataireId = col.replace('Num_piece_', '').replace('Num_piece', '1');
-        } else if (col.startsWith('Telephon') && !['Telephon1', 'Telephon2'].includes(col)) {
-            fieldType = 'telephone';
-            const telNum = col.replace('Telephon', '');
-            if (telNum === '3') affectataireId = '1';
-            else if (parseInt(telNum) > 3) affectataireId = String(parseInt(telNum) - 2);
-        } else if (col.startsWith('Date_nais') || col.startsWith('Dat_nais')) {
-            fieldType = 'date_naissance';
-            affectataireId = col.replace('Date_nais', '').replace('Dat_nais', '') || '1';
-        } else if (col.startsWith('Residence') && !['Residence_M'].includes(col)) {
-            fieldType = 'residence';
-            affectataireId = col.replace('Residence', '') || '1';
-        }
-
-        if (affectataireId && fieldType) {
-            affectataireId = affectataireId.replace(/^0+/, '') || '1';
-            if (!affectataires.has(affectataireId)) {
-                affectataires.set(affectataireId, {});
-            }
-            const value = row[index];
-            if (value !== undefined && value !== null && value !== '') {
-                affectataires.get(affectataireId)[fieldType] = cleanValue(value);
-            }
-        }
-    });
-
-    const sortedIds = Array.from(affectataires.keys()).sort((a, b) => {
-        const numA = parseInt(a) || 999;
-        const numB = parseInt(b) || 999;
-        return numA - numB;
-    });
-
-    sortedIds.forEach(affectataireId => {
-        const info = affectataires.get(affectataireId);
-        if (info.prenom && info.nom) {
-            const isDuplicate = (info.prenom === cleanValue(prenomM) && info.nom === cleanValue(nomM));
-            if (!isDuplicate) {
-                prenoms.push(info.prenom);
-                noms.push(info.nom);
-                sexes.push(info.sexe || '-');
-                pieces.push(info.numero_piece || '-');
-                telephones.push(info.telephone || '-');
-                datesNaissance.push(info.date_naissance || '-');
-                residences.push(info.residence || '-');
-            }
-        }
-    });
-
-    if (prenoms.length < 2) {
-        const nicad = getValue('nicad') || getValue('Num_parcel_2') || 'inconnue';
-        collectiveParcelErrors.push(`Parcelle ${nicad}: Seulement ${prenoms.length} individu(s) trouvé(s)`);
-        window.BoundouDashboard.showToast(`Parcelle ${nicad} exclue : moins de 2 individus`, 'warning');
-        return null;
-    }
-
-    return {
-        'Village': cleanValue(getValue('Village')),
-        'nicad': cleanValue(getValue('nicad') || getValue('Num_parcel_2')),
-        'Num_parcel_2': cleanValue(getValue('Num_parcel_2')),
-        'Prenom': prenoms.join('\n'),
-        'Nom': noms.join('\n'),
-        'Sexe': sexes.join('\n'),
-        'Numero_piece': pieces.join('\n'),
-        'Telephone': telephones.join('\n'),
-        'Date_naissance': datesNaissance.join('\n'),
-        'Residence': residences.join('\n'),
-        'superficie': cleanValue(getValue('superficie')),
-        'Vocation_1': cleanValue(getValue('Vocation_1')),
-        'type_usa': cleanValue(getValue('type_usa'))
-    };
-}
-
-function processFile(type) {
-    const originalData = type === 'individual' ? window.BoundouDashboard.originalIndividualData : window.BoundouDashboard.originalCollectiveData;
-    if (!originalData || originalData.length === 0) {
-        showToast('Aucun fichier chargé', 'error');
-        return;
-    }
-
-    const processBtn = document.getElementById(`generate-${type}`);
-    const processText = document.getElementById(`processText${type.charAt(0).toUpperCase() + type.slice(1)}`);
-    processText.innerHTML = '<span class="loading"></span>Traitement en cours...';
-    processBtn.disabled = true;
-
-    setTimeout(() => {
-        try {
-            const headers = originalData[0];
-            const dataRows = originalData.slice(1);
-            const results = type === 'individual' ? processIndividualData(originalData) : processCollectiveData(originalData);
-            if (type === 'individual') {
-                window.BoundouDashboard.processedIndividualData = results;
-                // Emit event for individual data processing completion
-                window.dispatchEvent(new CustomEvent('individualDataProcessed'));
-            } else {
-                window.BoundouDashboard.processedCollectiveData = results;
-                // Emit event for collective data processing completion
-                window.dispatchEvent(new CustomEvent('collectiveDataProcessed'));
-            }
-
-            const totalRows = dataRows.length;
-            const validCount = results.length;
-            const errorCount = totalRows - validCount;
-
-            // Display results using new UI system
-            BoundouUtils.showSuccess(`Traitement terminé: ${validCount}/${totalRows} parcelles valides`);
-            if (type === 'individual') {
-                window.DeliberationListUI.displayIndividualPreview();
-            } else {
-                window.DeliberationListUI.displayCollectivePreview();
-            }
-            generateDeliberationList(type);
-            processBtn.disabled = false;
-            processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
-            showToast(`Traitement terminé : ${validCount} parcelles valides`, 'success');
-        } catch (error) {
-            console.error('Erreur lors du traitement:', error);
-            showToast('Erreur lors du traitement du fichier', 'error');
-            processBtn.disabled = false;
-            processText.innerHTML = `Traiter et Générer Liste ${type === 'individual' ? 'Individuelle' : 'Collective'}`;
-        }
-    }, 100);
-}
-
-function generateDeliberationList(type) {
-    if (window.BoundouDashboard.isProcessingFile) {
-        showToast('Traitement en cours, veuillez patienter', 'error');
-        return;
-    }
-
-    const data = type === 'individual' ? window.BoundouDashboard.processedIndividualData : window.BoundouDashboard.processedCollectiveData;
-    if (!data || data.length === 0) {
-        showToast('Aucune donnée à traiter', 'error');
-        return;
-    }
-
-    if (type === 'individual') {
-        generateIndividualDeliberationList(data);
-    } else {
-        generateCollectiveDeliberationList(data);
-    }
-}
-
-function generateIndividualDeliberationList() {
-    // Use the enhanced Excel generator for better performance and features
-    try {
-        // Check if advanced options are enabled
-        const advancedOptions = window.BoundouDashboard.advancedOptions;
-        console.log('🔍 Advanced options check:', advancedOptions);
-
-        const hasAdvancedOptions = advancedOptions && (
-            advancedOptions.enableDualLists ||
-            advancedOptions.enableMandataireSeparation ||
-            advancedOptions.enableDateNormalization
-        );
-
-        console.log('🔍 Has advanced options:', hasAdvancedOptions);
-        console.log('  - Dual Lists:', advancedOptions?.enableDualLists);
-        console.log('  - Mandataire Separation:', advancedOptions?.enableMandataireSeparation);
-        console.log('  - Date Normalization:', advancedOptions?.enableDateNormalization);
-
-        // Use enhanced generation if advanced options are enabled
-        if (hasAdvancedOptions) {
-            console.log('🚀 Using enhanced generation with advanced options');
-            return BoundouExcelGenerator.generateEnhancedIndividualDeliberationList();
-        } else {
-            console.log('📋 Using basic generation (no advanced options)');
-            return BoundouExcelGenerator.generateIndividualDeliberationList();
-        }
-    } catch (error) {
-        console.error('Erreur dans generateIndividualDeliberationList:', error);
-        BoundouUtils.showError(`Erreur de génération: ${error.message}`);
-    }
-}
-
-function generateCollectiveDeliberationList(data) {
-    // Use the Excel generator for collective data generation
-    try {
-        return BoundouExcelGenerator.generateCollectiveDeliberationList();
-    } catch (error) {
-        console.error('Erreur dans generateCollectiveDeliberationList:', error);
-        BoundouUtils.showError(`Erreur de génération: ${error.message}`);
-    }
-}
-
-function resetDeliberationData(type = 'both') {
-    // Clear file input elements
-    const individualFileInput = document.getElementById('individual-file');
-    const collectiveFileInput = document.getElementById('collective-file');
-
-    if (type === 'individual' || type === 'both') {
-        // Reset individual data
-        window.BoundouDashboard.processedIndividualData = [];
-        window.BoundouDashboard.originalIndividualData = null;
-
-        // Clear file input
-        if (individualFileInput) {
-            individualFileInput.value = '';
-        }
-
-        // Reset individual UI elements
-        const fileNameIndividual = document.getElementById('fileNameIndividual');
-        if (fileNameIndividual) fileNameIndividual.textContent = '';
-
-        const previewIndividual = document.getElementById('previewIndividual');
-        if (previewIndividual) {
-            previewIndividual.style.display = 'none';
-            previewIndividual.innerHTML = '';
-        }
-
-        const generateBtn = document.getElementById('generate-individual');
-        if (generateBtn) generateBtn.disabled = true;
-
-        const statsBtn = document.getElementById('generateStats');
-        if (statsBtn) statsBtn.disabled = true;
-
-        console.log('Individual data reset complete');
-    }
-
-    if (type === 'collective' || type === 'both') {
-        // Reset collective data
-        window.BoundouDashboard.processedCollectiveData = [];
-        window.BoundouDashboard.originalCollectiveData = null;
-
-        // Clear file input
-        if (collectiveFileInput) {
-            collectiveFileInput.value = '';
-        }
-
-        // Reset collective UI elements
-        const fileNameCollective = document.getElementById('fileNameCollective');
-        if (fileNameCollective) fileNameCollective.textContent = '';
-
-        const previewCollective = document.getElementById('previewCollective');
-        if (previewCollective) {
-            previewCollective.style.display = 'none';
-            previewCollective.innerHTML = '';
-        }
-
-        const generateBtn = document.getElementById('generate-collective');
-        if (generateBtn) generateBtn.disabled = true;
-
-        const statsBtn = document.getElementById('generateCollectiveStats');
-        if (statsBtn) statsBtn.disabled = true;
-
-        console.log('Collective data reset complete');
-    }
-
-    // Show appropriate success message
-    const message = type === 'individual' ? 'Données individuelles réinitialisées' :
-        type === 'collective' ? 'Données collectives réinitialisées' :
-            'Toutes les données de délibération réinitialisées';
-
-    showToast(message, 'info');
-}
-
-async function initializeApp() {
-    try {
-        initializePerformanceMonitoring();
-        initializeTheme();
-
-        // Show UI immediately for better perceived performance
-        initializeEventHandlers();
-        initializeSubTabs();
-
-        // Hide loading screen early to show partial UI
-        document.getElementById('loading-screen')?.classList.add('hidden');
-
-        // Load data in background (non-blocking)
-        setTimeout(async () => {
-            try {
-                await retryDataLoad();
-                initializeMap(); // Initialize map after data is loaded
-                await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
-                initializeFilters();
-                initializeSearch();
-                updateGlobalStats();
-                showToast('Application initialisée avec succès!', 'success');
-            } catch (error) {
-                console.error('Erreur lors du chargement des données:', error);
-                showToast('Erreur lors du chargement des données', 'error');
-            }
-        }, 0);
-
-        // Initialize non-data dependent features immediately
-        initializePrint();
-        initializeAccessibility();
-        window.addEventListener('resize', handleResize);
-        loadUserPreferences();
-
-        console.log('Application Boundou Dashboard initialized');
-
-    } catch (error) {
-        console.error('Erreur lors de l\'initialisation:', error);
-        showToast('Erreur lors du chargement de l\'application', 'error');
-        document.getElementById('loading-screen')?.classList.add('hidden');
-    }
-}
-
-function saveUserPreferences() {
-    localStorage.setItem('userPreferences', JSON.stringify({
-        theme: document.documentElement.dataset.colorScheme,
-        fontScale: fontScale,
-        lastActiveSection: document.querySelector('.tab-button.active')?.dataset.section,
-        lastSelectedCommune: lastSelectedCommune
-    }));
-}
-
-function loadUserPreferences() {
-    setTimeout(() => {
-        const saved = localStorage.getItem('userPreferences');
-        if (!saved) return;
-        try {
-            const preferences = JSON.parse(saved);
-            if (preferences.theme) document.documentElement.dataset.colorScheme = preferences.theme;
-            if (preferences.fontScale) {
-                fontScale = preferences.fontScale;
-                document.documentElement.style.setProperty('--font-scale', fontScale);
-            }
-            if (preferences.lastActiveSection) {
-                switchSection(preferences.lastActiveSection);
-            }
-            if (preferences.lastSelectedCommune && communesLayer) {
-                lastSelectedCommune = preferences.lastSelectedCommune;
-                const layer = communesLayer.getLayers().find(l => getCommuneName(l.feature.properties) === lastSelectedCommune);
-                if (layer) zoomToCommune(lastSelectedCommune, layer);
-                else console.warn('No layer found for commune:', lastSelectedCommune);
-            }
-        } catch (error) {
-            console.warn('Erreur lors du chargement des préférences:', error);
-        }
-    }, 500); // Delay to ensure map initialization
-}
-
-window.addEventListener('beforeunload', saveUserPreferences);
-document.addEventListener('DOMContentLoaded', () => {
-    // Clear all caches first to ensure non-persistent cache behavior
-    clearBrowserCaches();
-    registerServiceWorker();
-
-    loadUserPreferences();
-
-    // Fix: initial dashboard iframe spinner never hides on first visit because
-    // switchDashboard() (which assigns onload) isn't called yet. Attach a load
-    // listener here so the first embedded dashboard hides the spinner once loaded.
-    const iframe = document.getElementById('dashboard-frame');
-    const loading = document.querySelector('.dashboard-loading');
-    if (iframe && loading) {
-        // Ensure spinner visible while loading initial iframe content
-        loading.style.display = 'block';
-        iframe.addEventListener('load', () => {
-            loading.style.display = 'none';
-            // Provide feedback only the very first time
-            if (!iframe.dataset.initialLoadNotified) {
-                iframe.dataset.initialLoadNotified = 'true';
-                try { showToast('Dashboard principal chargé', 'success'); } catch (_) { }
-            }
-        }, { once: true });
-        // Safety timeout in case onload never fires (network/CSP issues)
-        setTimeout(() => {
-            if (loading.style.display !== 'none') {
-                loading.style.display = 'none';
-            }
-        }, 15000);
-    }
-
-    initializeApp();
-});
-
-window.addEventListener('error', (event) => {
-    console.error('Erreur globale:', event.error);
-    showToast('Une erreur inattendue s\'est produite', 'error');
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('Promise rejetée:', event.reason);
-    showToast('Erreur de traitement des données', 'error');
-});
-
-// Extend the global BoundouDashboard object with additional methods
-Object.assign(window.BoundouDashboard, {
-    switchSection,
-    showCommuneDetails,
-    applyFilters,
-    exportDataHandler,
-    exportToGeoJSON,
-    retryDataLoad,
-    loadExcelFile,
-    processIndividualData,
-    processCollectiveData,
-    generateDeliberationList,
-    generateIndividualDeliberationList,
-    generateCollectiveDeliberationList,
-    resetDeliberationData,
-    showToast,
-    cleanValue,
-    formatParcelData
-});
+})();
