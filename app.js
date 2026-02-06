@@ -520,11 +520,14 @@
             legend.innerHTML = html;
         },
 
-        /* ── Highlight a commune contour on the map ── */
-        _highlightCommune(name) {
+        /* ── Highlight a commune contour on the map & zoom to its real bounds ── */
+        _highlightCommune(name, opts = {}) {
             if (!AppState.geoLayer) return;
             const cfg = COMMUNES_CONFIG[name];
             const highlightColor = cfg ? cfg.color : '#52B788';
+            const flyDuration = opts.duration ?? 1;
+
+            let matchedLayer = null;
 
             // Reset every layer, then highlight the match
             AppState.geoLayer.eachLayer(layer => {
@@ -543,6 +546,7 @@
                         layer.bringToFront();
                     }
                     this._highlightLayer = layer;
+                    matchedLayer = layer;
                 } else {
                     layer.setStyle({
                         weight: 2,
@@ -552,6 +556,15 @@
                     });
                 }
             });
+
+            // Fly to the ACTUAL geometry bounds (not hardcoded coords)
+            if (matchedLayer) {
+                AppState.map.flyToBounds(matchedLayer.getBounds(), {
+                    padding: [40, 40],
+                    duration: flyDuration,
+                    maxZoom: 13
+                });
+            }
         },
 
         /* ── Reset highlight to default ── */
@@ -581,14 +594,10 @@
             const panel = document.getElementById('stats-panel');
             if (panel) panel.classList.add('hidden');
 
-            // 2. Highlight the commune contour
-            this._highlightCommune(name);
+            // 2. Highlight contour + fly to actual geometry bounds
+            this._highlightCommune(name, { duration: 1 });
 
-            // 3. Fly to commune
-            const cfg = COMMUNES_CONFIG[name];
-            if (cfg) AppState.map.flyTo(cfg.center, cfg.zoom, { duration: 1 });
-
-            // 4. After 2 s reveal the stats panel
+            // 3. After 2 s reveal the stats panel
             this._statsDelayTimer = setTimeout(() => {
                 this._showCommuneStats(name);
             }, 2000);
@@ -684,17 +693,13 @@
                 return;
             }
 
-            // 1. Highlight the commune contour
-            this._highlightCommune(commune);
+            // 1. Highlight contour + fly to actual geometry bounds
+            this._highlightCommune(commune, { duration: 1.2 });
 
-            // 2. Fly to commune
-            const cfg = COMMUNES_CONFIG[commune];
-            if (cfg) AppState.map.flyTo(cfg.center, cfg.zoom, { duration: 1.2 });
-
-            // 3. Hide stats temporarily
+            // 2. Hide stats temporarily
             document.getElementById('stats-panel')?.classList.add('hidden');
 
-            // 4. Reveal stats after 2 s delay
+            // 3. Reveal stats after 2 s delay
             this._statsDelayTimer = setTimeout(() => {
                 this._showCommuneStats(commune);
             }, 2000);
