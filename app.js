@@ -656,8 +656,8 @@
 
             this._statsPopup = L.popup({
                 className: 'commune-stats-popup',
-                maxWidth: 460,
-                minWidth: 420,
+                maxWidth: 620,
+                minWidth: 520,
                 closeButton: false,
                 autoClose: false,
                 closeOnClick: false,

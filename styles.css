@@ -392,7 +392,7 @@ img, svg { max-width: 100%; }
 }
 .commune-stats-popup .leaflet-popup-content {
     margin: 0 !important;
-    width: 420px !important;
+    width: 520px !important;
     font-family: var(--font-body) !important;
     font-size: 0.85rem !important;
     line-height: 1.5 !important;
