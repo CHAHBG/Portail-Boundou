@@ -10,23 +10,23 @@
        and 'commune' field in parcelles.json (mixed case).
        We store a normalized lookup map for case-insensitive matching. */
     const COMMUNES_CONFIG = {
-        "Bala":             { center: [13.35, -12.30], zoom: 12, color: "#2D6A4F" },
-        "Ballou":           { center: [13.42, -12.08], zoom: 12, color: "#40916C" },
-        "Bandafassi":       { center: [12.45, -12.52], zoom: 12, color: "#52B788" },
-        "Bembou":           { center: [12.55, -12.20], zoom: 12, color: "#74C69D" },
-        "Dimboli":          { center: [12.60, -12.05], zoom: 12, color: "#95D5B2" },
-        "Dindefello":       { center: [12.37, -12.30], zoom: 12, color: "#38A3A5" },
-        "Fongolembi":       { center: [12.52, -12.13], zoom: 12, color: "#57CC99" },
-        "Gabou":            { center: [13.38, -12.18], zoom: 12, color: "#22577A" },
-        "Koar":             { center: [13.50, -12.35], zoom: 12, color: "#80ED99" },
-        "Medina Baffe":     { center: [13.68, -12.40], zoom: 12, color: "#0A9396" },
-        "Missirah":         { center: [13.60, -12.25], zoom: 12, color: "#E9D8A6" },
-        "Moudery":          { center: [13.85, -12.25], zoom: 12, color: "#94D2BD" },
-        "Ndoga Babacar":    { center: [13.98, -12.10], zoom: 12, color: "#FFB703" },
-        "Netteboulou":      { center: [14.08, -12.18], zoom: 12, color: "#8338EC" },
-        "Sabodala":         { center: [12.80, -12.30], zoom: 12, color: "#3A86FF" },
-        "Sinthiou Maleme":  { center: [14.18, -12.00], zoom: 12, color: "#FB5607" },
-        "Tomboronkoto":     { center: [12.65, -12.50], zoom: 12, color: "#FF006E" }
+        "Bala": { center: [13.35, -12.30], zoom: 12, color: "#2D6A4F" },
+        "Ballou": { center: [13.42, -12.08], zoom: 12, color: "#40916C" },
+        "Bandafassi": { center: [12.45, -12.52], zoom: 12, color: "#52B788" },
+        "Bembou": { center: [12.55, -12.20], zoom: 12, color: "#74C69D" },
+        "Dimboli": { center: [12.60, -12.05], zoom: 12, color: "#95D5B2" },
+        "Dindefello": { center: [12.37, -12.30], zoom: 12, color: "#38A3A5" },
+        "Fongolembi": { center: [12.52, -12.13], zoom: 12, color: "#57CC99" },
+        "Gabou": { center: [13.38, -12.18], zoom: 12, color: "#22577A" },
+        "Koar": { center: [13.50, -12.35], zoom: 12, color: "#80ED99" },
+        "Medina Baffe": { center: [13.68, -12.40], zoom: 12, color: "#0A9396" },
+        "Missirah": { center: [13.60, -12.25], zoom: 12, color: "#E9D8A6" },
+        "Moudery": { center: [13.85, -12.25], zoom: 12, color: "#94D2BD" },
+        "Ndoga Babacar": { center: [13.98, -12.10], zoom: 12, color: "#FFB703" },
+        "Netteboulou": { center: [14.08, -12.18], zoom: 12, color: "#8338EC" },
+        "Sabodala": { center: [12.80, -12.30], zoom: 12, color: "#3A86FF" },
+        "Sinthiou Maleme": { center: [14.18, -12.00], zoom: 12, color: "#FB5607" },
+        "Tomboronkoto": { center: [12.65, -12.50], zoom: 12, color: "#FF006E" }
     };
 
     /* Case-insensitive lookup helper: "BALA" → "Bala", "sinthiou maleme" → "Sinthiou Maleme" */
@@ -40,15 +40,15 @@
 
     /* ── Global State ── */
     const AppState = {
-        activeSection:  'map',
-        theme:          localStorage.getItem('boundou_theme') || 'light',
-        map:            null,
-        geoLayer:       null,
-        parcelsData:    null,
-        communeFilter:  '',
-        usageFilter:    '',
-        charts:         {},
-        dashLoaded:     {},
+        activeSection: 'map',
+        theme: localStorage.getItem('boundou_theme') || 'light',
+        map: null,
+        geoLayer: null,
+        parcelsData: null,
+        communeFilter: '',
+        usageFilter: '',
+        charts: {},
+        dashLoaded: {},
         // Deliberation wizard state
         individualWizardStep: 1,
         collectiveWizardStep: 1,
@@ -93,10 +93,10 @@
         },
         _updateThemeIcon() {
             const moon = document.getElementById('theme-icon-moon');
-            const sun  = document.getElementById('theme-icon-sun');
+            const sun = document.getElementById('theme-icon-sun');
             if (moon && sun) {
                 moon.style.display = AppState.theme === 'dark' ? 'none' : 'block';
-                sun.style.display  = AppState.theme === 'dark' ? 'block' : 'none';
+                sun.style.display = AppState.theme === 'dark' ? 'block' : 'none';
             }
         },
 
@@ -314,7 +314,7 @@
             const loader = document.getElementById('sif-loading');
             if (!frame) return;
             const url = 'https://sifboundou.netlify.app/';
-            if (!frame.src || frame.src === '' || frame.src === 'about:blank') {
+            if (!frame.getAttribute('src') || frame.getAttribute('src') === '' || frame.src === 'about:blank' || !frame.src.includes('sifboundou')) {
                 if (loader) loader.style.display = 'flex';
                 frame.src = url;
                 let loaded = false;
@@ -716,7 +716,7 @@
 
             const { labels, data } = dataFn();
             const colors = ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7',
-                           '#D8F3DC', '#FFB703', '#FB5607', '#FF006E', '#8338EC', '#3A86FF'];
+                '#D8F3DC', '#FFB703', '#FB5607', '#FF006E', '#8338EC', '#3A86FF'];
 
             AppState.charts[canvasId] = new Chart(canvas.getContext('2d'), {
                 type,

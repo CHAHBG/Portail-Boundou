@@ -8,7 +8,7 @@ window.BoundouDataProcessor = (() => {
         if (row[fieldName] !== undefined) {
             return row[fieldName];
         }
-        
+
         // For superficie field, try common variations
         if (fieldName.toLowerCase() === 'superficie') {
             const superficieVariants = [
@@ -18,7 +18,7 @@ window.BoundouDataProcessor = (() => {
                 'area', 'Area', 'AREA',
                 'surface', 'Surface', 'SURFACE'
             ];
-            
+
             for (const variant of superficieVariants) {
                 if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
                     console.log(`[OK] Found superficie variant "${variant}" with value:`, row[variant]);
@@ -26,7 +26,7 @@ window.BoundouDataProcessor = (() => {
                 }
             }
         }
-        
+
         // For num_parcel field, try common variations
         if (fieldName.toLowerCase() === 'num_parcel') {
             const numParcelVariants = [
@@ -37,7 +37,7 @@ window.BoundouDataProcessor = (() => {
                 'parcel_number', 'Parcel_number', 'PARCEL_NUMBER',
                 'id_parcelle', 'Id_parcelle', 'ID_PARCELLE'
             ];
-            
+
             for (const variant of numParcelVariants) {
                 if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
                     console.log(`[OK] Found num_parcel variant "${variant}" with value:`, row[variant]);
@@ -45,13 +45,13 @@ window.BoundouDataProcessor = (() => {
                 }
             }
         }
-        
+
         // Try case-insensitive lookup for other fields
         const keys = Object.keys(row);
-        const matchingKey = keys.find(key => 
+        const matchingKey = keys.find(key =>
             key.toLowerCase() === fieldName.toLowerCase()
         );
-        
+
         return matchingKey ? row[matchingKey] : undefined;
     };
 
@@ -59,35 +59,37 @@ window.BoundouDataProcessor = (() => {
     const filterByEntityType = (data, entityType) => {
         console.log(`[DBG] Filtering data for entity type: ${entityType}`);
         console.log(`[STAT] Total rows in data: ${data.length}`);
-        
+
         let filtered = [];
         switch (entityType) {
             case 'personne_physique':
-                filtered = data.filter(row => 
-                    row['Typ_pers'] && 
-                    row['Typ_pers'].toLowerCase().includes('personne_physique')
-                );
+                filtered = data.filter(row => {
+                    const typePers = getValue(row, 'Typ_pers');
+                    return typePers && typePers.toLowerCase().includes('personne_physique');
+                });
                 break;
-            
+
             case 'personne_morale':
-                filtered = data.filter(row => 
-                    row['Typ_pers'] && 
-                    row['Typ_pers'].toLowerCase().includes('personne_morale') &&
-                    !(row['Typ_pers_m'] && row['Typ_pers_m'].toLowerCase().includes('groupement'))
-                );
+                filtered = data.filter(row => {
+                    const typePers = getValue(row, 'Typ_pers');
+                    const typePersM = getValue(row, 'Typ_pers_m');
+                    return typePers &&
+                        typePers.toLowerCase().includes('personne_morale') &&
+                        !(typePersM && typePersM.toLowerCase().includes('groupement'));
+                });
                 break;
-            
+
             case 'groupement':
-                filtered = data.filter(row => 
-                    row['Typ_pers_m'] && 
-                    row['Typ_pers_m'].toLowerCase().includes('groupement')
-                );
+                filtered = data.filter(row => {
+                    const typePersM = getValue(row, 'Typ_pers_m');
+                    return typePersM && typePersM.toLowerCase().includes('groupement');
+                });
                 break;
-            
+
             default:
                 filtered = [];
         }
-        
+
         console.log(`[LIST] Filtered results for ${entityType}: ${filtered.length} rows`);
         if (filtered.length > 0) {
             console.log(`[NOTE] First ${entityType} row sample:`, filtered[0]);
@@ -98,15 +100,15 @@ window.BoundouDataProcessor = (() => {
                 return superficieKeys.map(k => `${k}: ${row[k]}`).join(', ');
             }));
         }
-        
+
         return filtered;
     };
 
     // Check if column should be excluded based on patterns
     const shouldExcludeColumn = (columnName) => {
         if (!columnName) return true;
-        
-        return BoundouConfig.EXCEL.EXCLUDE_PATTERNS.some(pattern => 
+
+        return BoundouConfig.EXCEL.EXCLUDE_PATTERNS.some(pattern =>
             columnName.includes(pattern)
         );
     };
@@ -114,17 +116,17 @@ window.BoundouDataProcessor = (() => {
     // Get filtered headers for specific entity type
     const getFilteredHeaders = (allHeaders, entityType) => {
         const configuredColumns = BoundouConfig.EXCEL.COLUMNS[entityType.toUpperCase()];
-        
+
         if (configuredColumns) {
             // Use configured columns if available
-            return configuredColumns.filter(header => 
+            return configuredColumns.filter(header =>
                 allHeaders.includes(header) && !shouldExcludeColumn(header)
             );
         }
-        
+
         // Fallback: filter all headers
-        return allHeaders.filter(header => 
-            !shouldExcludeColumn(header) && 
+        return allHeaders.filter(header =>
+            !shouldExcludeColumn(header) &&
             !['Typ_pers', 'Typ_pers_m'].includes(header)
         );
     };
@@ -155,8 +157,11 @@ window.BoundouDataProcessor = (() => {
             // Process data in chunks for better performance
             const processChunk = async (chunk) => {
                 chunk.forEach(row => {
-                    const rowTypePers = row['Typ_pers'] ? row['Typ_pers'].toLowerCase() : '';
-                    const rowTypePersM = row['Typ_pers_m'] ? row['Typ_pers_m'].toLowerCase() : '';
+                    const rawTypePers = getValue(row, 'Typ_pers');
+                    const rawTypePersM = getValue(row, 'Typ_pers_m');
+
+                    const rowTypePers = rawTypePers ? rawTypePers.toLowerCase() : '';
+                    const rowTypePersM = rawTypePersM ? rawTypePersM.toLowerCase() : '';
 
                     // Determine entity type - FIXED LOGIC to match filterByEntityType
                     let entityType = null;
@@ -171,14 +176,14 @@ window.BoundouDataProcessor = (() => {
 
                     if (entityType && entityFieldMappings[entityType]) {
                         console.log(`[CFG] Processing ${entityType} entity:`, {
-                            rowTypePers, 
+                            rowTypePers,
                             rowTypePersM,
                             hasSuperficie: !!row['superficie'],
                             superficieValue: row['superficie'],
                             allKeys: Object.keys(row).filter(k => k.toLowerCase().includes('superficie')),
                             allFieldNames: Object.keys(row).slice(0, 10) // Show first 10 field names
                         });
-                        
+
                         // Special debugging for personne_morale
                         if (entityType === 'personne_morale') {
                             console.log(`[CORP] PERSONNE_MORALE DEBUG - All available fields:`, Object.keys(row));
@@ -188,23 +193,25 @@ window.BoundouDataProcessor = (() => {
                                 console.log(`[CORP] PERSONNE_MORALE - ${variant} value:`, row[variant]);
                             });
                         }
-                        
+
                         const cleanedRow = {};
                         entityFieldMappings[entityType].forEach(field => {
+                            // Use case-sensitive lookup for ALL fields to ensure data is found
+                            // even if Excel headers have different casing (e.g. PRENOM vs Prenom)
+                            const fieldValue = getValue(row, field);
+
                             // Use special formatting for decimal fields like superficie
                             if (field === 'superficie') {
-                                // Try case-insensitive lookup for superficie field
-                                const superficieValue = getValue(row, 'superficie');
-                                console.log(`[RULER] Processing ${entityType} superficie:`, superficieValue, 'from getValue lookup');
-                                cleanedRow[field] = formatDecimalValue(superficieValue || '');
+                                console.log(`[RULER] Processing ${entityType} superficie:`, fieldValue, 'from getValue lookup');
+                                cleanedRow[field] = formatDecimalValue(fieldValue || '');
                             } else {
-                                cleanedRow[field] = BoundouUtils.sanitizeForExcel(row[field] || '');
+                                cleanedRow[field] = BoundouUtils.sanitizeForExcel(fieldValue || '');
                             }
                         });
                         // Keep original type fields for reference
-                        cleanedRow['Typ_pers'] = row['Typ_pers'] || '';
-                        cleanedRow['Typ_pers_m'] = row['Typ_pers_m'] || '';
-                        
+                        cleanedRow['Typ_pers'] = getValue(row, 'Typ_pers') || '';
+                        cleanedRow['Typ_pers_m'] = getValue(row, 'Typ_pers_m') || '';
+
                         categorizedData[entityType].push(cleanedRow);
                     }
                 });
@@ -212,7 +219,7 @@ window.BoundouDataProcessor = (() => {
             };
 
             await BoundouUtils.processInChunks(data, processChunk);
-            
+
             // Store categorized data
             window.BoundouDashboard.processedIndividualData = categorizedData;
             window.BoundouDashboard.originalIndividualData = BoundouUtils.deepClone(data);
@@ -222,12 +229,12 @@ window.BoundouDataProcessor = (() => {
             ['personne_physique', 'personne_morale', 'groupement'].forEach(entityType => {
                 const count = categorizedData[entityType].length;
                 console.log(`${entityType}: ${count} entities`);
-                
+
                 if (count > 0) {
                     const firstEntity = categorizedData[entityType][0];
                     console.log(`${entityType} first entity superficie:`, firstEntity.superficie);
                     console.log(`${entityType} first entity keys:`, Object.keys(firstEntity).slice(0, 15));
-                    
+
                     // Sample superficie values
                     const superficieSample = categorizedData[entityType].slice(0, 3).map(e => e.superficie);
                     console.log(`${entityType} superficie sample:`, superficieSample);
@@ -235,11 +242,11 @@ window.BoundouDataProcessor = (() => {
             });
 
             BoundouUtils.hideLoading('loadingIndicator');
-            
-            const totalProcessed = categorizedData.personne_physique.length + 
-                                 categorizedData.personne_morale.length + 
-                                 categorizedData.groupement.length;
-            
+
+            const totalProcessed = categorizedData.personne_physique.length +
+                categorizedData.personne_morale.length +
+                categorizedData.groupement.length;
+
             BoundouUtils.showSuccess(`Fichier traité: ${totalProcessed} entrées catégorisées`);
 
             return categorizedData;
@@ -254,14 +261,14 @@ window.BoundouDataProcessor = (() => {
     // Generate Excel data for specific entity type
     const generateEntityData = (data, entityType) => {
         const filteredData = filterByEntityType(data, entityType);
-        
+
         if (filteredData.length === 0) {
             return { data: [], headers: [] };
         }
 
         const allHeaders = Object.keys(filteredData[0]);
         const headers = getFilteredHeaders(allHeaders, entityType);
-        
+
         const entityData = filteredData.map(row => {
             const entityRow = {};
             headers.forEach(header => {
@@ -278,10 +285,10 @@ window.BoundouDataProcessor = (() => {
         if (!categorizedData || typeof categorizedData !== 'object') {
             return { data: [], headers: [], totalRows: 0, hasMore: false };
         }
-        
+
         const entityData = categorizedData[entityType] || [];
         const headers = entityData.length > 0 ? Object.keys(entityData[0]).filter(h => h !== 'Typ_pers' && h !== 'Typ_pers_m') : [];
-        
+
         return {
             data: entityData.slice(0, maxRows),
             headers,
@@ -293,27 +300,27 @@ window.BoundouDataProcessor = (() => {
     // Validate data structure
     const validateDataStructure = (data) => {
         const errors = [];
-        
+
         if (!Array.isArray(data)) {
             errors.push('Les données doivent être un tableau');
             return errors;
         }
-        
+
         if (data.length === 0) {
             errors.push('Le fichier ne contient aucune donnée');
             return errors;
         }
-        
+
         // Check for required columns
         const firstRow = data[0];
         const requiredColumns = ['Typ_pers'];
-        
+
         requiredColumns.forEach(column => {
             if (!(column in firstRow)) {
                 errors.push(`Colonne requise manquante: ${column}`);
             }
         });
-        
+
         return errors;
     };
 
@@ -326,32 +333,32 @@ window.BoundouDataProcessor = (() => {
     // Helper function to format decimal values (handles both comma and period separators)
     const formatDecimalValue = (value) => {
         if (value === null || value === undefined || value === '') return '';
-        
+
         let stringValue = String(value).trim();
-        
+
         // Handle empty or invalid values
         if (!stringValue || stringValue === '-' || stringValue === 'N/A') return '';
-        
+
         // Remove any whitespace
         stringValue = stringValue.replace(/\s+/g, '');
-        
+
         // Check if it looks like a number (with comma or period as decimal separator)
         const numberPattern = /^-?\d+([,.]\d+)?$/;
-        
+
         if (numberPattern.test(stringValue)) {
             // Replace comma with period for standardization
             const standardizedValue = stringValue.replace(',', '.');
-            
+
             // Parse as float and return formatted with period as decimal separator
             const numericValue = parseFloat(standardizedValue);
-            
+
             if (!isNaN(numericValue)) {
                 // Return the number with period as decimal separator
                 console.log(`[NUM] Decimal formatting: "${value}" -> "${numericValue.toString()}"`);
                 return numericValue.toString();
             }
         }
-        
+
         // If not a valid number pattern, return original cleaned value
         console.log(`[WARN] Invalid decimal format: "${value}" -> "${stringValue}" (keeping original)`);
         return stringValue;
@@ -360,17 +367,17 @@ window.BoundouDataProcessor = (() => {
     // Process collective data with proper parcel handling
     const processCollectiveData = (data) => {
         if (!data || data.length <= 1) return [];
-        
+
         const collectiveParcelErrors = []; // Track errors
         const headers = data[0];
         const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
 
         const results = rows.map(row => formatParcelData(row, headers, collectiveParcelErrors))
-                            .filter(row => row !== null);
-        
+            .filter(row => row !== null);
+
         // Store errors for debugging if needed
         window.BoundouDashboard.collectiveParcelErrors = collectiveParcelErrors;
-        
+
         return results;
     };
 
@@ -378,18 +385,18 @@ window.BoundouDataProcessor = (() => {
     const formatParcelData = (row, headers, collectiveParcelErrors) => {
         function getValue(columnName) {
             // Case-insensitive column lookup
-            const index = headers.findIndex(header => 
+            const index = headers.findIndex(header =>
                 String(header).toLowerCase() === String(columnName).toLowerCase()
             );
             return index !== -1 ? row[index] : undefined;
         }
 
         const individuals = []; // Store all individuals with their info
-        
+
         // Process mandataire (main person) first
         const prenomM = getValue('Prenom_M');
         const nomM = getValue('Nom_M');
-        
+
         if (prenomM && nomM && prenomM !== '' && nomM !== '') {
             const mandataireInfo = {
                 prenom: cleanValue(prenomM),
@@ -417,7 +424,7 @@ window.BoundouDataProcessor = (() => {
 
         // Process all affectataires (including those who might be duplicates of mandataire)
         const affectataires = new Map();
-        
+
         // Find all affectataire fields with improved detection
         headers.forEach((col, index) => {
             if (!col) return;
@@ -425,22 +432,22 @@ window.BoundouDataProcessor = (() => {
             let fieldType = null;
 
             const colStr = String(col);
-            
+
             // Prenom fields
             if (colStr === 'Prenom' || (colStr.startsWith('Prenom_') && colStr !== 'Prenom_M')) {
                 fieldType = 'prenom';
                 affectataireId = colStr === 'Prenom' ? '1' : colStr.replace('Prenom_', '');
-            } 
+            }
             // Nom fields
             else if (colStr === 'Nom' || (colStr.startsWith('Nom_') && colStr !== 'Nom_M')) {
                 fieldType = 'nom';
                 affectataireId = colStr === 'Nom' ? '1' : colStr.replace('Nom_', '');
-            } 
+            }
             // Sexe fields
             else if ((colStr === 'Sexe' || colStr.startsWith('Sexe_')) && !['Sexe_Mndt', 'Sexe_M'].includes(colStr)) {
                 fieldType = 'sexe';
                 affectataireId = colStr === 'Sexe' ? '1' : colStr.replace('Sexe_', '');
-            } 
+            }
             // Numero piece fields - improved detection
             else if (colStr.includes('Num_piece') && !['Num_piec'].includes(colStr)) {
                 fieldType = 'numero_piece';
@@ -487,11 +494,11 @@ window.BoundouDataProcessor = (() => {
             if (affectataireId && fieldType) {
                 // Clean up affectataireId
                 affectataireId = String(affectataireId).replace(/^0+/, '') || '1';
-                
+
                 if (!affectataires.has(affectataireId)) {
                     affectataires.set(affectataireId, {});
                 }
-                
+
                 const value = row[index];
                 if (value !== undefined && value !== null && value !== '') {
                     affectataires.get(affectataireId)[fieldType] = cleanValue(value);
@@ -508,7 +515,7 @@ window.BoundouDataProcessor = (() => {
 
         sortedIds.forEach(affectataireId => {
             const info = affectataires.get(affectataireId);
-            
+
             // Only include if has both prenom and nom
             if (info.prenom && info.nom) {
                 const affectataireInfo = {
@@ -524,17 +531,17 @@ window.BoundouDataProcessor = (() => {
                     isMandataire: false,
                     source: `affectataire_${affectataireId}`
                 };
-                
+
                 // Check if this affectataire is the same person as mandataire
                 // Two people are the same ONLY if they have the same name AND same Num_piece
                 const mandataire = individuals.find(ind => ind.isMandataire);
-                const isSamePersonAsMandataire = mandataire && 
-                    affectataireInfo.prenom === mandataire.prenom && 
+                const isSamePersonAsMandataire = mandataire &&
+                    affectataireInfo.prenom === mandataire.prenom &&
                     affectataireInfo.nom === mandataire.nom &&
                     affectataireInfo.numero_piece === mandataire.numero_piece &&
                     affectataireInfo.numero_piece !== '-' &&
                     mandataire.numero_piece !== '-';
-                
+
                 // If different name or different Num_piece, it's a different person (even if homonym)
                 if (!isSamePersonAsMandataire) {
                     individuals.push(affectataireInfo);
