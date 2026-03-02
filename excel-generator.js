@@ -15,13 +15,18 @@ window.BoundouExcelGenerator = (() => {
             // Try to parse various string formats
             let dateStr = String(dateValue).trim();
             
-            // Handle multi-line dates (for collective data) - take the first valid line
+            // Handle multi-line dates (for collective data): format each line independently
+            // and preserve line positions so each member keeps their own birth date.
             if (dateStr.includes('\n')) {
-                const dateLines = dateStr.split('\n').filter(line => line.trim() && line.trim() !== '-');
-                if (dateLines.length > 0) {
-                    dateStr = dateLines[0].trim();
-                    console.log('DEBUG: Multi-line date detected, using first line:', dateStr);
-                }
+                return dateStr
+                    .split('\n')
+                    .map(line => {
+                        const trimmed = String(line).trim();
+                        if (!trimmed) return '';
+                        if (trimmed === '-' || trimmed.toUpperCase() === 'N/A') return trimmed;
+                        return formatDateToDDMMYYYY(trimmed) || trimmed;
+                    })
+                    .join('\n');
             }
             
             // Skip empty or invalid values
