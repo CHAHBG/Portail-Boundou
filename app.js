@@ -1154,11 +1154,11 @@
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
-                        const wb = XLSX.read(e.target.result, { type: 'array' });
+                        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const data = type === 'collective'
                             ? XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
-                            : XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                            : XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
                         resolve(data);
                     } catch (err) { reject(err); }
                 };

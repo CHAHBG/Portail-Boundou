@@ -3,7 +3,7 @@ window.BoundouExcelGenerator = (() => {
 
     // Helper function to format dates to DD/MM/YYYY format
     const formatDateToDDMMYYYY = (dateValue) => {
-        if (!dateValue) return '';
+        if (dateValue === null || dateValue === undefined || dateValue === '') return '';
         
         // Handle different date formats
         let date;
@@ -11,6 +11,19 @@ window.BoundouExcelGenerator = (() => {
         // If it's already a Date object
         if (dateValue instanceof Date) {
             date = dateValue;
+        } else if (typeof dateValue === 'number' && isFinite(dateValue)) {
+            // Handle numeric Excel serial dates directly (e.g. 33009, 33009.5)
+            const serialNumber = Math.round(dateValue);
+            if (serialNumber > 0 && serialNumber < 100000) {
+                const excelEpoch = new Date(1900, 0, 1);
+                const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                let adjustedSerial = serialNumber;
+                if (serialNumber >= 60) {
+                    adjustedSerial = serialNumber - 1;
+                }
+                date = new Date(excelEpoch.getTime() + (adjustedSerial - 1) * millisecondsPerDay);
+                console.log('DEBUG: Converted numeric serial', dateValue, 'to date:', date);
+            }
         } else {
             // Try to parse various string formats
             let dateStr = String(dateValue).trim();
@@ -339,8 +352,8 @@ window.BoundouExcelGenerator = (() => {
                 const groupementsData = data.groupement.map(row => {
                     const orderedRow = {};
                     columns.forEach(col => {
-                        if (col === 'Creation') {
-                            // Apply date formatting to Creation field
+                        if (col === 'Creation' || col === 'Date_nai') {
+                            // Apply date formatting to date fields
                             orderedRow[col] = formatDateToDDMMYYYY(row[col]) || '';
                         } else if (col === 'superficie') {
                             // Apply decimal formatting to superficie field
@@ -1760,19 +1773,9 @@ window.BoundouExcelGenerator = (() => {
             columns.forEach(col => {
                 let value = row[col] || '';
                 
-                // Apply date formatting to specific columns
-                if (col === 'Date_naiss' || col === 'Creation' || col === 'Date_naissance') {
+                // Apply date formatting to ALL date columns including Date_nai
+                if (col === 'Date_naiss' || col === 'Creation' || col === 'Date_naissance' || col === 'Date_nai') {
                     value = formatDateToDDMMYYYY(value) || value;
-                } else if (col === 'Date_nai') {
-                    // Keep Date_nai in YYYY-MM-DD format for collective data
-                    if (value && typeof value === 'string' && value.includes('\n')) {
-                        // For multi-line dates, take the first valid date line
-                        const dateLines = value.split('\n').filter(line => line.trim() && line.trim() !== '-');
-                        if (dateLines.length > 0) {
-                            value = dateLines[0].trim();
-                        }
-                    }
-                    // Keep YYYY-MM-DD format as is
                 }
                 
                 // For collective data, preserve multi-line content

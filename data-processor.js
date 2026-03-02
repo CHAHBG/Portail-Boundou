@@ -195,6 +195,8 @@ window.BoundouDataProcessor = (() => {
                         }
 
                         const cleanedRow = {};
+                        // Date columns that need special formatting (Date objects or serial numbers)
+                        const dateColumns = ['Date_naiss', 'Date_nai', 'Creation'];
                         entityFieldMappings[entityType].forEach(field => {
                             // Use case-sensitive lookup for ALL fields to ensure data is found
                             // even if Excel headers have different casing (e.g. PRENOM vs Prenom)
@@ -204,6 +206,34 @@ window.BoundouDataProcessor = (() => {
                             if (field === 'superficie') {
                                 console.log(`[RULER] Processing ${entityType} superficie:`, fieldValue, 'from getValue lookup');
                                 cleanedRow[field] = formatDecimalValue(fieldValue || '');
+                            } else if (dateColumns.includes(field)) {
+                                // Format dates before sanitization — sanitizeForExcel would
+                                // destroy Date objects and might lose precision on serial numbers.
+                                // Use the Excel generator's date formatter via a local helper.
+                                if (fieldValue instanceof Date) {
+                                    const day = String(fieldValue.getDate()).padStart(2, '0');
+                                    const month = String(fieldValue.getMonth() + 1).padStart(2, '0');
+                                    const year = String(fieldValue.getFullYear());
+                                    cleanedRow[field] = `${day}/${month}/${year}`;
+                                } else if (typeof fieldValue === 'number' && isFinite(fieldValue)) {
+                                    // Excel serial number — convert inline
+                                    const serial = Math.round(fieldValue);
+                                    if (serial > 0 && serial < 100000) {
+                                        const epoch = new Date(1900, 0, 1);
+                                        const msPerDay = 86400000;
+                                        const adj = serial >= 60 ? serial - 1 : serial;
+                                        const d = new Date(epoch.getTime() + (adj - 1) * msPerDay);
+                                        const dd = String(d.getDate()).padStart(2, '0');
+                                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                        const yyyy = String(d.getFullYear());
+                                        cleanedRow[field] = `${dd}/${mm}/${yyyy}`;
+                                    } else {
+                                        cleanedRow[field] = BoundouUtils.sanitizeForExcel(fieldValue || '');
+                                    }
+                                } else {
+                                    // Already a string — pass through sanitization
+                                    cleanedRow[field] = BoundouUtils.sanitizeForExcel(fieldValue || '');
+                                }
                             } else {
                                 cleanedRow[field] = BoundouUtils.sanitizeForExcel(fieldValue || '');
                             }
