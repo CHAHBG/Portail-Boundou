@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'boundou-static-v6';
+const STATIC_CACHE = 'boundou-static-v7';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   './',
