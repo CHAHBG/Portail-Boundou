@@ -448,47 +448,55 @@ window.BoundouDataProcessor = (() => {
                 fieldType = 'sexe';
                 affectataireId = colStr === 'Sexe' ? '1' : colStr.replace('Sexe_', '');
             }
-            // Numero piece fields - improved detection
-            else if (colStr.includes('Num_piece') && !['Num_piec'].includes(colStr)) {
+            // Numero piece fields — match Num_piece, Num_piece_2, etc. but not Num_piec (mandataire)
+            else if (/^Num_piece(_\d+)?$/i.test(colStr)) {
                 fieldType = 'numero_piece';
-                if (colStr === 'Num_piece') {
-                    affectataireId = '1';
-                } else {
-                    affectataireId = colStr.replace('Num_piece_', '').replace('Num_piece', '');
-                }
+                const m = colStr.match(/_((\d+))$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Type piece fields
-            else if (colStr.startsWith('Type_piec_') || (colStr === 'Type_piece' && colStr !== 'Type_piec')) {
+            // Type piece fields — match Type_piec_2, Type_piece, etc. but not bare Type_piec (mandataire)
+            else if (/^Type_piec[e]?_\d+$/i.test(colStr) || colStr === 'Type_piece') {
                 fieldType = 'type_piece';
-                affectataireId = colStr.replace('Type_piec_', '').replace('Type_piece', '1') || '1';
+                const m = colStr.match(/(\d+)$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Date naissance fields
-            else if (colStr.startsWith('Date_nais') || colStr.startsWith('Dat_nais')) {
+            // Date naissance fields — match Date_nais, Date_nais_2, Date_naiss, Date_naiss_2, Dat_nais_2 etc.
+            // but NOT Date_nai (mandataire, no trailing 's')
+            else if (/^(Date_naiss?|Dat_naiss?)(_\d+)?$/i.test(colStr)) {
                 fieldType = 'date_naissance';
-                affectataireId = colStr.replace('Date_nais_', '').replace('Date_nais', '').replace('Dat_nais_', '').replace('Dat_nais', '') || '1';
+                const m = colStr.match(/(\d+)$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Lieu naissance fields
-            else if (colStr.startsWith('Lieu_nais') && colStr !== 'Lieu_nais') {
+            // Lieu naissance fields — match Lieu_nais_2 etc. but not bare Lieu_nais (mandataire)
+            else if (/^Lieu_nais_\d+$/i.test(colStr)) {
                 fieldType = 'lieu_naissance';
-                affectataireId = colStr.replace('Lieu_nais_', '') || '1';
+                const m = colStr.match(/(\d+)$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Residence fields
-            else if (colStr.startsWith('Residence') && !['Residence_M'].includes(colStr)) {
+            // Residence fields — match Residence, Residence_2 etc. but not Residence_M (mandataire)
+            else if (/^Residence(_\d+)?$/i.test(colStr) && colStr !== 'Residence_M') {
                 fieldType = 'residence';
-                affectataireId = colStr.replace('Residence_', '').replace('Residence', '') || '1';
+                const m = colStr.match(/(\d+)$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Lieu residence fields
-            else if (colStr.startsWith('Lieu_resi') && colStr !== 'Lieu_resi2') {
+            // Lieu residence fields — match Lieu_resi, Lieu_resi_2 etc. but not Lieu_resi2 (mandataire)
+            else if (/^Lieu_resi(_\d+)?$/i.test(colStr) && colStr !== 'Lieu_resi2') {
                 fieldType = 'lieu_residence';
-                affectataireId = colStr.replace('Lieu_resi_', '').replace('Lieu_resi', '') || '1';
+                const m = colStr.match(/(\d+)$/);
+                affectataireId = m ? m[1] : '1';
             }
-            // Telephone fields - improved detection
-            else if (colStr.startsWith('Telephon') && !['Telephon1', 'Telephon2'].includes(colStr)) {
+            // Telephone fields — match Telephon3-N, Telephon_3, Telephone_3 etc.
+            // Telephon1/Telephon2 are mandataire phones
+            else if (/^Telephon[e]?[_]?(\d+)?$/i.test(colStr) && !['Telephon1', 'Telephon2'].includes(colStr)) {
                 fieldType = 'telephone';
-                const telNum = colStr.replace('Telephon_', '').replace('Telephon', '');
-                if (telNum === '3' || telNum === '') affectataireId = '1';
-                else if (parseInt(telNum) > 3) affectataireId = String(parseInt(telNum) - 2);
-                else affectataireId = telNum;
+                const m = colStr.match(/(\d+)$/);
+                if (m) {
+                    const num = parseInt(m[1]);
+                    // Telephon3 → affectataire 1, Telephon4 → 2, etc.
+                    affectataireId = num > 2 ? String(num - 2) : String(num);
+                } else {
+                    affectataireId = '1';
+                }
             }
 
             if (affectataireId && fieldType) {

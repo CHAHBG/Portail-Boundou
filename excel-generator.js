@@ -1775,11 +1775,10 @@ window.BoundouExcelGenerator = (() => {
                     // Keep YYYY-MM-DD format as is
                 }
                 
-                // For collective data, preserve multi-line content by using proper line breaks
+                // For collective data, preserve multi-line content
+                // XLSX handles \n natively — no extra quoting needed
                 if (typeof value === 'string' && value.includes('\n')) {
-                    // Keep line breaks for Excel (Excel recognizes \n in cell content)
-                    // Add quotes around multi-line content for proper CSV/Excel format
-                    value = `"${value.trim()}"`;
+                    value = value.trim();
                 }
                 
                 orderedRow[col] = value;
@@ -1797,9 +1796,8 @@ window.BoundouExcelGenerator = (() => {
             for (let col = range.s.c; col <= range.e.c; col++) {
                 const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
                 if (ws[cellAddress]) {
-                    // Enable text wrapping for cells with line breaks (including quoted content)
-                    if (typeof ws[cellAddress].v === 'string' && 
-                        (ws[cellAddress].v.includes('\n') || ws[cellAddress].v.startsWith('"'))) {
+                    // Enable text wrapping for cells with line breaks
+                    if (typeof ws[cellAddress].v === 'string' && ws[cellAddress].v.includes('\n')) {
                         ws[cellAddress].s = { alignment: { wrapText: true, vertical: 'top' } };
                     }
                 }
