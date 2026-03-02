@@ -1007,6 +1007,10 @@
                 AppState.individualFile = null;
                 AppState.selectedIndividualConfig = null;
                 window.BoundouDashboard.processedIndividualData = null;
+                if (window.BoundouDashboard.advancedOptions) {
+                    window.BoundouDashboard.advancedOptions.enableDualLists = false;
+                    window.BoundouDashboard.advancedOptions.enableMandataireSeparation = false;
+                }
                 const fileInfo = document.getElementById('fileInfoIndividual');
                 if (fileInfo) fileInfo.style.display = 'none';
                 const fileInput = document.getElementById('individual-file');
@@ -1023,6 +1027,10 @@
                 AppState.collectiveFile = null;
                 AppState.selectedCollectiveConfig = null;
                 window.BoundouDashboard.processedCollectiveData = null;
+                if (window.BoundouDashboard.advancedOptionsCollective) {
+                    window.BoundouDashboard.advancedOptionsCollective.enableDualLists = false;
+                    window.BoundouDashboard.advancedOptionsCollective.enableMandataireSeparation = false;
+                }
                 const fileInfo = document.getElementById('fileInfoCollective');
                 if (fileInfo) fileInfo.style.display = 'none';
                 const fileInput = document.getElementById('collective-file');
@@ -1116,7 +1124,7 @@
 
             // Process file
             try {
-                const data = await this._readExcelFile(file);
+                const data = await this._readExcelFile(file, type);
                 if (type === 'individual') {
                     if (typeof BoundouDataProcessor !== 'undefined') {
                         await BoundouDataProcessor.processIndividualData(data);
@@ -1141,14 +1149,16 @@
             }
         },
 
-        _readExcelFile(file) {
+        _readExcelFile(file, type) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
                         const wb = XLSX.read(e.target.result, { type: 'array' });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
-                        const data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                        const data = type === 'collective'
+                            ? XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+                            : XLSX.utils.sheet_to_json(sheet, { defval: '' });
                         resolve(data);
                     } catch (err) { reject(err); }
                 };
@@ -1179,8 +1189,17 @@
                     if (container) container.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
 
-                    if (type === 'individual') AppState.selectedIndividualConfig = config;
-                    else AppState.selectedCollectiveConfig = config;
+                    if (type === 'individual') {
+                        AppState.selectedIndividualConfig = config;
+                        window.BoundouDashboard.advancedOptions = window.BoundouDashboard.advancedOptions || {};
+                        window.BoundouDashboard.advancedOptions.enableDualLists = config === 'habitat-agricole' || config === 'complete';
+                        window.BoundouDashboard.advancedOptions.enableMandataireSeparation = config === 'mandataire' || config === 'complete';
+                    } else {
+                        AppState.selectedCollectiveConfig = config;
+                        window.BoundouDashboard.advancedOptionsCollective = window.BoundouDashboard.advancedOptionsCollective || {};
+                        window.BoundouDashboard.advancedOptionsCollective.enableDualLists = config === 'habitat-agricole' || config === 'complete';
+                        window.BoundouDashboard.advancedOptionsCollective.enableMandataireSeparation = config === 'complete';
+                    }
 
                     this._refreshWizardButtons(type);
                 });
@@ -1250,10 +1269,10 @@
 
                         if (typeof BoundouExcelGenerator !== 'undefined') {
                             const config = AppState.selectedIndividualConfig || 'basic';
-                            if (config === 'mandataire' || config === 'complete') {
-                                await BoundouExcelGenerator.generateEnhancedDelibList(window.BoundouDashboard.originalIndividualData);
+                            if (config === 'basic') {
+                                await BoundouExcelGenerator.generateIndividualDeliberationList();
                             } else {
-                                await BoundouExcelGenerator.generateDelibList(window.BoundouDashboard.originalIndividualData);
+                                await BoundouExcelGenerator.generateEnhancedIndividualDeliberationList();
                             }
                         }
 
@@ -1282,7 +1301,7 @@
                         this._animateProgress(fill, label, 'Génération en cours…');
 
                         if (typeof BoundouExcelGenerator !== 'undefined') {
-                            await BoundouExcelGenerator.generateCollectiveDelibList(window.BoundouDashboard.originalCollectiveData);
+                            await BoundouExcelGenerator.generateCollectiveDeliberationList();
                         }
 
                         if (fill) fill.style.width = '100%';
