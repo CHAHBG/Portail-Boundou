@@ -283,7 +283,7 @@
                 console.log(`[CORP] EXCEL GEN - Starting personne_morale processing with ${data.personne_morale.length} entities`);
                 
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Typ_pers_m', 'Num_parcel'];
+                const columns = selectedColumns?.personne_morale || ['Denominat', 'Creation', 'Siege', 'Numero', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Typ_pers_m', 'Num_parcel'];
                 
                 // Debug first personne_morale entity
                 if (data.personne_morale.length > 0) {
@@ -325,11 +325,7 @@
                     { wch: 25 }, // Denominat
                     { wch: 12 }, // Creation
                     { wch: 25 }, // Siege
-                    { wch: 20 }, // Type_num
-                    { wch: 20 }, // Autre_pr_ciser
                     { wch: 15 }, // Numero
-                    { wch: 15 }, // PhotoPieMo
-                    { wch: 25 }, // PhotoPieMo_URL
                     { wch: 20 }, // Mandataire
                     { wch: 15 }, // Telephone_001
                     { wch: 25 }, // Adresse
@@ -347,7 +343,7 @@
             // Sheet 3: Groupements
             if (data.groupement && data.groupement.length > 0) {
                 const selectedColumns = window.BoundouDashboard.selectedColumns;
-                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Type_num', 'Autre_pr_ciser', 'Numero', 'Type_piec', 'PhotoPieMo', 'PhotoPieMo_URL', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'Num_parcel'];
+                const columns = selectedColumns?.groupement || ['Village', 'Denominat', 'Creation', 'Siege', 'Numero', 'Mandataire', 'Telephone_001', 'Adresse', 'superficie', 'nicad', 'Vocation', 'type_usa', 'Date_nai', 'Typ_pers_m', 'Num_parcel'];
                 
                 const groupementsData = data.groupement.map(row => {
                     const orderedRow = {};
@@ -373,22 +369,22 @@
                 
                 // Set column widths
                 const colWidthsGroupements = [
+                    { wch: 5 },  // N°
                     { wch: 20 }, // Village
                     { wch: 25 }, // Denominat
                     { wch: 12 }, // Creation
                     { wch: 25 }, // Siege
-                    { wch: 20 }, // Type_num
-                    { wch: 20 }, // Autre_pr_ciser
                     { wch: 15 }, // Numero
-                    { wch: 15 }, // PhotoPieMo
-                    { wch: 25 }, // PhotoPieMo_URL
                     { wch: 20 }, // Mandataire
                     { wch: 15 }, // Telephone_001
                     { wch: 25 }, // Adresse
                     { wch: 15 }, // superficie
                     { wch: 15 }, // nicad
                     { wch: 20 }, // Vocation
-                    { wch: 12 }  // type_usag
+                    { wch: 12 }, // type_usa
+                    { wch: 12 }, // Date_nai
+                    { wch: 20 }, // Typ_pers_m
+                    { wch: 15 }  // Num_parcel
                 ];
                 wsGroupements['!cols'] = colWidthsGroupements;
                 

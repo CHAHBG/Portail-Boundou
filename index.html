@@ -232,7 +232,11 @@
                     <div class="export-panel glass-card">
                         <div class="export-anim"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
                         <h3>Tout est prêt !</h3><p>Données validées. Cliquez pour générer.</p>
-                        <div class="export-actions"><button id="generate-individual" class="btn btn-primary btn-lg" disabled>Générer la liste</button></div>
+                        <div class="export-actions">
+                            <button id="generate-individual" class="btn btn-primary btn-lg" disabled>Generer la liste</button>
+                            <button id="generateStats" class="btn btn-outline btn-lg"><i class="bi bi-bar-chart-fill"></i> Statistiques Excel</button>
+                            <button id="generateStatsPDF" class="btn btn-outline btn-lg" style="border-color:#c0392b;color:#c0392b;"><i class="bi bi-file-earmark-pdf-fill"></i> Statistiques PDF</button>
+                        </div>
                         <div class="export-progress" id="export-progress-individual" style="display:none"><div class="progress-track"><div class="progress-fill" id="progress-fill-individual"></div></div><span class="progress-label" id="progress-label-individual">Génération…</span></div>
                     </div>
                 </div>
@@ -279,7 +283,11 @@
                     <div class="export-panel glass-card">
                         <div class="export-anim"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
                         <h3>Prêt à exporter</h3><p>Données collectives configurées.</p>
-                        <div class="export-actions"><button id="generate-collective" class="btn btn-primary btn-lg" disabled>Générer la liste collective</button></div>
+                        <div class="export-actions">
+                            <button id="generate-collective" class="btn btn-primary btn-lg" disabled>Generer la liste collective</button>
+                            <button id="generateCollectiveStats" class="btn btn-outline btn-lg"><i class="bi bi-bar-chart-fill"></i> Statistiques Excel</button>
+                            <button id="generateCollectiveStatsPDF" class="btn btn-outline btn-lg" style="border-color:#c0392b;color:#c0392b;"><i class="bi bi-file-earmark-pdf-fill"></i> Statistiques PDF</button>
+                        </div>
                         <div class="export-progress" id="export-progress-collective" style="display:none"><div class="progress-track"><div class="progress-fill" id="progress-fill-collective"></div></div><span class="progress-label" id="progress-label-collective">Génération…</span></div>
                     </div>
                 </div>
