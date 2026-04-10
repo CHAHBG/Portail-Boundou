@@ -1276,13 +1276,17 @@
                             }
                         }
 
-                        if (fill) fill.style.width = '100%';
-                        if (label) label.textContent = 'Terminé !';
+                        this._completeProgress(fill, label, 'Terminé !');
                         UI._toast('Liste individuelle générée !', 'success');
+
+                        // Show processing report if any lines were excluded
+                        if (window.BoundouDashboard._lastProcessingReport) {
+                            this._showProcessingReport(window.BoundouDashboard._lastProcessingReport);
+                        }
                     } catch (err) {
                         console.error(err);
+                        this._completeProgress(fill, label, 'Erreur');
                         UI._toast('Erreur lors de la génération', 'error');
-                        if (label) label.textContent = 'Erreur';
                     }
                     setTimeout(() => { genInd.disabled = false; }, 2000);
                 });
@@ -1304,13 +1308,17 @@
                             await BoundouExcelGenerator.generateCollectiveDeliberationList();
                         }
 
-                        if (fill) fill.style.width = '100%';
-                        if (label) label.textContent = 'Terminé !';
+                        this._completeProgress(fill, label, 'Terminé !');
                         UI._toast('Liste collective générée !', 'success');
+
+                        // Show processing report if any lines were excluded
+                        if (window.BoundouDashboard._lastProcessingReport) {
+                            this._showProcessingReport(window.BoundouDashboard._lastProcessingReport);
+                        }
                     } catch (err) {
                         console.error(err);
+                        this._completeProgress(fill, label, 'Erreur');
                         UI._toast('Erreur lors de la génération', 'error');
-                        if (label) label.textContent = 'Erreur';
                     }
                     setTimeout(() => { genCol.disabled = false; }, 2000);
                 });
@@ -1319,16 +1327,88 @@
 
         _animateProgress(fillEl, labelEl, msg) {
             if (!fillEl) return;
+            // Clear any previous interval
+            if (fillEl._progressInterval) {
+                clearInterval(fillEl._progressInterval);
+                fillEl._progressInterval = null;
+            }
+            fillEl.style.transition = 'width 0.3s ease';
             fillEl.style.width = '0%';
             if (labelEl) labelEl.textContent = msg;
             let w = 0;
             const interval = setInterval(() => {
-                w += Math.random() * 15;
+                w += Math.random() * 10 + 2;
                 if (w >= 90) { clearInterval(interval); w = 90; }
                 fillEl.style.width = w + '%';
             }, 200);
-            // Store interval for cleanup
             fillEl._progressInterval = interval;
+        },
+
+        _completeProgress(fillEl, labelEl, msg) {
+            if (!fillEl) return;
+            // Clear the animation interval
+            if (fillEl._progressInterval) {
+                clearInterval(fillEl._progressInterval);
+                fillEl._progressInterval = null;
+            }
+            fillEl.style.transition = 'width 0.5s ease';
+            fillEl.style.width = '100%';
+            if (labelEl) labelEl.textContent = msg || 'Terminé !';
+        },
+
+        _showProcessingReport(report) {
+            if (!report) return;
+            const { totalInput, totalOutput, excludedRows } = report;
+            // Clear the report so it doesn't show again
+            window.BoundouDashboard._lastProcessingReport = null;
+
+            if (!excludedRows || excludedRows.length === 0) return;
+
+            // Build report message
+            let msg = `⚠️ Rapport de traitement:\n`;
+            msg += `• Lignes en entrée: ${totalInput}\n`;
+            msg += `• Lignes exportées: ${totalOutput}\n`;
+            msg += `• Lignes exclues: ${excludedRows.length}\n\n`;
+            msg += `Détail des lignes exclues:\n`;
+            excludedRows.forEach(item => {
+                msg += `  - Ligne ${item.row}: ${item.reason}\n`;
+            });
+
+            console.warn('[REPORT]', msg);
+
+            // Show in UI as a dismissable alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'processing-report-alert';
+            alertDiv.style.cssText = 'position:fixed;top:80px;right:20px;max-width:500px;max-height:60vh;overflow-y:auto;background:var(--bg-card,#1e1e2e);color:var(--text-primary,#cdd6f4);border:1px solid #f9e2af;border-radius:12px;padding:1.2rem;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-size:0.85rem;';
+            
+            let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">`;
+            html += `<strong style="color:#f9e2af">⚠️ Rapport de traitement</strong>`;
+            html += `<button onclick="this.closest('.processing-report-alert').remove()" style="background:none;border:none;color:var(--text-primary,#cdd6f4);cursor:pointer;font-size:1.2rem">&times;</button></div>`;
+            html += `<div style="margin-bottom:0.5rem">Entrée: <strong>${totalInput}</strong> | Exportées: <strong>${totalOutput}</strong> | Exclues: <strong style="color:#f38ba8">${excludedRows.length}</strong></div>`;
+            html += `<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:0.5rem;font-size:0.8rem">`;
+            excludedRows.slice(0, 50).forEach(item => {
+                html += `<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05)">`;
+                html += `<span style="color:#f9e2af">Ligne ${item.row}</span>: ${item.reason}`;
+                if (item.data) html += ` <span style="color:#6c7086">[${item.data}]</span>`;
+                html += `</div>`;
+            });
+            if (excludedRows.length > 50) {
+                html += `<div style="padding:4px 0;color:#6c7086;font-style:italic">... et ${excludedRows.length - 50} de plus</div>`;
+            }
+            html += `</div>`;
+            alertDiv.innerHTML = html;
+            document.body.appendChild(alertDiv);
+
+            // Also download the report as a text file
+            const reportText = `RAPPORT DE TRAITEMENT - ${new Date().toLocaleString('fr-FR')}\n${'='.repeat(50)}\n\nLignes en entrée: ${totalInput}\nLignes exportées: ${totalOutput}\nLignes exclues: ${excludedRows.length}\n\n${'─'.repeat(50)}\nDÉTAIL DES LIGNES EXCLUES:\n${'─'.repeat(50)}\n` + 
+                excludedRows.map(item => `Ligne ${item.row}: ${item.reason}${item.data ? ' [' + item.data + ']' : ''}`).join('\n');
+            const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rapport_traitement_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
         },
 
         _formatSize(bytes) {

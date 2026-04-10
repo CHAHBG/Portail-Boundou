@@ -1265,6 +1265,16 @@ function setupAdvancedOptionsHandlers() {
         });
     }
 
+    // PDF Statistics generation button (Individual)
+    const statsPDFButton = document.getElementById('generateStatsPDF');
+    if (statsPDFButton) {
+        statsPDFButton.addEventListener('click', function() {
+            if (!this.disabled) {
+                generateStatisticsPDFReport();
+            }
+        });
+    }
+
     // Statistics generation button (Collective)
     const collectiveStatsButton = document.getElementById('generateCollectiveStats');
     console.log('[DBG] Looking for collective stats button:', collectiveStatsButton);
@@ -1332,7 +1342,77 @@ function setupAdvancedOptionsHandlers() {
         console.log('[DBG] Button by text:', buttonByText);
     }
 
+    // PDF Statistics generation button (Collective)
+    const collectiveStatsPDFButton = document.getElementById('generateCollectiveStatsPDF');
+    if (collectiveStatsPDFButton) {
+        collectiveStatsPDFButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!this.disabled) {
+                generateCollectiveStatisticsPDFReport();
+            }
+        });
+    }
+
     console.log('Advanced options handlers setup complete');
+}
+
+// Generate PDF statistics report (individual)
+function generateStatisticsPDFReport() {
+    try {
+        BoundouUtils.showLoading('loadingIndicator', 'Generation du rapport PDF...');
+
+        const data = window.BoundouDashboard.processedIndividualData;
+        const collectiveData = window.BoundouDashboard.processedCollectiveData;
+
+        if (!data && !collectiveData) {
+            throw new Error('Aucune donnee a analyser');
+        }
+
+        const stats = calculateComprehensiveStats(data, collectiveData);
+        BoundouExcelGenerator.generateStatisticsPDF(stats);
+
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showSuccess('Rapport PDF genere avec succes!');
+    } catch (error) {
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showError('Erreur generation PDF: ' + error.message);
+        console.error('PDF generation error:', error);
+    }
+}
+
+// Generate PDF statistics report (collective only)
+function generateCollectiveStatisticsPDFReport() {
+    try {
+        BoundouUtils.showLoading('loadingIndicator', 'Generation du rapport PDF collectif...');
+
+        const collectiveData = window.BoundouDashboard.processedCollectiveData;
+
+        if (!collectiveData || collectiveData.length === 0) {
+            throw new Error('Aucune donnee collective a analyser');
+        }
+
+        const stats = {
+            summary: {
+                totalIndividualParcels: 0,
+                totalCollectiveParcels: collectiveData.length,
+                totalRecords: collectiveData.length,
+                processingDate: new Date().toLocaleString('fr-FR')
+            },
+            individual: {},
+            collective: calculateCollectiveStats(collectiveData),
+            combined: {}
+        };
+
+        BoundouExcelGenerator.generateStatisticsPDF(stats);
+
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showSuccess('Rapport PDF collectif genere avec succes!');
+    } catch (error) {
+        BoundouUtils.hideLoading('loadingIndicator');
+        BoundouUtils.showError('Erreur generation PDF collectif: ' + error.message);
+        console.error('Collective PDF generation error:', error);
+    }
 }
 
 // Generate comprehensive statistics report
@@ -1479,13 +1559,14 @@ function calculateIndividualStats(data) {
             }
             stats.byUsageType[usageType]++;
 
-            // Count NICAD status
-            const nicadStatus = entity.nicad || entity.Num_parcel_2 || 'Non spécifié';
+            // Count NICAD status (aggregate by presence/absence)
+            const nicadValue = entity.nicad || '';
+            const nicadCategory = nicadValue && nicadValue.trim() !== '' ? 'Avec NICAD' : 'Sans NICAD';
             
-            if (!stats.byNicad[nicadStatus]) {
-                stats.byNicad[nicadStatus] = 0;
+            if (!stats.byNicad[nicadCategory]) {
+                stats.byNicad[nicadCategory] = 0;
             }
-            stats.byNicad[nicadStatus]++;
+            stats.byNicad[nicadCategory]++;
 
             // Group by document type (for person entities)
             if (entityType === 'personne_physique') {
@@ -1573,14 +1654,14 @@ function calculateCollectiveStats(data) {
         }
         stats.byDocumentType[docType]++;
 
-        // Count NICAD status
-        const nicadStatus = parcel.nicad || parcel.Num_parcel_2 || 'Non spécifié';
-        console.log(`[DBG] DEBUG: NICAD status for parcel ${index}:`, nicadStatus);
+        // Count NICAD status (aggregate by presence/absence)
+        const nicadValue = parcel.nicad || '';
+        const nicadCategory = nicadValue && nicadValue.trim() !== '' ? 'Avec NICAD' : 'Sans NICAD';
         
-        if (!stats.byNicad[nicadStatus]) {
-            stats.byNicad[nicadStatus] = 0;
+        if (!stats.byNicad[nicadCategory]) {
+            stats.byNicad[nicadCategory] = 0;
         }
-        stats.byNicad[nicadStatus]++;
+        stats.byNicad[nicadCategory]++;
 
         // Calculate age of mandataire (using Date_nai field)
         const mandataireBirthDate = parcel.Date_nai;

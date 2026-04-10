@@ -154,9 +154,14 @@ window.BoundouDataProcessor = (() => {
                 groupement: []
             };
 
+            // Track excluded rows for reporting
+            const excludedRows = [];
+            let rowIndex = 0;
+
             // Process data in chunks for better performance
             const processChunk = async (chunk) => {
                 chunk.forEach(row => {
+                    rowIndex++;
                     const rawTypePers = getValue(row, 'Typ_pers');
                     const rawTypePersM = getValue(row, 'Typ_pers_m');
 
@@ -170,8 +175,19 @@ window.BoundouDataProcessor = (() => {
                     } else if (rowTypePersM.includes('groupement')) {
                         entityType = 'groupement';
                     } else if (rowTypePers.includes('personne_morale') && !rowTypePersM.includes('groupement')) {
-                        // FIXED: Added the same exclusion condition as in filterByEntityType
                         entityType = 'personne_morale';
+                    }
+
+                    if (!entityType || !entityFieldMappings[entityType]) {
+                        // Track the excluded row with reason
+                        const parcelId = getValue(row, 'Num_parcel') || getValue(row, 'nicad') || '';
+                        const nom = getValue(row, 'Nom') || getValue(row, 'Denominat') || '';
+                        excludedRows.push({
+                            row: rowIndex + 1, // +1 for header row in original file
+                            reason: `Type de personne non reconnu (Typ_pers="${rawTypePers || ''}", Typ_pers_m="${rawTypePersM || ''}")`,
+                            data: parcelId ? `Parcelle: ${parcelId}` : (nom ? `Nom: ${nom}` : 'données non identifiables')
+                        });
+                        return;
                     }
 
                     if (entityType && entityFieldMappings[entityType]) {
@@ -253,6 +269,20 @@ window.BoundouDataProcessor = (() => {
             // Store categorized data
             window.BoundouDashboard.processedIndividualData = categorizedData;
             window.BoundouDashboard.originalIndividualData = BoundouUtils.deepClone(data);
+
+            // Store processing report for excluded rows
+            const totalOutput = categorizedData.personne_physique.length +
+                categorizedData.personne_morale.length +
+                categorizedData.groupement.length;
+            window.BoundouDashboard._lastProcessingReport = {
+                totalInput: data.length,
+                totalOutput: totalOutput,
+                excludedRows: excludedRows
+            };
+            if (excludedRows.length > 0) {
+                console.warn(`[REPORT] ${excludedRows.length} lignes exclues sur ${data.length} total:`);
+                excludedRows.forEach(e => console.warn(`  Ligne ${e.row}: ${e.reason} ${e.data ? '[' + e.data + ']' : ''}`));
+            }
 
             // DEBUG: Check what's actually stored for each entity type
             console.log(`[STAT] STORED DATA SUMMARY:`);
@@ -399,14 +429,61 @@ window.BoundouDataProcessor = (() => {
         if (!data || data.length <= 1) return [];
 
         const collectiveParcelErrors = []; // Track errors
+        const excludedRows = []; // Track excluded rows for report
         const headers = data[0];
-        const rows = data.slice(1).filter(row => row.some(cell => cell !== ''));
+        const allRows = data.slice(1);
+        const nonEmptyRows = allRows.filter(row => row.some(cell => cell !== ''));
 
-        const results = rows.map(row => formatParcelData(row, headers, collectiveParcelErrors))
-            .filter(row => row !== null);
+        // Track completely empty rows
+        const emptyCount = allRows.length - nonEmptyRows.length;
+        if (emptyCount > 0) {
+            // Find which rows were empty
+            allRows.forEach((row, idx) => {
+                if (!row.some(cell => cell !== '')) {
+                    excludedRows.push({
+                        row: idx + 2, // +2 for header + 0-index
+                        reason: 'Ligne entièrement vide',
+                        data: ''
+                    });
+                }
+            });
+        }
 
-        // Store errors for debugging if needed
+        const results = [];
+        nonEmptyRows.forEach((row, idx) => {
+            // Find the original row index in the full data
+            const originalIndex = allRows.indexOf(row);
+            const rowNumber = originalIndex + 2; // +2 for header + 0-index
+
+            const processed = formatParcelData(row, headers, collectiveParcelErrors);
+            if (processed !== null) {
+                results.push(processed);
+            } else {
+                // Determine reason for null return
+                const getVal = (colName) => {
+                    const i = headers.findIndex(h => String(h).toLowerCase() === String(colName).toLowerCase());
+                    return i !== -1 ? row[i] : undefined;
+                };
+                const numParcel = getVal('Num_parcel_2') || getVal('Num_parcel') || '';
+                excludedRows.push({
+                    row: rowNumber,
+                    reason: 'Parcelle invalide (mandataire manquant ou données insuffisantes)',
+                    data: numParcel ? `Parcelle: ${numParcel}` : ''
+                });
+            }
+        });
+
+        // Store errors and report
         window.BoundouDashboard.collectiveParcelErrors = collectiveParcelErrors;
+        window.BoundouDashboard._lastProcessingReport = {
+            totalInput: allRows.length,
+            totalOutput: results.length,
+            excludedRows: excludedRows
+        };
+        if (excludedRows.length > 0) {
+            console.warn(`[REPORT] Collective: ${excludedRows.length} lignes exclues sur ${allRows.length} total`);
+            excludedRows.forEach(e => console.warn(`  Ligne ${e.row}: ${e.reason} ${e.data ? '[' + e.data + ']' : ''}`));
+        }
 
         return results;
     };

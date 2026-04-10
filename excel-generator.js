@@ -1,4 +1,4 @@
-window.BoundouExcelGenerator = (() => {
+﻿window.BoundouExcelGenerator = (() => {
     'use strict';
 
     // Helper function to format dates to DD/MM/YYYY format
@@ -965,11 +965,24 @@ window.BoundouExcelGenerator = (() => {
             
             const agricoleRecords = data.filter(record => {
                 const usage = (record.type_usa || '').toString().toLowerCase().trim();
-                return usage === 'agriculture_pluviale' || usage === 'agriculture_traditionnelle';
+                return usage === 'agriculture_pluviale' || usage === 'agriculture_traditionnelle' || 
+                       usage.includes('agricol');
+            });
+
+            // Records that don't fall into habitat or agricole
+            const otherUsageRecords = data.filter(record => {
+                const usage = (record.type_usa || '').toString().toLowerCase().trim();
+                const isHabitat = usage === 'habitat';
+                const isAgricole = usage === 'agriculture_pluviale' || usage === 'agriculture_traditionnelle' || 
+                                  usage.includes('agricol');
+                return !isHabitat && !isAgricole;
             });
             
             console.log(`[HOME] Habitat records: ${habitatRecords.length}`);
             console.log(`[FIELD] Agricole records: ${agricoleRecords.length}`);
+            if (otherUsageRecords.length > 0) {
+                console.log(`[OTHER] Other usage records: ${otherUsageRecords.length}`);
+            }
             
             // Process Habitat records
             if (habitatRecords.length > 0) {
@@ -991,6 +1004,17 @@ window.BoundouExcelGenerator = (() => {
                     options
                 );
                 sheets.push(...agricoleSheets);
+            }
+
+            // Process Other usage records (don't drop them)
+            if (otherUsageRecords.length > 0) {
+                const otherSheets = await processCollectiveRecordsByUsage(
+                    otherUsageRecords, 
+                    'Autres', 
+                    columns, 
+                    options
+                );
+                sheets.push(...otherSheets);
             }
             
         } else {
@@ -1150,35 +1174,6 @@ window.BoundouExcelGenerator = (() => {
         return 'standard';
     };
     
-    // Check if a person should be mandataire based on document type and age (individual version)
-    const isPersonMandataire = (person, ageThreshold) => {
-        // For individual data, use the standard field names
-        const docType = person.numero_piece || '';
-        const docTypeStr = String(docType).toLowerCase().trim();
-        
-        // Check for extrait de naissance (non-mandataire)
-        const hasExtraitDocument = docTypeStr === 'extrait_de_naissance' || 
-                                   docTypeStr === 'extrait de naissance' ||
-                                   (docTypeStr.includes('extrait') && docTypeStr.includes('naissance'));
-        
-        if (hasExtraitDocument) {
-            console.log(`[TGT] Person with extrait document (non-mandataire): ${person.prenom} ${person.nom}`);
-            return false;
-        }
-        
-        // Check age if date is available
-        if (person.date_naissance) {
-            const age = calculateAge(person.date_naissance);
-            if (age !== null && age < ageThreshold) {
-                console.log(`[TGT] Person under ${ageThreshold} years (non-mandataire): ${person.prenom} ${person.nom}, age: ${age}`);
-                return false;
-            }
-        }
-        
-        // Default to mandataire
-        return true;
-    };
-
     // Generate sheets specifically for individual data (personne_physique)
     const generateIndividualEntitySheets = async (data, entityType, usageType, columns, options) => {
         const sheets = [];
@@ -1503,197 +1498,65 @@ window.BoundouExcelGenerator = (() => {
                 console.log(`[NOTE] All unique document types found:`, uniqueDocTypes);
             }
             
-            // Helper function to check if collective record has extrait document
-            const hasExtraitDocument = (row) => {
-                // Check only collective field
-                const docField = row.Type_piec;  // Collective data only
-                
-                if (!docField) return false;
-                
-                const fieldStr = String(docField).toLowerCase().trim();
-                // More flexible matching for extrait de naissance
-                const hasExtrait = fieldStr === 'extrait_de_naissance' || 
-                                  fieldStr === 'extrait de naissance' ||
-                                  fieldStr.includes('extrait') && fieldStr.includes('naissance');
-                
-                if (hasExtrait) {
-                    console.log(`[TGT] Found collective extrait document: "${docField}"`);
-                }
-                
-                return hasExtrait;
-            };
-            
-            // Helper function to check if collective record has CNI or other standard ID documents
-            const hasStandardDocument = (row) => {
-                const docField = row.Type_piec;  // Collective data only
-                
-                if (!docField) return false;
-                
-                const fieldStr = String(docField).toLowerCase().trim();
-                
-                // For collective files (Type_piec) - exact matching based on provided values
-                const isStandard = fieldStr === 'cni' || 
-                                  fieldStr === 'passeport' ||
-                                  fieldStr === 'passport' ||
-                                  fieldStr === 'carte_nationale_identite' ||
-                                  fieldStr === 'carte d\'identité' ||
-                                  fieldStr === 'carte d\'identite';
-                
-                if (isStandard && !hasExtraitDocument(row)) {
-                    console.log(`[TGT] Found collective standard document: "${docField}"`);
-                    return true;
-                }
-                
-                return false;
-            };
-            
-            // Helper function to check if collective record has "Autres" or unknown documents
-            const hasOtherDocument = (row) => {
-                const docField = row.Type_piec;  // Collective data only
-                
-                if (!docField) return false;
-                
-                const fieldStr = String(docField).toLowerCase().trim();
-                
-                // For individual files
-                if (row.Type_piece) {
-                    const isOther = fieldStr === 'autres' || fieldStr.includes('autre');
-                    if (isOther) {
-                        console.log(`[TGT] Found other individual document: "${docField}"`);
-                    }
-                    return isOther;
-                }
-                
-                // For collective files
-                if (row.Type_piec) {
-                    const isOther = fieldStr === 'option_7' || fieldStr.includes('option');
-                    if (isOther) {
-                        console.log(`[TGT] Found other collective document: "${docField}"`);
-                    }
-                    return isOther;
-                }
-                
-                return false;
-            };
-            
             // Helper function to get age from record
             const getRecordAge = (row) => {
-                console.log(`[DBG] Getting age for record with fields:`, Object.keys(row));
-                
-                // For collective data, use Date_nai field (not Date_naiss which is for individual data)
                 const collectiveDateField = row.Date_nai;
-                
                 if (collectiveDateField) {
-                    console.log(`   [TGT] Using collective birth date (Date_nai): ${collectiveDateField}`);
                     const calculatedAge = calculateAge(collectiveDateField);
-                    if (calculatedAge !== null) {
-                        console.log(`   [OK] Calculated mandataire age: ${calculatedAge}`);
-                        return calculatedAge;
-                    }
-                } else {
-                    console.log(`   [ERR] No Date_nai field found for mandataire`);
+                    if (calculatedAge !== null) return calculatedAge;
                 }
-                
-                // Fallback: try direct Age field if Date_nai is not available
-                if (row.Age && typeof row.Age === 'number' && row.Age < 150) {
-                    console.log(`   [OK] Using direct age field: ${row.Age}`);
-                    return row.Age;
-                }
-                
-                console.log(`   [ERR] No valid mandataire age found for record`);
+                if (row.Age && typeof row.Age === 'number' && row.Age < 150) return row.Age;
                 return null;
             };
 
-            // Separate mandataires by age and document type
-            const underageMandataires = data.filter(row => {
-                const hasExtrait = hasExtraitDocument(row);
+            // Single-pass categorization to prevent overlapping or missing records
+            const underageMandataires = [];
+            const majorMandataires = [];
+            const standardDocuments = [];
+            const otherDocuments = [];
+            const unknownDocuments = [];
+
+            data.forEach(row => {
+                const docField = row.Type_piec || row.Type_piece || '';
+                const fieldStr = String(docField).toLowerCase().trim();
                 const age = getRecordAge(row);
+                const isMajor = age === null ? true : age > ageThreshold;
+
+                const isExtrait = fieldStr === 'extrait_de_naissance' || 
+                                 fieldStr === 'extrait de naissance' ||
+                                 (fieldStr.includes('extrait') && fieldStr.includes('naissance'));
                 
-                // Minor mandataires: Records with extrait documents and age <= threshold
-                const isUnderage = hasExtrait && age !== null && age <= ageThreshold;
+                const isStandard = !isExtrait && (
+                    fieldStr === 'cni' || fieldStr === 'passeport' || fieldStr === 'passport' ||
+                    fieldStr === 'carte_nationale_identite' || fieldStr === 'acni' ||
+                    fieldStr === 'recepisse_cni' || fieldStr === 'attestation_cni_1' ||
+                    fieldStr === 'carte residence' ||
+                    fieldStr.includes('cni') || fieldStr.includes('passeport') || fieldStr.includes('recepisse')
+                );
                 
-                console.log(`[DBG] MINOR check: hasExtrait=${hasExtrait}, age=${age}, threshold=${ageThreshold}, isUnderage=${isUnderage}`);
-                console.log(`   - Doc type: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                console.log(`   - Birth date field: ${row.Date_naiss || row.Date_nai || 'N/A'}`);
-                
-                if (hasExtrait) {
-                    console.log(`[DBG] Age check - Date_naiss: ${row.Date_naiss}, Date_nai: ${row.Date_nai}, Age: ${age}, Threshold: ${ageThreshold}, IsUnderage: ${isUnderage}`);
+                const isOther = !isExtrait && !isStandard && (
+                    fieldStr === 'autres' || fieldStr.includes('autre') ||
+                    fieldStr === 'option_7' || fieldStr.includes('option')
+                );
+
+                if (isExtrait) {
+                    if (isMajor) { majorMandataires.push(row); }
+                    else { underageMandataires.push(row); }
+                } else if (isStandard) {
+                    standardDocuments.push(row);
+                } else if (isOther) {
+                    otherDocuments.push(row);
+                } else {
+                    unknownDocuments.push(row);
                 }
-                
-                if (isUnderage) {
-                    console.log(`[CHILD] Found underage mandataire: age ${age}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                }
-                
-                return isUnderage;
             });
 
-            const majorMandataires = data.filter(row => {
-                const hasExtrait = hasExtraitDocument(row);
-                const hasStandard = hasStandardDocument(row);
-                const age = getRecordAge(row);
-                
-                // Major mandataires: Records with standard documents (CNI, passport, etc.) OR adults with extrait documents
-                const isMajor = (hasStandard && age !== null && age > ageThreshold) || 
-                               (hasExtrait && age !== null && age > ageThreshold);
-                
-                console.log(`[DBG] MAJOR check: hasExtrait=${hasExtrait}, hasStandard=${hasStandard}, age=${age}, threshold=${ageThreshold}, isMajor=${isMajor}`);
-                console.log(`   - Doc type: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                console.log(`   - Date_nai: ${row.Date_nai}`);
-                console.log(`   - Standard doc check: ${hasStandard && age !== null && age > ageThreshold}`);
-                console.log(`   - Adult extrait check: ${hasExtrait && age !== null && age > ageThreshold}`);
-                
-                if (isMajor) {
-                    console.log(`[MAN] Found major mandataire: age ${age || 'unknown'}, doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                }
-                
-                return isMajor;
-            });
-
-            // Records with CNI, passport, etc. (standard ID documents)
-            const standardDocuments = data.filter(row => {
-                const hasStandard = hasStandardDocument(row);
-                
-                if (hasStandard) {
-                    console.log(`[DOC] Found standard document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                }
-                
-                return hasStandard;
-            });
-
-            // Records with "Autres" or option_7 documents
-            const otherDocuments = data.filter(row => {
-                const hasOther = hasOtherDocument(row);
-                
-                if (hasOther) {
-                    console.log(` Found other document: doc: ${row.Type_piece || row.Type_piec || 'N/A'}`);
-                }
-                
-                return hasOther;
-            });
-
-            // Records with no clear document type or completely missing document fields
-            const unknownDocuments = data.filter(row => {
-                const hasExtrait = hasExtraitDocument(row);
-                const hasStandard = hasStandardDocument(row);
-                const hasOther = hasOtherDocument(row);
-                const hasNoDocInfo = !hasExtrait && !hasStandard && !hasOther;
-                
-                if (hasNoDocInfo) {
-                    const docField = row.Type_piece || row.Type_piec || 'NO_DOC';
-                    console.log(`[?]“ Found record with unknown/missing document: "${docField}" (original value)`);
-                    console.log(`   - Row data:`, {Type_piece: row.Type_piece, Type_piec: row.Type_piec, Date_naiss: row.Date_naiss, Age: row.Age});
-                }
-                
-                return hasNoDocInfo;
-            });
-
-            console.log(`[LIST] Separation results for ${entityType}:`);
-            console.log(`   - Underage mandataires (extrait_de_naissance + ≤${ageThreshold}): ${underageMandataires.length}`);
-            console.log(`   - Major mandataires (extrait_de_naissance + >${ageThreshold}): ${majorMandataires.length}`);
-            console.log(`   - Standard documents (CNI, passeport, etc.): ${standardDocuments.length}`);
-            console.log(`   - Other documents (Autres/option_7): ${otherDocuments.length}`);
-            console.log(`   - Unknown documents: ${unknownDocuments.length}`);
-            console.log(`   - Total: ${underageMandataires.length + majorMandataires.length + standardDocuments.length + otherDocuments.length + unknownDocuments.length} / ${data.length}`);
+            const totalCategorized = underageMandataires.length + majorMandataires.length + 
+                                    standardDocuments.length + otherDocuments.length + unknownDocuments.length;
+            console.log('[LIST] Separation results for ' + entityType + ': ' + totalCategorized + '/' + data.length);
+            if (totalCategorized !== data.length) {
+                console.error('[ERR] MISSING: ' + (data.length - totalCategorized) + ' records not categorized!');
+            }
 
             // Create sheets for each category (only if they have data)
             if (underageMandataires.length > 0) {
@@ -1996,6 +1859,7 @@ window.BoundouExcelGenerator = (() => {
         ];
 
         const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        wsSummary['!cols'] = [{ wch: 35 }, { wch: 25 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé Exécutif');
 
         // 2. INDIVIDUAL DATA STATISTICS SHEET
@@ -2055,6 +1919,7 @@ window.BoundouExcelGenerator = (() => {
             });
 
             const wsIndividual = XLSX.utils.aoa_to_sheet(individualData);
+            wsIndividual['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 12 }];
             XLSX.utils.book_append_sheet(wb, wsIndividual, 'Stats Individuelles');
         }
 
@@ -2102,6 +1967,7 @@ window.BoundouExcelGenerator = (() => {
             });
 
             const wsCollective = XLSX.utils.aoa_to_sheet(collectiveData);
+            wsCollective['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 12 }];
             XLSX.utils.book_append_sheet(wb, wsCollective, 'Stats Collectives');
         }
 
@@ -2112,12 +1978,526 @@ window.BoundouExcelGenerator = (() => {
         return wb;
     };
 
+    // ===================================================================
+    // PDF STATISTICS GENERATION (with charts, colors, icons)
+    // ===================================================================
+
+    const COLORS = {
+        primary: [41, 128, 185],     // #2980b9
+        secondary: [142, 68, 173],   // #8e44ad
+        success: [39, 174, 96],      // #27ae60
+        warning: [243, 156, 18],     // #f39c12
+        danger: [192, 57, 43],       // #c0392b
+        dark: [44, 62, 80],          // #2c3e50
+        light: [236, 240, 241],      // #ecf0f1
+        white: [255, 255, 255],
+        chartPalette: [
+            [52, 152, 219],   // blue
+            [231, 76, 60],    // red
+            [46, 204, 113],   // green
+            [241, 196, 15],   // yellow
+            [155, 89, 182],   // purple
+            [230, 126, 34],   // orange
+            [26, 188, 156],   // teal
+            [52, 73, 94],     // dark blue
+            [149, 165, 166],  // gray
+            [211, 84, 0]      // dark orange
+        ]
+    };
+
+    const renderPieChart = (entries, size) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const total = entries.reduce((s, e) => s + e.value, 0);
+        if (total === 0) return canvas.toDataURL('image/png');
+
+        const cx = size / 2, cy = size / 2, r = size / 2 - 10;
+        let startAngle = -Math.PI / 2;
+
+        entries.forEach((entry, i) => {
+            const slice = (entry.value / total) * 2 * Math.PI;
+            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+            ctx.closePath();
+            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            startAngle += slice;
+        });
+
+        // white dot in center for donut look
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.45, 0, 2 * Math.PI);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+
+        return canvas.toDataURL('image/png');
+    };
+
+    const renderBarChart = (entries, width, height) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        const total = entries.reduce((s, e) => s + e.value, 0);
+        if (total === 0) return canvas.toDataURL('image/png');
+
+        const margin = { top: 15, right: 15, bottom: 40, left: 50 };
+        const chartW = width - margin.left - margin.right;
+        const chartH = height - margin.top - margin.bottom;
+        const maxVal = Math.max(...entries.map(e => e.value));
+        const barW = Math.min(50, chartW / entries.length - 8);
+        const gap = (chartW - barW * entries.length) / (entries.length + 1);
+
+        // grid lines
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = margin.top + chartH - (chartH / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y);
+            ctx.lineTo(width - margin.right, y);
+            ctx.stroke();
+            ctx.fillStyle = '#666';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(Math.round((maxVal / 4) * i), margin.left - 5, y + 4);
+        }
+
+        entries.forEach((entry, i) => {
+            const x = margin.left + gap + i * (barW + gap);
+            const h = maxVal > 0 ? (entry.value / maxVal) * chartH : 0;
+            const y = margin.top + chartH - h;
+            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+
+            // bar with rounded top
+            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+            const radius = Math.min(4, barW / 4);
+            ctx.beginPath();
+            ctx.moveTo(x, y + radius);
+            ctx.arcTo(x, y, x + radius, y, radius);
+            ctx.arcTo(x + barW, y, x + barW, y + radius, radius);
+            ctx.lineTo(x + barW, margin.top + chartH);
+            ctx.lineTo(x, margin.top + chartH);
+            ctx.closePath();
+            ctx.fill();
+
+            // value
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(entry.value, x + barW / 2, y - 4);
+
+            // label
+            ctx.save();
+            ctx.translate(x + barW / 2, margin.top + chartH + 8);
+            ctx.rotate(Math.PI / 6);
+            ctx.fillStyle = '#444';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'left';
+            const label = entry.label.length > 12 ? entry.label.substring(0, 11) + '..' : entry.label;
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        });
+
+        return canvas.toDataURL('image/png');
+    };
+
+    const addPdfHeader = (doc, title, yPos) => {
+        // colored banner
+        doc.setFillColor(...COLORS.primary);
+        doc.rect(0, yPos, doc.internal.pageSize.getWidth(), 14, 'F');
+        doc.setTextColor(...COLORS.white);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title, 14, yPos + 9.5);
+        doc.setTextColor(...COLORS.dark);
+        return yPos + 20;
+    };
+
+    const addPdfFooter = (doc) => {
+        const pageCount = doc.internal.getNumberOfPages();
+        const pw = doc.internal.pageSize.getWidth();
+        const ph = doc.internal.pageSize.getHeight();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            // footer line
+            doc.setDrawColor(...COLORS.light);
+            doc.setLineWidth(0.5);
+            doc.line(14, ph - 18, pw - 14, ph - 18);
+            // left text
+            doc.setFontSize(8);
+            doc.setTextColor(130, 130, 130);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Portail PROCASEF Boundou - generated by cabg', 14, ph - 12);
+            // page number right
+            doc.text(`Page ${i} / ${pageCount}`, pw - 14, ph - 12, { align: 'right' });
+        }
+    };
+
+    const addLegend = (doc, entries, x, y, boxSize) => {
+        const bs = boxSize || 6;
+        entries.forEach((entry, i) => {
+            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+            doc.setFillColor(...col);
+            doc.rect(x, y + i * (bs + 4), bs, bs, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(...COLORS.dark);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${entry.label} (${entry.value})`, x + bs + 3, y + i * (bs + 4) + bs - 1);
+        });
+        return y + entries.length * (bs + 4);
+    };
+
+    const entriesFromObj = (obj) => {
+        return Object.entries(obj || {}).map(([label, value]) => ({ label, value }));
+    };
+
+    const generateStatisticsPDF = (stats) => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pw = doc.internal.pageSize.getWidth();
+        const ph = doc.internal.pageSize.getHeight();
+        let y = 0;
+
+        // ---- COVER HEADER ----
+        doc.setFillColor(...COLORS.dark);
+        doc.rect(0, 0, pw, 50, 'F');
+        // accent stripe
+        doc.setFillColor(...COLORS.primary);
+        doc.rect(0, 50, pw, 4, 'F');
+
+        doc.setTextColor(...COLORS.white);
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RAPPORT STATISTIQUES', pw / 2, 22, { align: 'center' });
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Portail PROCASEF Boundou', pw / 2, 32, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(stats.summary.processingDate || new Date().toLocaleString('fr-FR'), pw / 2, 42, { align: 'center' });
+
+        y = 62;
+
+        // ---- EXECUTIVE SUMMARY CARDS ----
+        const cardW = (pw - 42) / 3;
+        const cards = [
+            { label: 'Parcelles Individuelles', value: stats.summary.totalIndividualParcels, color: COLORS.primary },
+            { label: 'Parcelles Collectives', value: stats.summary.totalCollectiveParcels, color: COLORS.secondary },
+            { label: 'Total General', value: stats.summary.totalRecords, color: COLORS.success }
+        ];
+        cards.forEach((card, i) => {
+            const cx = 14 + i * (cardW + 7);
+            // card bg
+            doc.setFillColor(card.color[0], card.color[1], card.color[2]);
+            doc.roundedRect(cx, y, cardW, 28, 3, 3, 'F');
+            // value
+            doc.setTextColor(...COLORS.white);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text(String(card.value), cx + cardW / 2, y + 13, { align: 'center' });
+            // label
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(card.label, cx + cardW / 2, y + 22, { align: 'center' });
+        });
+        y += 36;
+
+        // ===== INDIVIDUAL STATS =====
+        if (stats.individual && stats.individual.totalParcels > 0) {
+            y = addPdfHeader(doc, 'STATISTIQUES INDIVIDUELLES', y);
+
+            const indTotal = stats.individual.totalParcels || 0;
+
+            // --- Entity Type ---
+            const entityEntries = entriesFromObj(stats.individual.byEntityType);
+            if (entityEntries.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par type de personne', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(entityEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 50, 50);
+                y = addLegend(doc, entityEntries, 70, y + 5);
+                y = Math.max(y, y) + 10;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Type de Personne', 'Nombre', '%']],
+                    body: entityEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [245, 248, 250] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- Usage Type ---
+            const usageEntries = entriesFromObj(stats.individual.byUsageType);
+            if (usageEntries.length > 0) {
+                if (y > ph - 80) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par type d\'usage', 14, y + 5);
+                y += 8;
+
+                const barImg = renderBarChart(usageEntries, 500, 200);
+                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
+                y += 50;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Usage', 'Nombre', '%']],
+                    body: usageEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.success, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [245, 250, 245] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- Age Group ---
+            const ageEntries = entriesFromObj(stats.individual.byAgeGroup);
+            if (ageEntries.length > 0) {
+                if (y > ph - 80) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par tranche d\'age', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(ageEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 45, 45);
+                y = addLegend(doc, ageEntries, 65, y + 10);
+                y = Math.max(y, y) + 10;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Tranche d\'age', 'Nombre', '%']],
+                    body: ageEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [255, 252, 240] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- Document Type ---
+            const docEntries = entriesFromObj(stats.individual.byDocumentType);
+            if (docEntries.length > 0) {
+                if (y > ph - 80) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par type de document', 14, y + 5);
+                y += 8;
+
+                const barImg = renderBarChart(docEntries, 500, 200);
+                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
+                y += 50;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Document', 'Nombre', '%']],
+                    body: docEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.secondary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [248, 245, 252] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- NICAD ---
+            const nicadEntries = entriesFromObj(stats.individual.byNicad);
+            if (nicadEntries.length > 0) {
+                if (y > ph - 60) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Statut NICAD', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(nicadEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 40, 40);
+                y = addLegend(doc, nicadEntries, 60, y + 8);
+                y = Math.max(y, y) + 8;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Statut NICAD', 'Nombre', '%']],
+                    body: nicadEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [255, 245, 245] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+        }
+
+        // ===== COLLECTIVE STATS =====
+        if (stats.collective && stats.collective.totalParcels > 0) {
+            doc.addPage();
+            y = 15;
+            y = addPdfHeader(doc, 'STATISTIQUES COLLECTIVES', y);
+
+            const colTotal = stats.collective.totalParcels || 0;
+
+            // summary row
+            doc.setFillColor(245, 248, 250);
+            doc.roundedRect(14, y, pw - 28, 12, 2, 2, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...COLORS.dark);
+            doc.text(`Total parcelles: ${colTotal}`, 20, y + 8);
+            doc.text(`Total affectataires: ${stats.collective.totalAffectataires || 0}`, pw / 2, y + 8);
+            y += 18;
+
+            // --- Usage Type ---
+            const usageEntries = entriesFromObj(stats.collective.byUsageType);
+            if (usageEntries.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par type d\'usage', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(usageEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 50, 50);
+                y = addLegend(doc, usageEntries, 70, y + 5);
+                y = Math.max(y, y) + 10;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Usage', 'Nombre', '%']],
+                    body: usageEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [245, 248, 250] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- Document Type ---
+            const docEntries = entriesFromObj(stats.collective.byDocumentType);
+            if (docEntries.length > 0) {
+                if (y > ph - 80) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par type de document', 14, y + 5);
+                y += 8;
+
+                const barImg = renderBarChart(docEntries, 500, 200);
+                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
+                y += 50;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Document', 'Nombre', '%']],
+                    body: docEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.success, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [245, 250, 245] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- Age Group ---
+            const ageEntries = entriesFromObj(stats.collective.byAgeGroup);
+            if (ageEntries.length > 0) {
+                if (y > ph - 80) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Repartition par tranche d\'age', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(ageEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 45, 45);
+                y = addLegend(doc, ageEntries, 65, y + 10);
+                y = Math.max(y, y) + 10;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Tranche d\'age', 'Nombre', '%']],
+                    body: ageEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [255, 252, 240] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // --- NICAD ---
+            const nicadEntries = entriesFromObj(stats.collective.byNicad);
+            if (nicadEntries.length > 0) {
+                if (y > ph - 60) { doc.addPage(); y = 15; }
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.dark);
+                doc.text('Statut NICAD', 14, y + 5);
+                y += 8;
+
+                const pieImg = renderPieChart(nicadEntries, 200);
+                doc.addImage(pieImg, 'PNG', 14, y, 40, 40);
+                y = addLegend(doc, nicadEntries, 60, y + 8);
+                y = Math.max(y, y) + 8;
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Statut NICAD', 'Nombre', '%']],
+                    body: nicadEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
+                    theme: 'grid',
+                    headStyles: { fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { fontSize: 8 },
+                    alternateRowStyles: { fillColor: [255, 245, 245] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            }
+        }
+
+        // ---- FOOTER on every page ----
+        addPdfFooter(doc);
+
+        // ---- SAVE ----
+        const fileName = `Statistiques_Boundou_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`;
+        doc.save(fileName);
+        return doc;
+    };
+
     // Export public methods
     return {
         generateIndividualDeliberationList,
         generateEnhancedIndividualDeliberationList,
         generateCollectiveDeliberationList,
         generateStatisticsExcel,
+        generateStatisticsPDF,
         exportPreviewData,
         testDocumentDetection  // For debugging purposes
     };
