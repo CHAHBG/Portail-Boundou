@@ -1381,29 +1381,19 @@ function generateStatisticsPDFReport() {
     }
 }
 
-// Generate PDF statistics report (collective only)
+// Generate PDF statistics report (collective trigger - includes individual if available)
 function generateCollectiveStatisticsPDFReport() {
     try {
         BoundouUtils.showLoading('loadingIndicator', 'Generation du rapport PDF collectif...');
 
+        const data = window.BoundouDashboard.processedIndividualData;
         const collectiveData = window.BoundouDashboard.processedCollectiveData;
 
         if (!collectiveData || collectiveData.length === 0) {
             throw new Error('Aucune donnee collective a analyser');
         }
 
-        const stats = {
-            summary: {
-                totalIndividualParcels: 0,
-                totalCollectiveParcels: collectiveData.length,
-                totalRecords: collectiveData.length,
-                processingDate: new Date().toLocaleString('fr-FR')
-            },
-            individual: {},
-            collective: calculateCollectiveStats(collectiveData),
-            combined: {}
-        };
-
+        const stats = calculateComprehensiveStats(data, collectiveData);
         BoundouExcelGenerator.generateStatisticsPDF(stats);
 
         BoundouUtils.hideLoading('loadingIndicator');
@@ -1445,56 +1435,30 @@ function generateStatisticsReport() {
     }
 }
 
-// Generate collective-only statistics report
+// Generate collective-triggered statistics report (includes individual if available)
 function generateCollectiveStatisticsReport() {
     console.log('[FIRE] generateCollectiveStatisticsReport called!');
     
     try {
         BoundouUtils.showLoading('loadingIndicator', 'Génération des statistiques collectives...');
         
-        console.log('[DBG] Checking collective data availability...');
-        console.log('window.BoundouDashboard:', window.BoundouDashboard);
-        
+        const data = window.BoundouDashboard.processedIndividualData;
         const collectiveData = window.BoundouDashboard.processedCollectiveData;
-        console.log('[STAT] Collective data:', collectiveData);
-        console.log('[STAT] Collective data length:', collectiveData ? collectiveData.length : 'undefined');
         
         if (!collectiveData || collectiveData.length === 0) {
-            console.error('[ERR] No collective data available');
             throw new Error('Aucune donnée collective à analyser');
         }
 
-        console.log('[OK] Collective data found, calculating statistics...');
-        
-        // Calculate collective-only statistics
-        const stats = {
-            summary: {
-                totalIndividualParcels: 0,
-                totalCollectiveParcels: collectiveData.length,
-                totalRecords: collectiveData.length,
-                processingDate: new Date().toLocaleString('fr-FR')
-            },
-            individual: {},
-            collective: calculateCollectiveStats(collectiveData),
-            combined: {}
-        };
-        
-        console.log('[GRAPH] Statistics calculated:', stats);
-        
-        // Generate and download statistics Excel file
-        console.log('[FILE] Generating Excel file...');
-        const statsExcel = BoundouExcelGenerator.generateStatisticsExcel(stats);
+        const stats = calculateComprehensiveStats(data, collectiveData);
+        BoundouExcelGenerator.generateStatisticsExcel(stats);
         
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showSuccess('Rapport de statistiques collectives généré avec succès!');
-        
-        console.log('[OK] Collective statistics report generated successfully:', stats);
         
     } catch (error) {
         BoundouUtils.hideLoading('loadingIndicator');
         BoundouUtils.showError(`Erreur génération statistiques collectives: ${error.message}`);
         console.error('[ERR] Collective statistics generation error:', error);
-        console.error('[ERR] Error stack:', error.stack);
     }
 }
 

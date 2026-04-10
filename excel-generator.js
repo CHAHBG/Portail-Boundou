@@ -1835,320 +1835,322 @@
     };
 
     // Generate comprehensive statistics Excel file with enhanced categorization
-    // Generate comprehensive statistics Excel file with enhanced categorization
     const generateStatisticsExcel = (stats) => {
         const wb = XLSX.utils.book_new();
-        
-        // 1. EXECUTIVE SUMMARY SHEET
-        const summaryData = [
-            ['RAPPORT DE STATISTIQUES PORTAIL BOUNDOU'],
-            ['Date de génération:', stats.summary.processingDate],
+        const accent = { r: 82, g: 183, b: 136 }; // #52B788
+
+        // Helper to build a styled sheet from sections
+        const buildStatsSheet = (title, sections, total) => {
+            const rows = [[title], ['']];
+            const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+            const headerRows = [0]; // title row
+            const sectionHeaderRows = [];
+
+            sections.forEach(sec => {
+                const startRow = rows.length;
+                sectionHeaderRows.push(startRow);
+                rows.push([sec.title]);
+                merges.push({ s: { r: startRow, c: 0 }, e: { r: startRow, c: 2 } });
+                rows.push([sec.col1 || 'Categorie', 'Nombre', 'Pourcentage']);
+                sec.entries.forEach(([label, value]) => {
+                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0.0%';
+                    rows.push([label, value, pct]);
+                });
+                rows.push(['']);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 35 }, { wch: 14 }, { wch: 14 }];
+            ws['!merges'] = merges;
+            return ws;
+        };
+
+        // 1. Summary sheet
+        const hasInd = stats.summary.totalIndividualParcels > 0;
+        const hasCol = stats.summary.totalCollectiveParcels > 0;
+        const summaryRows = [
+            ['RAPPORT DE STATISTIQUES - PORTAIL BOUNDOU'],
             [''],
-            ['=== RÉSUMÉ EXÉCUTIF ==='],
-            ['Total parcelles individuelles:', stats.summary.totalIndividualParcels],
-            ['Total parcelles collectives:', stats.summary.totalCollectiveParcels],
-            ['TOTAL GÉNÉRAL:', stats.summary.totalRecords],
+            ['Date de generation', stats.summary.processingDate],
             [''],
-            ['=== RÉPARTITION PAR SOURCE ==='],
-            ['Données individuelles:', stats.summary.totalIndividualParcels, `${((stats.summary.totalIndividualParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`],
-            ['Données collectives:', stats.summary.totalCollectiveParcels, `${((stats.summary.totalCollectiveParcels / stats.summary.totalRecords) * 100).toFixed(1)}%`]
+            ['RESUME'],
         ];
-
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        if (hasInd) summaryRows.push(['Total parcelles individuelles', stats.summary.totalIndividualParcels]);
+        if (hasCol) summaryRows.push(['Total parcelles collectives', stats.summary.totalCollectiveParcels]);
+        summaryRows.push(['Total general', stats.summary.totalRecords]);
+        if (hasInd && hasCol) {
+            summaryRows.push(['']);
+            summaryRows.push(['REPARTITION PAR SOURCE']);
+            summaryRows.push(['Donnees individuelles', stats.summary.totalIndividualParcels, ((stats.summary.totalIndividualParcels / stats.summary.totalRecords) * 100).toFixed(1) + '%']);
+            summaryRows.push(['Donnees collectives', stats.summary.totalCollectiveParcels, ((stats.summary.totalCollectiveParcels / stats.summary.totalRecords) * 100).toFixed(1) + '%']);
+        }
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
         wsSummary['!cols'] = [{ wch: 35 }, { wch: 25 }, { wch: 15 }];
-        XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé Exécutif');
+        wsSummary['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+            { s: { r: 4, c: 0 }, e: { r: 4, c: 2 } }
+        ];
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Resume');
 
-        // 2. INDIVIDUAL DATA STATISTICS SHEET
-        if (stats.individual && Object.keys(stats.individual).length > 0) {
-            const individualData = [
-                ['STATISTIQUES DONNÉES INDIVIDUELLES'],
-                [''],
-                ['=== RÉPARTITION PAR TYPE DE PERSONNE (Typ_pers) ==='],
-                ['Type de Personne', 'Nombre', 'Pourcentage']
-            ];
-
-            // Add entity type statistics
-            const individualTotal = stats.individual.totalParcels || 0;
-            Object.entries(stats.individual.byEntityType || {}).forEach(([type, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([type, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÉPARTITION PAR USAGE (type_usag) ==='], ['Type d\'Usage', 'Nombre', 'Pourcentage']);
-            
-            // Add usage type statistics
-            Object.entries(stats.individual.byUsageType || {}).forEach(([usage, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([usage, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÉPARTITION PAR TRANCHE D\'ÂGE ==='], ['Tranche d\'Âge', 'Nombre', 'Pourcentage']);
-            
-            // Add age group statistics
-            Object.entries(stats.individual.byAgeGroup || {}).forEach(([age, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([age, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÉPARTITION PAR TYPE DE DOCUMENT (Type_piece) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
-            
-            // Add document type statistics
-            Object.entries(stats.individual.byDocumentType || {}).forEach(([doc, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([doc, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÉPARTITION PAR TYPE DE PERSONNE MORALE (Typ_pers_m) ==='], ['Type Personne Morale', 'Nombre', 'Pourcentage']);
-            
-            // Add morale person type statistics
-            Object.entries(stats.individual.byMoraleType || {}).forEach(([moraleType, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([moraleType, count, `${percentage}%`]);
-            });
-
-            individualData.push([''], ['=== RÉPARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
-            
-            // Add NICAD status statistics
-            Object.entries(stats.individual.byNicad || {}).forEach(([nicadStatus, count]) => {
-                const percentage = individualTotal > 0 ? ((count / individualTotal) * 100).toFixed(1) : '0.0';
-                individualData.push([nicadStatus, count, `${percentage}%`]);
-            });
-
-            const wsIndividual = XLSX.utils.aoa_to_sheet(individualData);
-            wsIndividual['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 12 }];
-            XLSX.utils.book_append_sheet(wb, wsIndividual, 'Stats Individuelles');
+        // 2. Individual stats
+        if (stats.individual && stats.individual.totalParcels > 0) {
+            const t = stats.individual.totalParcels;
+            const sections = [];
+            if (stats.individual.byEntityType) sections.push({ title: 'REPARTITION PAR TYPE DE PERSONNE', col1: 'Type de Personne', entries: Object.entries(stats.individual.byEntityType) });
+            if (stats.individual.byUsageType) sections.push({ title: 'REPARTITION PAR USAGE', col1: 'Type d\'Usage', entries: Object.entries(stats.individual.byUsageType) });
+            if (stats.individual.byAgeGroup) sections.push({ title: 'REPARTITION PAR TRANCHE D\'AGE', col1: 'Tranche d\'Age', entries: Object.entries(stats.individual.byAgeGroup) });
+            if (stats.individual.byDocumentType) sections.push({ title: 'REPARTITION PAR TYPE DE DOCUMENT', col1: 'Type de Document', entries: Object.entries(stats.individual.byDocumentType) });
+            if (stats.individual.byMoraleType && Object.keys(stats.individual.byMoraleType).length > 0) sections.push({ title: 'REPARTITION PAR TYPE DE PERSONNE MORALE', col1: 'Type Personne Morale', entries: Object.entries(stats.individual.byMoraleType) });
+            if (stats.individual.byNicad) sections.push({ title: 'STATUT NICAD', col1: 'Statut NICAD', entries: Object.entries(stats.individual.byNicad) });
+            const ws = buildStatsSheet('STATISTIQUES INDIVIDUELLES (Total: ' + t + ')', sections, t);
+            XLSX.utils.book_append_sheet(wb, ws, 'Stats Individuelles');
         }
 
-        // 3. COLLECTIVE DATA STATISTICS SHEET
-        if (stats.collective && Object.keys(stats.collective).length > 0) {
-            const collectiveData = [
-                ['STATISTIQUES DONNÉES COLLECTIVES'],
-                [''],
-                ['Total parcelles collectives:', stats.collective.totalParcels],
-                ['Total affectataires:', stats.collective.totalAffectataires],
-                [''],
-                ['=== RÉPARTITION PAR USAGE (type_usa/type_usag) ==='],
-                ['Type d\'Usage', 'Nombre', 'Pourcentage']
-            ];
-
-            // Add usage type statistics
-            const collectiveTotal = stats.collective.totalParcels || 0;
-            Object.entries(stats.collective.byUsageType || {}).forEach(([usage, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([usage, count, `${percentage}%`]);
-            });
-
-            collectiveData.push([''], ['=== RÉPARTITION PAR TYPE DE DOCUMENT (Type_piec) ==='], ['Type de Document', 'Nombre', 'Pourcentage']);
-            
-            // Add document type statistics
-            Object.entries(stats.collective.byDocumentType || {}).forEach(([doc, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([doc, count, `${percentage}%`]);
-            });
-
-            collectiveData.push([''], ['=== RÉPARTITION PAR TRANCHE D\'ÂGE ==='], ['Tranche d\'Âge', 'Nombre', 'Pourcentage']);
-            
-            // Add age group statistics
-            Object.entries(stats.collective.byAgeGroup || {}).forEach(([age, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([age, count, `${percentage}%`]);
-            });
-
-            collectiveData.push([''], ['=== RÉPARTITION PAR STATUT NICAD ==='], ['Statut NICAD', 'Nombre', 'Pourcentage']);
-            
-            // Add NICAD status statistics
-            Object.entries(stats.collective.byNicad || {}).forEach(([nicadStatus, count]) => {
-                const percentage = collectiveTotal > 0 ? ((count / collectiveTotal) * 100).toFixed(1) : '0.0';
-                collectiveData.push([nicadStatus, count, `${percentage}%`]);
-            });
-
-            const wsCollective = XLSX.utils.aoa_to_sheet(collectiveData);
-            wsCollective['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 12 }];
-            XLSX.utils.book_append_sheet(wb, wsCollective, 'Stats Collectives');
+        // 3. Collective stats
+        if (stats.collective && stats.collective.totalParcels > 0) {
+            const t = stats.collective.totalParcels;
+            const sections = [];
+            if (stats.collective.byUsageType) sections.push({ title: 'REPARTITION PAR USAGE', col1: 'Type d\'Usage', entries: Object.entries(stats.collective.byUsageType) });
+            if (stats.collective.byDocumentType) sections.push({ title: 'REPARTITION PAR TYPE DE DOCUMENT', col1: 'Type de Document', entries: Object.entries(stats.collective.byDocumentType) });
+            if (stats.collective.byAgeGroup) sections.push({ title: 'REPARTITION PAR TRANCHE D\'AGE', col1: 'Tranche d\'Age', entries: Object.entries(stats.collective.byAgeGroup) });
+            if (stats.collective.byNicad) sections.push({ title: 'STATUT NICAD', col1: 'Statut NICAD', entries: Object.entries(stats.collective.byNicad) });
+            const ws = buildStatsSheet('STATISTIQUES COLLECTIVES (Total: ' + t + ', Affectataires: ' + (stats.collective.totalAffectataires || 0) + ')', sections, t);
+            XLSX.utils.book_append_sheet(wb, ws, 'Stats Collectives');
         }
 
-        // Download the file
-        const fileName = `Statistiques_Boundou_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
+        const label = hasInd && hasCol ? '' : hasInd ? '_Individuelles' : '_Collectives';
+        const fileName = `Statistiques_Boundou${label}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
         XLSX.writeFile(wb, fileName);
-        
         return wb;
     };
 
+
     // ===================================================================
-    // PDF STATISTICS GENERATION (with charts, colors, icons)
+    // PDF STATISTICS GENERATION - Portal theme
     // ===================================================================
 
-    const COLORS = {
-        primary: [41, 128, 185],     // #2980b9
-        secondary: [142, 68, 173],   // #8e44ad
-        success: [39, 174, 96],      // #27ae60
-        warning: [243, 156, 18],     // #f39c12
-        danger: [192, 57, 43],       // #c0392b
-        dark: [44, 62, 80],          // #2c3e50
-        light: [236, 240, 241],      // #ecf0f1
-        white: [255, 255, 255],
-        chartPalette: [
-            [52, 152, 219],   // blue
-            [231, 76, 60],    // red
-            [46, 204, 113],   // green
-            [241, 196, 15],   // yellow
-            [155, 89, 182],   // purple
-            [230, 126, 34],   // orange
-            [26, 188, 156],   // teal
-            [52, 73, 94],     // dark blue
-            [149, 165, 166],  // gray
-            [211, 84, 0]      // dark orange
-        ]
+    // Portal-aligned muted palette (no indigo/violet, no vibrant)
+    const PDF_THEME = {
+        dark:    [15, 17, 23],       // #0F1117
+        surface: [26, 29, 39],       // #1A1D27
+        accent:  [82, 183, 136],     // #52B788
+        accentL: [116, 198, 157],    // #74C69D
+        accentD: [64, 145, 108],     // #40916C
+        text:    [50, 55, 65],       // #323741
+        muted:   [130, 136, 148],    // #828894
+        white:   [255, 255, 255],
+        rowAlt:  [247, 250, 248],    // very light green-gray
+        // Gradient-friendly palette: each entry is [start, end] for canvas gradient
+        palette: [
+            { s: [82, 183, 136],  e: [64, 145, 108]  },  // green
+            { s: [66, 133, 160],  e: [48, 100, 125]  },  // teal-steel
+            { s: [190, 165, 120], e: [160, 135, 90]  },  // warm sand
+            { s: [160, 110, 100], e: [130, 85, 78]   },  // terracotta
+            { s: [120, 150, 170], e: [90, 120, 140]  },  // slate-blue
+            { s: [170, 140, 110], e: [140, 112, 85]  },  // bronze
+            { s: [100, 160, 140], e: [75, 130, 112]  },  // sage
+            { s: [150, 130, 150], e: [120, 105, 122] },  // mauve-gray
+            { s: [130, 155, 105], e: [105, 130, 80]  },  // olive
+            { s: [165, 145, 135], e: [135, 118, 108] }   // warm gray
+        ],
+        flatColor(i) {
+            const p = this.palette[i % this.palette.length];
+            return p.s;
+        }
     };
 
-    const renderPieChart = (entries, size) => {
+    const renderDonut = (entries, size) => {
+        const scale = 2; // retina
         const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = size * scale;
+        canvas.height = size * scale;
         const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
         const total = entries.reduce((s, e) => s + e.value, 0);
         if (total === 0) return canvas.toDataURL('image/png');
 
-        const cx = size / 2, cy = size / 2, r = size / 2 - 10;
-        let startAngle = -Math.PI / 2;
+        const cx = size / 2, cy = size / 2, r = size / 2 - 8, inner = r * 0.52;
+        let angle = -Math.PI / 2;
 
         entries.forEach((entry, i) => {
             const slice = (entry.value / total) * 2 * Math.PI;
-            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+            const p = PDF_THEME.palette[i % PDF_THEME.palette.length];
+            // radial gradient per slice
+            const mid = angle + slice / 2;
+            const gx = cx + Math.cos(mid) * r * 0.5;
+            const gy = cy + Math.sin(mid) * r * 0.5;
+            const grad = ctx.createRadialGradient(gx, gy, inner * 0.3, cx, cy, r);
+            grad.addColorStop(0, `rgb(${p.s[0]},${p.s[1]},${p.s[2]})`);
+            grad.addColorStop(1, `rgb(${p.e[0]},${p.e[1]},${p.e[2]})`);
+
             ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+            ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+            ctx.arc(cx, cy, r, angle, angle + slice);
+            ctx.arc(cx, cy, inner, angle + slice, angle, true);
             ctx.closePath();
-            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+            ctx.fillStyle = grad;
             ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
+            // subtle separator
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
-            startAngle += slice;
+            angle += slice;
         });
-
-        // white dot in center for donut look
-        ctx.beginPath();
-        ctx.arc(cx, cy, r * 0.45, 0, 2 * Math.PI);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-
         return canvas.toDataURL('image/png');
     };
 
-    const renderBarChart = (entries, width, height) => {
+    const renderHBar = (entries, width, height) => {
+        const scale = 2;
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width * scale;
+        canvas.height = height * scale;
         const ctx = canvas.getContext('2d');
-        const total = entries.reduce((s, e) => s + e.value, 0);
-        if (total === 0) return canvas.toDataURL('image/png');
-
-        const margin = { top: 15, right: 15, bottom: 40, left: 50 };
+        ctx.scale(scale, scale);
+        const maxVal = Math.max(...entries.map(e => e.value), 1);
+        const margin = { top: 8, right: 12, bottom: 8, left: 100 };
         const chartW = width - margin.left - margin.right;
-        const chartH = height - margin.top - margin.bottom;
-        const maxVal = Math.max(...entries.map(e => e.value));
-        const barW = Math.min(50, chartW / entries.length - 8);
-        const gap = (chartW - barW * entries.length) / (entries.length + 1);
-
-        // grid lines
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 4; i++) {
-            const y = margin.top + chartH - (chartH / 4) * i;
-            ctx.beginPath();
-            ctx.moveTo(margin.left, y);
-            ctx.lineTo(width - margin.right, y);
-            ctx.stroke();
-            ctx.fillStyle = '#666';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText(Math.round((maxVal / 4) * i), margin.left - 5, y + 4);
-        }
+        const barH = Math.min(18, (height - margin.top - margin.bottom) / entries.length - 4);
+        const gap = 4;
 
         entries.forEach((entry, i) => {
-            const x = margin.left + gap + i * (barW + gap);
-            const h = maxVal > 0 ? (entry.value / maxVal) * chartH : 0;
-            const y = margin.top + chartH - h;
-            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+            const y = margin.top + i * (barH + gap);
+            const w = (entry.value / maxVal) * chartW;
+            const p = PDF_THEME.palette[i % PDF_THEME.palette.length];
 
-            // bar with rounded top
-            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
-            const radius = Math.min(4, barW / 4);
+            // gradient bar
+            const grad = ctx.createLinearGradient(margin.left, 0, margin.left + w, 0);
+            grad.addColorStop(0, `rgb(${p.s[0]},${p.s[1]},${p.s[2]})`);
+            grad.addColorStop(1, `rgb(${p.e[0]},${p.e[1]},${p.e[2]})`);
+            ctx.fillStyle = grad;
+            // rounded rect
+            const radius = Math.min(3, barH / 3);
             ctx.beginPath();
-            ctx.moveTo(x, y + radius);
-            ctx.arcTo(x, y, x + radius, y, radius);
-            ctx.arcTo(x + barW, y, x + barW, y + radius, radius);
-            ctx.lineTo(x + barW, margin.top + chartH);
-            ctx.lineTo(x, margin.top + chartH);
+            ctx.moveTo(margin.left + radius, y);
+            ctx.lineTo(margin.left + w - radius, y);
+            ctx.arcTo(margin.left + w, y, margin.left + w, y + radius, radius);
+            ctx.lineTo(margin.left + w, y + barH - radius);
+            ctx.arcTo(margin.left + w, y + barH, margin.left + w - radius, y + barH, radius);
+            ctx.lineTo(margin.left + radius, y + barH);
+            ctx.arcTo(margin.left, y + barH, margin.left, y + barH - radius, radius);
+            ctx.lineTo(margin.left, y + radius);
+            ctx.arcTo(margin.left, y, margin.left + radius, y, radius);
             ctx.closePath();
             ctx.fill();
-
-            // value
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(entry.value, x + barW / 2, y - 4);
 
             // label
-            ctx.save();
-            ctx.translate(x + barW / 2, margin.top + chartH + 8);
-            ctx.rotate(Math.PI / 6);
-            ctx.fillStyle = '#444';
+            ctx.fillStyle = '#323741';
             ctx.font = '9px sans-serif';
-            ctx.textAlign = 'left';
-            const label = entry.label.length > 12 ? entry.label.substring(0, 11) + '..' : entry.label;
-            ctx.fillText(label, 0, 0);
-            ctx.restore();
-        });
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const lbl = entry.label.length > 18 ? entry.label.substring(0, 17) + '..' : entry.label;
+            ctx.fillText(lbl, margin.left - 5, y + barH / 2);
 
+            // value
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'left';
+            if (w > 30) {
+                ctx.fillText(String(entry.value), margin.left + 6, y + barH / 2);
+            } else {
+                ctx.fillStyle = '#323741';
+                ctx.fillText(String(entry.value), margin.left + w + 4, y + barH / 2);
+            }
+        });
         return canvas.toDataURL('image/png');
     };
 
-    const addPdfHeader = (doc, title, yPos) => {
-        // colored banner
-        doc.setFillColor(...COLORS.primary);
-        doc.rect(0, yPos, doc.internal.pageSize.getWidth(), 14, 'F');
-        doc.setTextColor(...COLORS.white);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(title, 14, yPos + 9.5);
-        doc.setTextColor(...COLORS.dark);
-        return yPos + 20;
-    };
-
-    const addPdfFooter = (doc) => {
-        const pageCount = doc.internal.getNumberOfPages();
+    const pdfSectionHeader = (doc, title, y) => {
         const pw = doc.internal.pageSize.getWidth();
-        const ph = doc.internal.pageSize.getHeight();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            // footer line
-            doc.setDrawColor(...COLORS.light);
-            doc.setLineWidth(0.5);
-            doc.line(14, ph - 18, pw - 14, ph - 18);
-            // left text
-            doc.setFontSize(8);
-            doc.setTextColor(130, 130, 130);
-            doc.setFont('helvetica', 'normal');
-            doc.text('Portail PROCASEF Boundou - generated by cabg', 14, ph - 12);
-            // page number right
-            doc.text(`Page ${i} / ${pageCount}`, pw - 14, ph - 12, { align: 'right' });
-        }
+        // thin accent line
+        doc.setFillColor(...PDF_THEME.accent);
+        doc.rect(14, y, pw - 28, 0.6, 'F');
+        y += 4;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...PDF_THEME.text);
+        doc.text(title, 14, y + 4);
+        return y + 10;
     };
 
-    const addLegend = (doc, entries, x, y, boxSize) => {
-        const bs = boxSize || 6;
+    const pdfSubTitle = (doc, text, y) => {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...PDF_THEME.muted);
+        doc.text(text, 14, y + 4);
+        return y + 7;
+    };
+
+    const pdfLegend = (doc, entries, x, y) => {
         entries.forEach((entry, i) => {
-            const col = COLORS.chartPalette[i % COLORS.chartPalette.length];
+            const col = PDF_THEME.flatColor(i);
             doc.setFillColor(...col);
-            doc.rect(x, y + i * (bs + 4), bs, bs, 'F');
-            doc.setFontSize(8);
-            doc.setTextColor(...COLORS.dark);
+            doc.roundedRect(x, y + i * 8, 5, 5, 1, 1, 'F');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...PDF_THEME.text);
             doc.setFont('helvetica', 'normal');
-            doc.text(`${entry.label} (${entry.value})`, x + bs + 3, y + i * (bs + 4) + bs - 1);
+            doc.text(`${entry.label}  (${entry.value})`, x + 7, y + i * 8 + 4);
         });
-        return y + entries.length * (bs + 4);
+        return y + entries.length * 8;
+    };
+
+    const pdfTable = (doc, head, body, y) => {
+        doc.autoTable({
+            startY: y,
+            head: [head],
+            body: body,
+            theme: 'plain',
+            headStyles: {
+                fillColor: PDF_THEME.surface,
+                textColor: PDF_THEME.white,
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 3
+            },
+            bodyStyles: {
+                fontSize: 7.5,
+                textColor: PDF_THEME.text,
+                cellPadding: 2.5
+            },
+            alternateRowStyles: { fillColor: PDF_THEME.rowAlt },
+            styles: { lineColor: [220, 224, 228], lineWidth: 0.2 },
+            margin: { left: 14, right: 14 }
+        });
+        return doc.lastAutoTable.finalY + 6;
+    };
+
+    const pdfCheckPage = (doc, y, need) => {
+        if (y > doc.internal.pageSize.getHeight() - need) {
+            doc.addPage();
+            return 18;
+        }
+        return y;
+    };
+
+    const pdfAddSection = (doc, y, title, entries, total, useBar) => {
+        y = pdfCheckPage(doc, y, 75);
+        y = pdfSubTitle(doc, title, y);
+        const pw = doc.internal.pageSize.getWidth();
+
+        if (useBar) {
+            const h = Math.max(entries.length * 22, 40);
+            const img = renderHBar(entries, 500, h);
+            const imgH = Math.min(h * (pw - 28) / 500, 70);
+            doc.addImage(img, 'PNG', 14, y, pw - 28, imgH);
+            y += imgH + 4;
+        } else {
+            const img = renderDonut(entries, 160);
+            doc.addImage(img, 'PNG', 14, y, 38, 38);
+            const ly = pdfLegend(doc, entries, 56, y + 2);
+            y = Math.max(y + 42, ly) + 2;
+        }
+
+        const body = entries.map(e => [
+            e.label,
+            e.value,
+            total > 0 ? ((e.value / total) * 100).toFixed(1) + '%' : '0%'
+        ]);
+        y = pdfTable(doc, [title.split(' ').slice(-1)[0] || 'Categorie', 'Nombre', '%'], body, y);
+        return y;
     };
 
     const entriesFromObj = (obj) => {
@@ -2160,329 +2162,121 @@
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pw = doc.internal.pageSize.getWidth();
         const ph = doc.internal.pageSize.getHeight();
+        const hasInd = stats.individual && stats.individual.totalParcels > 0;
+        const hasCol = stats.collective && stats.collective.totalParcels > 0;
         let y = 0;
 
-        // ---- COVER HEADER ----
-        doc.setFillColor(...COLORS.dark);
-        doc.rect(0, 0, pw, 50, 'F');
-        // accent stripe
-        doc.setFillColor(...COLORS.primary);
-        doc.rect(0, 50, pw, 4, 'F');
+        // ---- HEADER ----
+        doc.setFillColor(...PDF_THEME.dark);
+        doc.rect(0, 0, pw, 38, 'F');
+        doc.setFillColor(...PDF_THEME.accent);
+        doc.rect(0, 38, pw, 2, 'F');
 
-        doc.setTextColor(...COLORS.white);
-        doc.setFontSize(22);
+        doc.setTextColor(...PDF_THEME.white);
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text('RAPPORT STATISTIQUES', pw / 2, 22, { align: 'center' });
-        doc.setFontSize(13);
+        doc.text('Rapport Statistiques', pw / 2, 16, { align: 'center' });
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text('Portail PROCASEF Boundou', pw / 2, 32, { align: 'center' });
-        doc.setFontSize(10);
-        doc.text(stats.summary.processingDate || new Date().toLocaleString('fr-FR'), pw / 2, 42, { align: 'center' });
+        doc.setTextColor(...PDF_THEME.accentL);
+        doc.text('Portail PROCASEF Boundou', pw / 2, 24, { align: 'center' });
+        doc.setTextColor(180, 184, 190);
+        doc.text(stats.summary.processingDate || new Date().toLocaleString('fr-FR'), pw / 2, 32, { align: 'center' });
 
-        y = 62;
+        y = 48;
 
-        // ---- EXECUTIVE SUMMARY CARDS ----
-        const cardW = (pw - 42) / 3;
-        const cards = [
-            { label: 'Parcelles Individuelles', value: stats.summary.totalIndividualParcels, color: COLORS.primary },
-            { label: 'Parcelles Collectives', value: stats.summary.totalCollectiveParcels, color: COLORS.secondary },
-            { label: 'Total General', value: stats.summary.totalRecords, color: COLORS.success }
-        ];
-        cards.forEach((card, i) => {
-            const cx = 14 + i * (cardW + 7);
-            // card bg
-            doc.setFillColor(card.color[0], card.color[1], card.color[2]);
-            doc.roundedRect(cx, y, cardW, 28, 3, 3, 'F');
-            // value
-            doc.setTextColor(...COLORS.white);
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');
-            doc.text(String(card.value), cx + cardW / 2, y + 13, { align: 'center' });
-            // label
+        // ---- SUMMARY CARDS ----
+        const cards = [];
+        if (hasInd) cards.push({ label: 'Parcelles Individuelles', value: stats.summary.totalIndividualParcels });
+        if (hasCol) cards.push({ label: 'Parcelles Collectives', value: stats.summary.totalCollectiveParcels });
+        if (hasInd && hasCol) cards.push({ label: 'Total General', value: stats.summary.totalRecords });
+
+        if (cards.length > 0) {
+            const cardW = (pw - 28 - (cards.length - 1) * 6) / cards.length;
+            cards.forEach((card, i) => {
+                const cx = 14 + i * (cardW + 6);
+                doc.setFillColor(...PDF_THEME.surface);
+                doc.roundedRect(cx, y, cardW, 22, 2, 2, 'F');
+                // accent left border
+                doc.setFillColor(...PDF_THEME.accent);
+                doc.rect(cx, y + 3, 1.2, 16, 'F');
+                // value
+                doc.setTextColor(...PDF_THEME.accent);
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text(String(card.value), cx + cardW / 2 + 2, y + 10, { align: 'center' });
+                // label
+                doc.setTextColor(...PDF_THEME.muted);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.text(card.label, cx + cardW / 2 + 2, y + 17, { align: 'center' });
+            });
+            y += 30;
+        }
+
+        // ===== INDIVIDUAL =====
+        if (hasInd) {
+            const t = stats.individual.totalParcels;
+            y = pdfSectionHeader(doc, 'Statistiques Individuelles', y);
+
+            const entityE = entriesFromObj(stats.individual.byEntityType);
+            if (entityE.length > 0) y = pdfAddSection(doc, y, 'Type de Personne', entityE, t, false);
+
+            const usageE = entriesFromObj(stats.individual.byUsageType);
+            if (usageE.length > 0) y = pdfAddSection(doc, y, "Type d'Usage", usageE, t, true);
+
+            const ageE = entriesFromObj(stats.individual.byAgeGroup);
+            if (ageE.length > 0) y = pdfAddSection(doc, y, "Tranche d'Age", ageE, t, false);
+
+            const docE = entriesFromObj(stats.individual.byDocumentType);
+            if (docE.length > 0) y = pdfAddSection(doc, y, 'Type de Document', docE, t, true);
+
+            const nicadE = entriesFromObj(stats.individual.byNicad);
+            if (nicadE.length > 0) y = pdfAddSection(doc, y, 'Statut NICAD', nicadE, t, false);
+        }
+
+        // ===== COLLECTIVE =====
+        if (hasCol) {
+            if (hasInd) { doc.addPage(); y = 18; }
+            const t = stats.collective.totalParcels;
+            y = pdfSectionHeader(doc, 'Statistiques Collectives', y);
+
+            // summary line
             doc.setFontSize(8);
             doc.setFont('helvetica', 'normal');
-            doc.text(card.label, cx + cardW / 2, y + 22, { align: 'center' });
-        });
-        y += 36;
+            doc.setTextColor(...PDF_THEME.muted);
+            doc.text(`Parcelles: ${t}   |   Affectataires: ${stats.collective.totalAffectataires || 0}`, 14, y + 2);
+            y += 8;
 
-        // ===== INDIVIDUAL STATS =====
-        if (stats.individual && stats.individual.totalParcels > 0) {
-            y = addPdfHeader(doc, 'STATISTIQUES INDIVIDUELLES', y);
+            const usageE = entriesFromObj(stats.collective.byUsageType);
+            if (usageE.length > 0) y = pdfAddSection(doc, y, "Type d'Usage", usageE, t, true);
 
-            const indTotal = stats.individual.totalParcels || 0;
+            const docE = entriesFromObj(stats.collective.byDocumentType);
+            if (docE.length > 0) y = pdfAddSection(doc, y, 'Type de Document', docE, t, true);
 
-            // --- Entity Type ---
-            const entityEntries = entriesFromObj(stats.individual.byEntityType);
-            if (entityEntries.length > 0) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par type de personne', 14, y + 5);
-                y += 8;
+            const ageE = entriesFromObj(stats.collective.byAgeGroup);
+            if (ageE.length > 0) y = pdfAddSection(doc, y, "Tranche d'Age", ageE, t, false);
 
-                const pieImg = renderPieChart(entityEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 50, 50);
-                y = addLegend(doc, entityEntries, 70, y + 5);
-                y = Math.max(y, y) + 10;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Type de Personne', 'Nombre', '%']],
-                    body: entityEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [245, 248, 250] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- Usage Type ---
-            const usageEntries = entriesFromObj(stats.individual.byUsageType);
-            if (usageEntries.length > 0) {
-                if (y > ph - 80) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par type d\'usage', 14, y + 5);
-                y += 8;
-
-                const barImg = renderBarChart(usageEntries, 500, 200);
-                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
-                y += 50;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Usage', 'Nombre', '%']],
-                    body: usageEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.success, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [245, 250, 245] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- Age Group ---
-            const ageEntries = entriesFromObj(stats.individual.byAgeGroup);
-            if (ageEntries.length > 0) {
-                if (y > ph - 80) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par tranche d\'age', 14, y + 5);
-                y += 8;
-
-                const pieImg = renderPieChart(ageEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 45, 45);
-                y = addLegend(doc, ageEntries, 65, y + 10);
-                y = Math.max(y, y) + 10;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Tranche d\'age', 'Nombre', '%']],
-                    body: ageEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [255, 252, 240] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- Document Type ---
-            const docEntries = entriesFromObj(stats.individual.byDocumentType);
-            if (docEntries.length > 0) {
-                if (y > ph - 80) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par type de document', 14, y + 5);
-                y += 8;
-
-                const barImg = renderBarChart(docEntries, 500, 200);
-                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
-                y += 50;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Document', 'Nombre', '%']],
-                    body: docEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.secondary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [248, 245, 252] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- NICAD ---
-            const nicadEntries = entriesFromObj(stats.individual.byNicad);
-            if (nicadEntries.length > 0) {
-                if (y > ph - 60) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Statut NICAD', 14, y + 5);
-                y += 8;
-
-                const pieImg = renderPieChart(nicadEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 40, 40);
-                y = addLegend(doc, nicadEntries, 60, y + 8);
-                y = Math.max(y, y) + 8;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Statut NICAD', 'Nombre', '%']],
-                    body: nicadEntries.map(e => [e.label, e.value, indTotal > 0 ? ((e.value / indTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [255, 245, 245] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
+            const nicadE = entriesFromObj(stats.collective.byNicad);
+            if (nicadE.length > 0) y = pdfAddSection(doc, y, 'Statut NICAD', nicadE, t, false);
         }
 
-        // ===== COLLECTIVE STATS =====
-        if (stats.collective && stats.collective.totalParcels > 0) {
-            doc.addPage();
-            y = 15;
-            y = addPdfHeader(doc, 'STATISTIQUES COLLECTIVES', y);
-
-            const colTotal = stats.collective.totalParcels || 0;
-
-            // summary row
-            doc.setFillColor(245, 248, 250);
-            doc.roundedRect(14, y, pw - 28, 12, 2, 2, 'F');
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...COLORS.dark);
-            doc.text(`Total parcelles: ${colTotal}`, 20, y + 8);
-            doc.text(`Total affectataires: ${stats.collective.totalAffectataires || 0}`, pw / 2, y + 8);
-            y += 18;
-
-            // --- Usage Type ---
-            const usageEntries = entriesFromObj(stats.collective.byUsageType);
-            if (usageEntries.length > 0) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par type d\'usage', 14, y + 5);
-                y += 8;
-
-                const pieImg = renderPieChart(usageEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 50, 50);
-                y = addLegend(doc, usageEntries, 70, y + 5);
-                y = Math.max(y, y) + 10;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Usage', 'Nombre', '%']],
-                    body: usageEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [245, 248, 250] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- Document Type ---
-            const docEntries = entriesFromObj(stats.collective.byDocumentType);
-            if (docEntries.length > 0) {
-                if (y > ph - 80) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par type de document', 14, y + 5);
-                y += 8;
-
-                const barImg = renderBarChart(docEntries, 500, 200);
-                doc.addImage(barImg, 'PNG', 14, y, pw - 28, 45);
-                y += 50;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Document', 'Nombre', '%']],
-                    body: docEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.success, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [245, 250, 245] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- Age Group ---
-            const ageEntries = entriesFromObj(stats.collective.byAgeGroup);
-            if (ageEntries.length > 0) {
-                if (y > ph - 80) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Repartition par tranche d\'age', 14, y + 5);
-                y += 8;
-
-                const pieImg = renderPieChart(ageEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 45, 45);
-                y = addLegend(doc, ageEntries, 65, y + 10);
-                y = Math.max(y, y) + 10;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Tranche d\'age', 'Nombre', '%']],
-                    body: ageEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [255, 252, 240] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
-
-            // --- NICAD ---
-            const nicadEntries = entriesFromObj(stats.collective.byNicad);
-            if (nicadEntries.length > 0) {
-                if (y > ph - 60) { doc.addPage(); y = 15; }
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...COLORS.dark);
-                doc.text('Statut NICAD', 14, y + 5);
-                y += 8;
-
-                const pieImg = renderPieChart(nicadEntries, 200);
-                doc.addImage(pieImg, 'PNG', 14, y, 40, 40);
-                y = addLegend(doc, nicadEntries, 60, y + 8);
-                y = Math.max(y, y) + 8;
-
-                doc.autoTable({
-                    startY: y,
-                    head: [['Statut NICAD', 'Nombre', '%']],
-                    body: nicadEntries.map(e => [e.label, e.value, colTotal > 0 ? ((e.value / colTotal) * 100).toFixed(1) + '%' : '0%']),
-                    theme: 'grid',
-                    headStyles: { fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { fontSize: 8 },
-                    alternateRowStyles: { fillColor: [255, 245, 245] },
-                    margin: { left: 14, right: 14 }
-                });
-                y = doc.lastAutoTable.finalY + 8;
-            }
+        // ---- FOOTER ----
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setDrawColor(200, 204, 210);
+            doc.setLineWidth(0.3);
+            doc.line(14, ph - 14, pw - 14, ph - 14);
+            doc.setFontSize(7);
+            doc.setTextColor(...PDF_THEME.muted);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Portail PROCASEF Boundou - generated by cabg', 14, ph - 9);
+            doc.text(`Page ${i} / ${pageCount}`, pw - 14, ph - 9, { align: 'right' });
         }
 
-        // ---- FOOTER on every page ----
-        addPdfFooter(doc);
-
-        // ---- SAVE ----
-        const fileName = `Statistiques_Boundou_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`;
+        const label = hasInd && hasCol ? '' : hasInd ? '_Individuelles' : '_Collectives';
+        const fileName = `Statistiques_Boundou${label}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`;
         doc.save(fileName);
         return doc;
     };
