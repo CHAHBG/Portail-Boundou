@@ -731,13 +731,14 @@ img, svg { max-width: 100%; }
 .validation-msg.error { color: var(--danger); } .validation-msg.success { color: var(--accent-dark); }
 
 /* ── Mode Cards ── */
-.mode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.85rem; }
+.mode-grid { display: flex; flex-wrap: wrap; gap: 0.85rem; justify-content: center; }
 .mode-card {
     padding: 1.4rem 1rem; text-align: center;
     background: var(--bg-surface); border: 2px solid var(--border);
     border-radius: var(--radius-lg); cursor: pointer;
     transition: all 0.3s var(--spring);
     position: relative; overflow: hidden;
+    flex: 0 1 190px; min-width: 160px; max-width: 220px;
 }
 .mode-card-glow {
     position: absolute; inset: 0;
@@ -1059,8 +1060,8 @@ img, svg { max-width: 100%; }
     .drop-zone-anim svg { width: 40px; height: 40px; }
     .drop-zone-info { flex-wrap: wrap; gap: 0.5rem; padding: 0.7rem 0.9rem; }
 
-    .mode-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .mode-card { padding: 1rem 0.75rem; }
+    .mode-grid { gap: 0.6rem; }
+    .mode-card { padding: 1rem 0.75rem; flex: 0 1 160px; min-width: 140px; }
     .mode-card-icon { font-size: 1.5rem; }
     .mode-card h4 { font-size: 0.85rem; }
     .mode-card p { font-size: 0.72rem; }
@@ -1149,8 +1150,8 @@ img, svg { max-width: 100%; }
     .drop-zone-content p { font-size: 0.78rem; }
     .drop-zone-anim svg { width: 36px; height: 36px; }
 
-    .mode-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .mode-card { padding: 0.85rem 0.6rem; }
+    .mode-grid { gap: 0.5rem; }
+    .mode-card { padding: 0.85rem 0.6rem; flex: 0 1 140px; min-width: 120px; }
     .mode-card-icon { font-size: 1.3rem; margin-bottom: 0.25rem; }
     .mode-card h4 { font-size: 0.78rem; }
     .mode-card p { font-size: 0.66rem; }
