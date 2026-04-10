@@ -1323,6 +1323,52 @@
                     setTimeout(() => { genCol.disabled = false; }, 2000);
                 });
             }
+
+            // Stats Excel buttons
+            const statsInd = document.getElementById('generateStats');
+            if (statsInd) {
+                statsInd.addEventListener('click', () => {
+                    if (typeof generateStatisticsReport === 'function') {
+                        generateStatisticsReport();
+                    } else {
+                        UI._toast('Fonction statistiques non disponible', 'error');
+                    }
+                });
+            }
+            const statsCol = document.getElementById('generateCollectiveStats');
+            if (statsCol) {
+                statsCol.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (typeof generateCollectiveStatisticsReport === 'function') {
+                        generateCollectiveStatisticsReport();
+                    } else {
+                        UI._toast('Fonction statistiques non disponible', 'error');
+                    }
+                });
+            }
+
+            // Stats PDF buttons
+            const pdfInd = document.getElementById('generateStatsPDF');
+            if (pdfInd) {
+                pdfInd.addEventListener('click', () => {
+                    if (typeof generateStatisticsPDFReport === 'function') {
+                        generateStatisticsPDFReport();
+                    } else {
+                        UI._toast('Fonction PDF non disponible', 'error');
+                    }
+                });
+            }
+            const pdfCol = document.getElementById('generateCollectiveStatsPDF');
+            if (pdfCol) {
+                pdfCol.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (typeof generateCollectiveStatisticsPDFReport === 'function') {
+                        generateCollectiveStatisticsPDFReport();
+                    } else {
+                        UI._toast('Fonction PDF non disponible', 'error');
+                    }
+                });
+            }
         },
 
         _animateProgress(fillEl, labelEl, msg) {
